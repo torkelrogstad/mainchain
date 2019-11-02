@@ -30,6 +30,12 @@ struct SidechainWTPrimeState;
 
 enum VoteType : unsigned int;
 
+// TODO custom operator[] or getter functions for private data members which
+// will check the index and throw an error instead of going out of bounds
+
+// TODO Refactor: remove AddWTPrime() and UpdateSCDBIndex() - handle both inside
+// of SCDB::Update()
+
 class SidechainDB
 {
 public:
@@ -98,7 +104,7 @@ public:
     uint256 GetSCDBHash() const;
 
     /** Return what the SCDB hash would be if the updates are applied */
-    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight) const;
+    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime = {}) const;
 
     /** Get the sidechain that relates to nSidechain if it exists */
     bool GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const;
@@ -129,7 +135,7 @@ public:
 
     /** Returns SCDB WT^ state with single vote type applied to all of the most
      * recent WT^(s) in the cache */
-    std::vector<SidechainWTPrimeState> GetVotes(VoteType vote) const;
+    std::vector<SidechainWTPrimeState> GetLatestStateWithVote(VoteType vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const;
 
     /** Return cached WT^ transaction(s) */
     std::vector<CMutableTransaction> GetWTPrimeCache() const;
@@ -176,13 +182,12 @@ public:
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
 
     /** Update / add multiple SCDB WT^(s) to SCDB */
-    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug = false);
+    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {});
 
     /** Read the SCDB hash in a new block and try to synchronize our SCDB by
      * testing possible work score updates until the SCDB hash of our SCDB
      * matches the one from the new block. Return false if no match found. */
-    bool UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, const std::vector<SidechainWTPrimeState>& vScores);
-    bool UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot);
+    bool UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, const std::vector<SidechainWTPrimeState>& vScores = {}, const std::map<uint8_t, uint256>& mapNewWTPrime = {});
 
 private:
     /**
