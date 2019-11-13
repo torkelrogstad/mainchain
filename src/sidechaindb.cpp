@@ -526,7 +526,7 @@ std::vector<uint256> SidechainDB::GetUncommittedWTPrimeCache(uint8_t nSidechain)
     return vHash;
 }
 
-std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(VoteType vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const
+std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const
 {
     std::vector<SidechainWTPrimeState> vNew;
     for (const Sidechain& s : vActiveSidechain) {
@@ -1064,10 +1064,48 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
     if (!fJustCheck && vMTHashScript.size() == 1) {
         const CScript& scriptPubKey = vMTHashScript.front();
 
+        // Check if there are update bytes
+        std::vector<CScript> vUpdateBytes;
+        for (const CTxOut& out : vout) {
+            const CScript scriptPubKey = out.scriptPubKey;
+            if (scriptPubKey.IsSCDBUpdate())
+                vUpdateBytes.push_back(scriptPubKey);
+        }
+        // There is a maximum of 1 update bytes script
+        if (vUpdateBytes.size() > 1) {
+            if (fDebug)
+                LogPrintf("SCDB %s: Error: multiple update byte scripts at height: %u\n",
+                       __func__,
+                       nHeight);
+            return false;
+        }
+
+        std::vector<SidechainWTPrimeState> vNewScores;
+        if (vUpdateBytes.size()) {
+            // Get old (current) state
+            std::vector<std::vector<SidechainWTPrimeState>> vOldState;
+            for (const Sidechain& s : vActiveSidechain) {
+                vOldState.push_back(GetState(s.nSidechain));
+            }
+
+            // Parse SCDB update bytes for new WT^ scores
+            if (!ParseSCDBUpdateScript(vUpdateBytes.front(), vOldState, vNewScores)) {
+                if (fDebug)
+                    LogPrintf("SCDB %s: Error: Failed to parse update bytes at height: %u\n",
+                            __func__,
+                            nHeight);
+                return false;
+            }
+            if (fDebug)
+                LogPrintf("SCDB %s: Parsed update bytes at height: %u\n",
+                        __func__,
+                        nHeight);
+        }
+
         // TODO IsSCDBHashMerkleRootCommit should return the MT hash
         // Get MT hash from script
         uint256 hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
-        bool fUpdated = UpdateSCDBMatchMT(nHeight, hashMerkleRoot, std::vector<SidechainWTPrimeState> {}, mapNewWTPrime);
+        bool fUpdated = UpdateSCDBMatchMT(nHeight, hashMerkleRoot, vNewScores, mapNewWTPrime);
         if (!fUpdated) {
             if (fDebug)
                 LogPrintf("SCDB %s: Failed to match MT: %s at height: %u\n",
@@ -1523,6 +1561,77 @@ int GetNumBlocksSinceLastSidechainVerificationPeriod(int nHeight)
 {
     int nPeriodStart = GetLastSidechainVerificationPeriod(nHeight);
     return nHeight - nPeriodStart;
+}
+
+bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores)
+{
+    if (!script.IsSCDBUpdate())
+        return false;
+
+    if (vOldScores.empty())
+        return false;
+
+    CScript byteSection = CScript(script.begin() + 5, script.end());
+
+    size_t x = 0; // vOldScores outer vector (sidechains)
+    for (CScript::const_iterator it = script.begin(); it < script.end(); it++) {
+        const unsigned char c = *it;
+        if (c == SC_OP_UPVOTE || c == SC_OP_DOWNVOTE) {
+            // Figure out which WT^ is being upvoted
+            if (vOldScores.size() <= x)
+                return false;
+
+            // Read which WT^ we are voting on from the script and set
+            size_t y = 0; // vOldScores inner vector (WT^(s) per sidechain)
+            if (script.end() - it > 2) {
+                CScript::const_iterator itWT = it + 1;
+                const unsigned char cNext = *itWT;
+                if (cNext != SC_OP_DELIM) {
+                    if ((*itWT) == 0x01)
+                    {
+                        if (!(script.end() - itWT >= 1))
+                            return false;
+
+                        const CScript::const_iterator it1 = itWT + 1;
+                        y = CScriptNum(std::vector<unsigned char>{*it1}, false).getint();
+                    }
+                    else
+                    if ((*itWT) == 0x02)
+                    {
+                        if (!(script.end() - itWT >= 2))
+                            return false;
+
+                        const CScript::const_iterator it1 = itWT + 1;
+                        const CScript::const_iterator it2 = itWT + 2;
+                        y = CScriptNum(std::vector<unsigned char>{*it1, *it2}, false).getint();
+                    }
+                    else
+                    {
+                        // TODO support WT^ indexes requiring more than 2 bytes?
+                        return false;
+                    }
+                }
+            }
+
+            if (vOldScores[x].size() <= y)
+                return false;
+
+            SidechainWTPrimeState newScore = vOldScores[x][y];
+            newScore.nBlocksLeft--;
+
+            c == SC_OP_UPVOTE ? newScore.nWorkScore++ : newScore.nWorkScore--;
+
+            vNewScores.push_back(newScore);
+        }
+        else
+        if (c == SC_OP_DELIM) {
+            // Moving on to the next sidechain
+            x++;
+            continue;
+        }
+    }
+
+    return true;
 }
 
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted)

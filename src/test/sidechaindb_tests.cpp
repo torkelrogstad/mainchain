@@ -820,7 +820,8 @@ BOOST_AUTO_TEST_CASE(IsSidechainUpdateBytes)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSCDBUpdateScript(block, std::vector<std::vector<SidechainWTPrimeState>>{}, std::vector<SidechainCustomVote>{}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, std::vector<std::vector<SidechainWTPrimeState>>{}, std::vector<SidechainCustomVote>{}, Params().GetConsensus());
 
     BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBUpdate());
 }
@@ -907,9 +908,9 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, std::vector<SidechainCustomVote>{vote}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote}, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1038,9 +1039,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1171,9 +1172,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1259,9 +1260,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4}, Params().GetConsensus());
+    CScript script2;
+    GenerateSCDBUpdateScript(block2, script2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4}, Params().GetConsensus());
 
-    const CScript script2 = block2.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script2.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1382,9 +1383,9 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     for (const Sidechain& s : scdbTestCopy.GetActiveSidechains()) {
         vOldScores.push_back(scdbTestCopy.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, vUserVotes, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, vUserVotes, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it

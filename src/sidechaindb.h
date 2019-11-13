@@ -6,7 +6,7 @@
 #define BITCOIN_SIDECHAINDB_H
 
 #include <map>
-#include <memory>
+#include <memory> // Required for forward declaration of CTransactionRef typedef
 #include <queue>
 #include <vector>
 
@@ -140,7 +140,7 @@ public:
 
     /** Returns SCDB WT^ state with single vote type applied to all of the most
      * recent WT^(s) in the cache */
-    std::vector<SidechainWTPrimeState> GetLatestStateWithVote(VoteType vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const;
+    std::vector<SidechainWTPrimeState> GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const;
 
     /** Return cached WT^ transaction(s) */
     std::vector<CMutableTransaction> GetWTPrimeCache() const;
@@ -256,6 +256,9 @@ int GetLastSidechainVerificationPeriod(int nHeight);
 
 /** Return the number of blocks that have been mined in this period so far */
 int GetNumBlocksSinceLastSidechainVerificationPeriod(int nHeight);
+
+/** Read an SCDB update script and return new scores by reference if valid */
+bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores);
 
 /** Sort deposits by CTIP UTXO spending order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);

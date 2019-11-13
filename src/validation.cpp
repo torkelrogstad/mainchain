@@ -3649,7 +3649,7 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, c
 }
 
 
-void GenerateSCDBUpdateScript(CBlock& block, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
+void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
 {
     // Check for activation of Drivechains
     if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
@@ -3696,6 +3696,9 @@ void GenerateSCDBUpdateScript(CBlock& block, const std::vector<std::vector<Sidec
         // Add deliminator to script, we're moving on to the next sidechain
         out.scriptPubKey << SC_OP_DELIM;
     }
+
+    // Return the script by reference
+    script = out.scriptPubKey;
 
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);
@@ -5906,77 +5909,6 @@ bool VerifyTxOutProof(const std::string& strProof)
 bool IsSidechainNumberValid(uint8_t nSidechain)
 {
     return scdb.IsSidechainNumberValid(nSidechain);
-}
-
-bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores)
-{
-    if (!script.IsSCDBUpdate())
-        return false;
-
-    if (vOldScores.empty())
-        return false;
-
-    CScript byteSection = CScript(script.begin() + 5, script.end());
-
-    size_t x = 0; // vOldScores outer vector (sidechains)
-    for (CScript::const_iterator it = script.begin(); it < script.end(); it++) {
-        const unsigned char c = *it;
-        if (c == SC_OP_UPVOTE || c == SC_OP_DOWNVOTE) {
-            // Figure out which WT^ is being upvoted
-            if (vOldScores.size() <= x)
-                return false;
-
-            // Read which WT^ we are voting on from the script and set
-            size_t y = 0; // vOldScores inner vector (WT^(s) per sidechain)
-            if (script.end() - it > 2) {
-                CScript::const_iterator itWT = it + 1;
-                const unsigned char cNext = *itWT;
-                if (cNext != SC_OP_DELIM) {
-                    if ((*itWT) == 0x01)
-                    {
-                        if (!(script.end() - itWT >= 1))
-                            return false;
-
-                        const CScript::const_iterator it1 = itWT + 1;
-                        y = CScriptNum(std::vector<unsigned char>{*it1}, false).getint();
-                    }
-                    else
-                    if ((*itWT) == 0x02)
-                    {
-                        if (!(script.end() - itWT >= 2))
-                            return false;
-
-                        const CScript::const_iterator it1 = itWT + 1;
-                        const CScript::const_iterator it2 = itWT + 2;
-                        y = CScriptNum(std::vector<unsigned char>{*it1, *it2}, false).getint();
-                    }
-                    else
-                    {
-                        // TODO support WT^ indexes requiring more than 2 bytes?
-                        return false;
-                    }
-                }
-            }
-
-            if (vOldScores[x].size() <= y)
-                return false;
-
-            SidechainWTPrimeState newScore = vOldScores[x][y];
-            newScore.nBlocksLeft--;
-
-            c == SC_OP_UPVOTE ? newScore.nWorkScore++ : newScore.nWorkScore--;
-
-            vNewScores.push_back(newScore);
-        }
-        else
-        if (c == SC_OP_DELIM) {
-            // Moving on to the next sidechain
-            x++;
-            continue;
-        }
-    }
-
-    return true;
 }
 
 void DumpSCDBCache()
