@@ -142,20 +142,26 @@ struct SidechainDeposit {
     }
 };
 
-// The types of votes a user may set for a WT^
-enum VoteType : unsigned int
-{
-    SCDB_UPVOTE = 0,
-    SCDB_DOWNVOTE = 1,
-    SCDB_ABSTAIN = 2,
-};
+static const char SCDB_UPVOTE = 'u';
+static const char SCDB_DOWNVOTE = 'd';
+static const char SCDB_ABSTAIN = 'a';
 
-// A vote set by the user to specify custom votes for particular WT^(s)
+// A vote set by the user to specify custom votes for particular WT^(s) - Used
+// by the miner to pass minimal data GenerateSCDBUpdateScript()
 struct SidechainCustomVote
 {
-    VoteType vote;
+    char vote; // SCDB_UPVOTE, SCDB_DOWNVOTE or SCDB_ABSTAIN
     uint8_t nSidechain;
     uint256 hashWTPrime;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(vote);
+        READWRITE(nSidechain);
+        READWRITE(hashWTPrime);
+    }
 };
 
 struct SidechainWTPrimeState {
