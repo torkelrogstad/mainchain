@@ -1126,13 +1126,6 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
 
 bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug, const std::map<uint8_t, uint256>& mapNewWTPrime)
 {
-    if (vNewScores.empty()) {
-        if (fDebug)
-            LogPrintf("SCDB %s: Update failed! No new scores at height: %u\n",
-                    __func__,
-                    nHeight);
-        return false;
-    }
     if (vWTPrimeStatus.empty()) {
         if (fDebug)
             LogPrintf("SCDB %s: Update failed: vWTPrimeStatus is empty!\n",
