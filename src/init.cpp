@@ -1655,6 +1655,7 @@ bool AppInitMain()
         // was created by the user and is not in any block
         LoadSidechainProposalCache(); // Sidechain proposals we have created
         LoadSidechainActivationHashCache(); // Sidechain hashes we want to ack
+        LoadCustomVoteCache(); // Custom WT^ votes set by user
     }
 
     // ********************************************************* Step 9: load wallet

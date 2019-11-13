@@ -521,7 +521,11 @@ bool DumpMempool();
 /** Load the mempool from disk. */
 bool LoadMempool();
 
-// TODO replace all of these Drivechain related DAT files with sqlite
+/** Load cache of user set WT^ votes for sidechains */
+bool LoadCustomVoteCache();
+
+/** Dump cache of user set WT^ votes for sidechains */
+void DumpCustomVoteCache();
 
 // TODO Add startup param to enable this, make disabled by default. The other
 // .dat files aren't created unless the user is BMM mining but this cache needs

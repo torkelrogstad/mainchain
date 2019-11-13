@@ -23,12 +23,11 @@ class uint256;
 
 struct Sidechain;
 struct SidechainActivationStatus;
+struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
 struct SidechainProposal;
 struct SidechainWTPrimeState;
-
-enum VoteType : unsigned int;
 
 // TODO custom operator[] or getter functions for private data members which
 // will check the index and throw an error instead of going out of bounds
@@ -52,6 +51,9 @@ public:
 
     /** Add active sidechains to the in-memory cache */
     void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
+
+    /** Add a users custom vote to the in-memory cache */
+    bool CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote);
 
     /** Add SidechainActivationStatus to the in-memory cache */
     void CacheSidechainActivationStatus(const std::vector<SidechainActivationStatus>& vActivationStatusIn);
@@ -83,6 +85,9 @@ public:
 
     /** Return the CTIP (critical transaction index pair) for all sidechains */
     std::map<uint8_t, SidechainCTIP> GetCTIP() const;
+
+    /** Return vector of cached custom sidechain WT^ votes */
+    std::vector<SidechainCustomVote> GetCustomVoteCache() const;
 
     /** Return vector of cached deposits for nSidechain. */
     std::vector<SidechainDeposit> GetDeposits(uint8_t nSidechain) const;
@@ -211,6 +216,10 @@ private:
 
     /** Activation status of proposed sidechains */
     std::vector<SidechainActivationStatus> vActivationStatus;
+
+    /** Cache of votes set by the user. These can be set via GUI on the
+     * sidechain manage page, or command line params / config file */
+    std::vector<SidechainCustomVote> vCustomVoteCache;
 
     /** Cache of deposits for each sidechain. TODO optimize with caching
      * so that we don't have to keep all of these in memory.

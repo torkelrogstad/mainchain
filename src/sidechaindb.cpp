@@ -163,6 +163,40 @@ void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSid
     vDepositCache.resize(vActiveSidechain.size());
 }
 
+bool SidechainDB::CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote)
+{
+    // TODO unit tests
+
+    // For each vote passed in we want to check if it is an update to an
+    // existing vote. If it is, update the old vote. If it is a new vote, add
+    // it to the cache. If the new vote is for a sidechain that already has a
+    // WT^ vote, remove the old vote.
+    for (const SidechainCustomVote& v : vCustomVote) {
+        bool fFound = false;
+        for (size_t i = 0; i < vCustomVoteCache.size(); i++) {
+            if (vCustomVoteCache[i].hashWTPrime == v.hashWTPrime &&
+                    vCustomVoteCache[i].nSidechain == v.nSidechain)
+            {
+                vCustomVoteCache[i].vote = v.vote;
+                fFound = true;
+                break;
+            }
+        }
+        if (!fFound) {
+            // Check if there's already a WT^ vote for this sidechain and remove
+            for (size_t i = 0; i < vCustomVoteCache.size(); i++) {
+                if (vCustomVoteCache[i].nSidechain == v.nSidechain) {
+                    vCustomVoteCache[i] = vCustomVoteCache.back();
+                    vCustomVoteCache.pop_back();
+                    break;
+                }
+            }
+            vCustomVoteCache.push_back(v);
+        }
+    }
+    return true;
+}
+
 void SidechainDB::CacheSidechainActivationStatus(const std::vector<SidechainActivationStatus>& vActivationStatusIn)
 {
     vActivationStatus = vActivationStatusIn;
@@ -265,6 +299,11 @@ bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
 std::map<uint8_t, SidechainCTIP> SidechainDB::GetCTIP() const
 {
     return mapCTIP;
+}
+
+std::vector<SidechainCustomVote> SidechainDB::GetCustomVoteCache() const
+{
+    return vCustomVoteCache;
 }
 
 std::vector<SidechainDeposit> SidechainDB::GetDeposits(uint8_t nSidechain) const

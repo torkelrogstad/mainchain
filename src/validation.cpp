@@ -5348,6 +5348,72 @@ bool DumpMempool(void)
     return true;
 }
 
+bool LoadCustomVoteCache()
+{
+    fs::path path = GetDataDir() / "customvotes.dat";
+    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull()) {
+        return false;
+    }
+
+    std::vector<SidechainCustomVote> vCustomVote;
+    try {
+        int nVersionRequired, nVersionThatWrote;
+        filein >> nVersionRequired;
+        filein >> nVersionThatWrote;
+        if (nVersionRequired > CLIENT_VERSION) {
+            return false;
+        }
+
+        int count = 0;
+        filein >> count;
+        for (int i = 0; i < count; i++) {
+            SidechainCustomVote vote;
+            filein >> vote;
+            vCustomVote.push_back(vote);
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Exception: %s\n", __func__, e.what());
+        return false;
+    }
+
+    // Add to SCDB
+    if (!vCustomVote.empty()) {
+        scdb.CacheCustomVotes(vCustomVote);
+    }
+
+    return true;
+}
+
+void DumpCustomVoteCache()
+{
+    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+
+    int count = vCustomVote.size();
+
+    // Write the votes
+    fs::path path = GetDataDir() / "customvotes.dat";
+    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    if (fileout.IsNull()) {
+        return;
+    }
+
+    try {
+        fileout << 210000; // version required to read: 0.21.00 or later
+        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << count; // Number of deposits in file
+
+        for (const SidechainCustomVote& v : vCustomVote) {
+            fileout << v;
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Exception: %s\n", __func__, e.what());
+        return;
+    }
+}
+
 bool LoadDepositCache()
 {
     fs::path path = GetDataDir() / "deposit.dat";
@@ -5919,6 +5985,7 @@ void DumpSCDBCache()
 
     // Dump SidechainDB, sidechain activation & optional caches
     DumpDepositCache();
+    DumpCustomVoteCache();
     DumpWTPrimeCache();
     DumpSidechainActivationStatusCache();
     DumpActiveSidechainCache();
