@@ -950,6 +950,45 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
     }
 
+    // Scan for updated SCDB MT hash commit
+    std::vector<CScript> vMTHashScript;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+        if (scriptPubKey.IsSCDBHashMerkleRootCommit())
+            vMTHashScript.push_back(scriptPubKey);
+    }
+
+    // Verift that there is only one MT hash commit if any
+    if (vMTHashScript.size() > 1) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
+                __func__,
+                nHeight);
+        }
+        return false;
+    }
+
+    // TODO IsSCDBHashMerkleRootCommit should return the MT hash
+    uint256 hashMerkleRoot;
+    if (vMTHashScript.size()) {
+        // Get MT hash from script
+        const CScript& scriptPubKey = vMTHashScript.front();
+        hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
+    }
+
+
+    // If there's a MT hash commit in this block, it must be different than
+    // the current SCDB hash (WT^ blocks remaining should have at least
+    // be updated if nothing else)
+    if (!hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
+        if (fDebug)
+            LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
+                    __func__,
+                    hashMerkleRoot.ToString(),
+                    nHeight);
+        return false;
+    }
+
     /*
      * Look for data relevant to SCDB in this block's coinbase.
      *
@@ -1085,17 +1124,8 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
     }
 
-    // Scan for updated SCDB MT hash and try to update workscore of WT^(s)
-    std::vector<CScript> vMTHashScript;
-    for (const CTxOut& out : vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-        if (scriptPubKey.IsSCDBHashMerkleRootCommit())
-            vMTHashScript.push_back(scriptPubKey);
-    }
-
-    // Only one MT hash commit is allowed per coinbase
-    if (!fJustCheck && vMTHashScript.size() == 1) {
-        const CScript& scriptPubKey = vMTHashScript.front();
+    // Update SCDB to match new SCDB MT (hashMerkleRoot) from block
+    if (!fJustCheck && !hashMerkleRoot.IsNull()) {
 
         // Check if there are update bytes
         std::vector<CScript> vUpdateBytes;
@@ -1133,22 +1163,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                 LogPrintf("SCDB %s: Parsed update bytes at height: %u\n",
                         __func__,
                         nHeight);
-        }
-
-        // TODO IsSCDBHashMerkleRootCommit should return the MT hash
-        // Get MT hash from script
-        uint256 hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
-
-        // If there's a MT hash commit in this block, it must be different than
-        // the current SCDB hash (WT^ blocks remaining should have at least
-        // be updated if nothing else)
-        if (GetSCDBHash() == hashMerkleRoot) {
-            if (fDebug)
-                LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
-                        __func__,
-                        hashMerkleRoot.ToString(),
-                        nHeight);
-            return false;
         }
 
         bool fUpdated = UpdateSCDBMatchMT(nHeight, hashMerkleRoot, vNewScores, mapNewWTPrime);
