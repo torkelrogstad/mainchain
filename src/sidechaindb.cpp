@@ -1043,8 +1043,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         UpdateActivationStatus(vActivationHash);
 
     // Scan for new WT^(s) and start tracking them
-    // TODO also return false if there is multiple new WT^ for a sidechain
-    // std::vector<uint256> vHashNewWTPrime;
     std::map<uint8_t, uint256> mapNewWTPrime;
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
@@ -1140,6 +1138,19 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         // TODO IsSCDBHashMerkleRootCommit should return the MT hash
         // Get MT hash from script
         uint256 hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
+
+        // If there's a MT hash commit in this block, it must be different than
+        // the current SCDB hash (WT^ blocks remaining should have at least
+        // be updated if nothing else)
+        if (GetSCDBHash() == hashMerkleRoot) {
+            if (fDebug)
+                LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
+                        __func__,
+                        hashMerkleRoot.ToString(),
+                        nHeight);
+            return false;
+        }
+
         bool fUpdated = UpdateSCDBMatchMT(nHeight, hashMerkleRoot, vNewScores, mapNewWTPrime);
         if (!fUpdated) {
             if (fDebug)
@@ -1374,10 +1385,6 @@ bool SidechainDB::UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, 
 {
     // Note: vScores is an optional vector of scores that we have parsed from
     // an update script, the network or otherwise.
-
-    // First see if we are already synchronized
-    if (GetSCDBHash() == hashMerkleRoot)
-        return true;
 
     // Try testing out most likely updates
     std::vector<SidechainWTPrimeState> vUpvote = GetLatestStateWithVote(SCDB_UPVOTE, mapNewWTPrime);
