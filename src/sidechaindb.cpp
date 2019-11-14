@@ -165,7 +165,18 @@ void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSid
 
 bool SidechainDB::CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote)
 {
-    // TODO unit tests
+    // Check for valid vote type and non-null WT^ hash.
+    for (const SidechainCustomVote& v : vCustomVote) {
+        // Check WT^ hash is not null
+        if (v.hashWTPrime.IsNull())
+            return false;
+        // Check that vote type is valid
+        if (v.vote != SCDB_UPVOTE && v.vote != SCDB_DOWNVOTE
+                && v.vote != SCDB_ABSTAIN)
+        {
+            return false;
+        }
+    }
 
     // For each vote passed in we want to check if it is an update to an
     // existing vote. If it is, update the old vote. If it is a new vote, add
@@ -194,6 +205,16 @@ bool SidechainDB::CacheCustomVotes(const std::vector<SidechainCustomVote>& vCust
             vCustomVoteCache.push_back(v);
         }
     }
+    // TODO right now this is accepting votes for any sidechain, whether active
+    // or not. The function also accepts votes for WT^(s) that do not exist yet
+    // or maybe never will. I'm not sure yet whether that behavior is the best.
+    // Some miner may wish to set votes for a WT^ they create on a sidechain
+    // before it's even added to the SCDB, but it also might be good to give
+    // an error if they do in case it was an accident?
+    //
+    // We can update this function so that it returns false if some or all
+    // votes were not cached, and also return an error string explaining why,
+    // possibly along with a list of the vote(s) that weren't cached.
     return true;
 }
 
@@ -691,6 +712,9 @@ void SidechainDB::Reset()
 
     // Clear out WT^ state
     ResetWTPrimeState();
+
+    // Clear out custom vote cache
+    vCustomVoteCache.clear();
 }
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)

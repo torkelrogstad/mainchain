@@ -154,6 +154,12 @@ struct SidechainCustomVote
     uint8_t nSidechain;
     uint256 hashWTPrime;
 
+    bool operator==(const SidechainCustomVote& v) const
+    {
+        return (vote == v.vote && nSidechain == v.nSidechain
+                && hashWTPrime == v.hashWTPrime);
+    }
+
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
