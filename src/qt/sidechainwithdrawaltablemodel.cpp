@@ -138,7 +138,7 @@ void SidechainWithdrawalTableModel::updateModel()
     std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
 
     int nSidechains = vSidechain.size();
-    beginInsertColumns(QModelIndex(), model.size(), model.size() + nSidechains);
+    beginInsertRows(QModelIndex(), model.size(), model.size() + nSidechains);
     for (const Sidechain& s : vSidechain) {
         std::vector<SidechainWTPrimeState> vState = scdb.GetState(s.nSidechain);
         for (const SidechainWTPrimeState& wt : vState) {
@@ -153,7 +153,7 @@ void SidechainWithdrawalTableModel::updateModel()
             model.append(QVariant::fromValue(object));
         }
     }
-    endInsertColumns();
+    endInsertRows();
 }
 
 void SidechainWithdrawalTableModel::AddDemoData()
