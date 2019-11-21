@@ -171,6 +171,9 @@ public:
     /** Reset SCDB and clear out all data tracked by SidechainDB */
     void ResetWTPrimeState();
 
+    /** Clear out the WT^ custom vote cache */
+    void ResetWTPrimeVotes();
+
     /** Reset everything */
     void Reset();
 

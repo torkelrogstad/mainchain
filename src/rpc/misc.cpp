@@ -1322,6 +1322,23 @@ UniValue setwtprimevote(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+UniValue clearwtprimevotes(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "clearwtprimevotes\n"
+            "Delete all custom WT^ vote(s).\n"
+            "\nExamples:\n"
+            + HelpExampleCli("clearwtprimevotes", "")
+            + HelpExampleRpc("clearwtprimevotes", "")
+            );
+
+    scdb.ResetWTPrimeVotes();
+
+    return NullUniValue;
+}
+
+
 UniValue listwtprimevotes(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 0)
@@ -1642,6 +1659,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listsidechainproposals",        &listsidechainproposals,       {}},
     { "DriveChain",  "getsidechainactivationstatus",  &getsidechainactivationstatus, {}},
     { "DriveChain",  "createsidechainproposal",       &createsidechainproposal,      {"title", "description", "keyhash", "nversion", "hashid1", "hashid2"}},
+    { "DriveChain",  "clearwtprimevotes",             &clearwtprimevotes,            {}},
     { "DriveChain",  "setwtprimevote",                &setwtprimevote,               {"vote", "nsidechain", "hashwtprime"}},
     { "DriveChain",  "listwtprimevotes",              &listwtprimevotes,             {}},
     { "DriveChain",  "getaveragefee",                 &getaveragefee,                {"numblocks", "startheight"}},

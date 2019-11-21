@@ -684,6 +684,11 @@ void SidechainDB::ResetWTPrimeState()
     vWTPrimeStatus.resize(vActiveSidechain.size());
 }
 
+void SidechainDB::ResetWTPrimeVotes()
+{
+    vCustomVoteCache.clear();
+}
+
 void SidechainDB::Reset()
 {
     // Clear out CTIP data
