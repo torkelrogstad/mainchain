@@ -84,6 +84,10 @@ drivenet-qt
 DriveNet-Qt.app
 background.tiff*
 
+DriveNet.pro.user
+mainchain.pro
+mainchain.pro.user
+
 # Unit-tests
 Makefile.test
 drivenet-qt_test
