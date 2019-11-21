@@ -195,7 +195,7 @@ void SidechainActivationTableModel::updateModel()
         }
     }
 
-    // Check if any new sidechains have been adding to the pending list,
+    // Check if any new sidechains have been added to the pending list,
     // collect them into a vector.
     std::vector<SidechainActivationStatus> vNew;
     for (const SidechainActivationStatus& s : vActivationStatus) {
