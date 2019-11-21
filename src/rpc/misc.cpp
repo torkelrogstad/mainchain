@@ -1338,7 +1338,6 @@ UniValue clearwtprimevotes(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
-
 UniValue listwtprimevotes(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 0)
