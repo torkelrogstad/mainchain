@@ -1575,6 +1575,41 @@ UniValue listcachedwtprimetransactions(const JSONRPCRequest& request)
     return ret;
 }
 
+UniValue listspentwtprimes(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listspentwtprimes\n"
+            "List WT^(s) which have been approved by workscore and spent\n"
+            "\nResult: (array)\n"
+            "{\n"
+            "  \"nsidechain\" : (numeric) Sidechain number of WT^\n"
+            "  \"hashwtprime\" : (string) hash of WT^\n"
+            "  \"hashblock\"   : (string) hash of block WT^ was spent in\n"
+            "}\n"
+            "\n"
+            "\nExample:\n"
+            + HelpExampleCli("listspentwtprimes", "")
+            );
+
+    std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
+    if (vSpent.empty())
+        throw JSONRPCError(RPC_TYPE_ERROR, "No spent WT^(s) in cache!");
+
+    UniValue ret(UniValue::VARR);
+    for (const SidechainSpentWTPrime& s : vSpent) {
+        UniValue obj(UniValue::VOBJ);
+
+        obj.push_back(Pair("nsidechain", s.nSidechain));
+        obj.push_back(Pair("hashwtprime", s.hashWTPrime.ToString()));
+        obj.push_back(Pair("hashblock", s.hashBlock.ToString()));
+
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
+
 UniValue getscdbhash(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
@@ -1665,6 +1700,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "getworkscore",                  &getworkscore,                 {"nsidechain", "hashwtprime"}},
     { "DriveChain",  "listcachedwtprimetransactions", &listcachedwtprimetransactions,{"nsidechain"}},
     { "DriveChain",  "listwtprimestatus",             &listwtprimestatus,            {"nsidechain"}},
+    { "DriveChain",  "listspentwtprimes",             &listspentwtprimes,            {}},
     { "DriveChain",  "getscdbhash",                   &getscdbhash,                  {}},
     { "DriveChain",  "gettotalscdbhash",              &gettotalscdbhash,             {}},
 };
