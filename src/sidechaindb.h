@@ -28,6 +28,7 @@ struct SidechainCTIP;
 struct SidechainDeposit;
 struct SidechainProposal;
 struct SidechainWTPrimeState;
+struct SidechainSpentWTPrime;
 
 // TODO custom operator[] or getter functions for private data members which
 // will check the index and throw an error instead of going out of bounds
@@ -48,6 +49,9 @@ public:
 
     /** Add a new WT^ to SCDB */
     bool AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int nHeight, bool fDebug = false);
+
+    /** Add spent WT^(s) to SCDB */
+    void AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSpent);
 
     /** Add active sidechains to the in-memory cache */
     void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
@@ -129,6 +133,9 @@ public:
     /** Get list of sidechains that we have set to ACK */
     std::vector<uint256> GetSidechainsToActivate() const;
 
+    /** Get a list of WT^(s) spent in a given block */
+    std::vector<SidechainSpentWTPrime> GetSpentWTPrimesForBlock(const uint256& hashBlock) const;
+
     /** Get status of nSidechain's WT^(s) (public for unit tests) */
     std::vector<SidechainWTPrimeState> GetState(uint8_t nSidechain) const;
 
@@ -144,6 +151,9 @@ public:
 
     /** Return cached WT^ transaction(s) */
     std::vector<CMutableTransaction> GetWTPrimeCache() const;
+
+    /** Return cached spent WT^(s) as a vector for dumping to disk */
+    std::vector<SidechainSpentWTPrime> GetSpentWTPrimeCache() const;
 
     /** Is there anything being tracked by the SCDB? */
     bool HasState() const;
@@ -249,6 +259,9 @@ private:
      * x = nSidechain
      * y = state of WT^(s) for nSidechain */
     std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
+
+    /** Map of spent WT^(s) key: block hash value: State of WT^(s) when spent */
+    std::map<uint256, std::vector<SidechainSpentWTPrime>> mapSpentWTPrime;
 
     /** Calls SortDeposits for all of SCDB's deposit cache */
     bool SortSCDBDeposits();

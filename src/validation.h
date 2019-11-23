@@ -537,7 +537,7 @@ bool LoadDepositCache();
 void DumpDepositCache();
 
 /** Load the optional WT^ transaction cache from disk. */
-bool LoadWTPrimeCache();
+bool LoadWTPrimeCache(bool fReindex = false);
 
 /** Dump the WT^ cache to disk. */
 void DumpWTPrimeCache();

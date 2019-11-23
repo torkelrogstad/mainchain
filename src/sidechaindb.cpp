@@ -152,6 +152,20 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int
     return fUpdated;
 }
 
+void SidechainDB::AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSpent)
+{
+    std::map<uint256, std::vector<SidechainSpentWTPrime>>::iterator it;
+
+    for (const SidechainSpentWTPrime& spent : vSpent) {
+        it = mapSpentWTPrime.find(spent.hashBlock);
+        if (it != mapSpentWTPrime.end()) {
+            it->second.push_back(spent);
+        } else {
+            mapSpentWTPrime[spent.hashBlock] = std::vector<SidechainSpentWTPrime>{ spent };
+        }
+    }
+}
+
 void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSidechainIn)
 {
     vActiveSidechain = vActiveSidechainIn;
@@ -524,6 +538,17 @@ std::vector<uint256> SidechainDB::GetSidechainsToActivate() const
     return vSidechainHashActivate;
 }
 
+std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimesForBlock(const uint256& hashBlock) const
+{
+    std::map<uint256, std::vector<SidechainSpentWTPrime>>::const_iterator it;
+    it = mapSpentWTPrime.find(hashBlock);
+
+    if (it != mapSpentWTPrime.end())
+        return it->second;
+
+    return std::vector<SidechainSpentWTPrime>{};
+}
+
 std::vector<SidechainWTPrimeState> SidechainDB::GetState(uint8_t nSidechain) const
 {
     if (!HasState() || !IsSidechainNumberValid(nSidechain))
@@ -579,6 +604,16 @@ std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(const cha
 std::vector<CMutableTransaction> SidechainDB::GetWTPrimeCache() const
 {
     return vWTPrimeCache;
+}
+
+std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimeCache() const
+{
+    std::vector<SidechainSpentWTPrime> vSpent;
+    for (auto const& it : mapSpentWTPrime) {
+        for (const SidechainSpentWTPrime& s : it.second)
+            vSpent.push_back(s);
+    }
+    return vSpent;
 }
 
 bool SidechainDB::HasState() const
@@ -720,6 +755,9 @@ void SidechainDB::Reset()
 
     // Clear out custom vote cache
     vCustomVoteCache.clear();
+
+    // Clear out spent WT^ cache
+    mapSpentWTPrime.clear();
 }
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)
@@ -838,6 +876,14 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
             vWTPrimeCache.pop_back();
         }
     }
+
+    SidechainSpentWTPrime spent;
+    spent.nSidechain = nSidechain;
+    spent.hashWTPrime = hashBlind;
+    spent.hashBlock = hashBlock;
+
+    // Track the spent WT^
+    AddSpentWTPrimes(std::vector<SidechainSpentWTPrime>{ spent });
 
     LogPrintf("%s WT^ spent: %s for sidechain number: %u.\n", __func__, hashBlind.ToString(), nSidechain);
 

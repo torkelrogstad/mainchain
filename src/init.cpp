@@ -1611,7 +1611,7 @@ bool AppInitMain()
         // Note that LoadActiveSidechainCache will resize deposit and WT^ cache
         // vectors of SCDB so it must be done before loading deposits or WT^(s)
         LoadActiveSidechainCache();
-        LoadWTPrimeCache();
+        LoadWTPrimeCache(fReindex);
     }
 
     // Synchronize SCDB

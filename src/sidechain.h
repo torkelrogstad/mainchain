@@ -193,6 +193,21 @@ struct SidechainWTPrimeState {
     }
 };
 
+struct SidechainSpentWTPrime {
+    uint8_t nSidechain;
+    uint256 hashWTPrime;
+    uint256 hashBlock;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(nSidechain);
+        READWRITE(hashWTPrime);
+        READWRITE(hashBlock);
+    }
+};
+
 struct SidechainCTIP {
     COutPoint out;
     CAmount amount;
