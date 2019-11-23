@@ -727,9 +727,9 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     if (!IsSidechainNumberValid(nSidechain)) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^ (txid): %s for sidechain number: %u.\n Invalid sidechain number.\n",
-                    __func__,
-                    tx.GetHash().ToString(),
-                    nSidechain);
+                __func__,
+                tx.GetHash().ToString(),
+                nSidechain);
         }
         return false;
     }
@@ -756,13 +756,13 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     }
 
     // Find the required single output returning to the sidechain script
-    bool fBurnFound = false;
+    bool fReturnFound = false;
     uint32_t n = 0;
     uint8_t nSidechainScript;
     for (size_t i = 0; i < tx.vout.size(); i++) {
         const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
         if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechainScript)) {
-            if (fBurnFound) {
+            if (fReturnFound) {
                 // We already found a sidechain script output. This second
                 // sidechain output makes the WT^ invalid.
                 if (fDebug) {
@@ -776,13 +776,13 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
 
             // Copy output index of deposit burn and move on
             n = i;
-            fBurnFound = true;
+            fReturnFound = true;
             continue;
         }
     }
 
     // Make sure that the sidechain output was found
-    if (!fBurnFound) {
+    if (!fReturnFound) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. No sidechain return output in WT^.\n",
                 __func__,
