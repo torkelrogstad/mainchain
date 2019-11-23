@@ -632,6 +632,8 @@ const fs::path &GetDataDir(bool fNetSpecific)
     if (fs::create_directories(path)) {
         // This is the first run, create wallets subdirectory too
         fs::create_directories(path / "wallets");
+        // Also create drivechain subdirectory
+        fs::create_directories(path / "drivechain");
     }
 
     return path;

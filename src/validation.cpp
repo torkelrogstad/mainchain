@@ -5353,7 +5353,7 @@ bool DumpMempool(void)
 
 bool LoadCustomVoteCache()
 {
-    fs::path path = GetDataDir() / "customvotes.dat";
+    fs::path path = GetDataDir() / "drivechain" / "customvotes.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5396,7 +5396,7 @@ void DumpCustomVoteCache()
     int count = vCustomVote.size();
 
     // Write the votes
-    fs::path path = GetDataDir() / "customvotes.dat";
+    fs::path path = GetDataDir() / "drivechain" / "customvotes.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5419,7 +5419,7 @@ void DumpCustomVoteCache()
 
 bool LoadDepositCache()
 {
-    fs::path path = GetDataDir() / "deposit.dat";
+    fs::path path = GetDataDir() / "drivechain" / "deposit.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5468,7 +5468,7 @@ void DumpDepositCache()
     int count = vDeposit.size();
 
     // Write the deposits
-    fs::path path = GetDataDir() / "deposit.dat";
+    fs::path path = GetDataDir() / "drivechain" / "deposit.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5491,7 +5491,7 @@ void DumpDepositCache()
 
 bool LoadWTPrimeCache(bool fReindex)
 {
-    fs::path path = GetDataDir() / "wtprime.dat";
+    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5552,7 +5552,7 @@ void DumpWTPrimeCache()
     int nSpent = vSpent.size();
 
     // Write the WT^ raw tx cache & spent WT^ cache
-    fs::path path = GetDataDir() / "wtprime.dat";
+    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5581,7 +5581,7 @@ void DumpWTPrimeCache()
 
 bool LoadSidechainActivationStatusCache()
 {
-    fs::path path = GetDataDir() / "sidechainactivation.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5623,7 +5623,7 @@ void DumpSidechainActivationStatusCache()
     int count = vActivationStatus.size();
 
     // Write the sidechain activation status cache
-    fs::path path = GetDataDir() / "sidechainactivation.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5646,7 +5646,7 @@ void DumpSidechainActivationStatusCache()
 
 bool LoadActiveSidechainCache()
 {
-    fs::path path = GetDataDir() / "activesidechains.dat";
+    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5687,7 +5687,7 @@ void DumpActiveSidechainCache()
     int count = vSidechain.size();
 
     // Write the active sidechain cache
-    fs::path path = GetDataDir() / "activesidechains.dat";
+    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5710,7 +5710,7 @@ void DumpActiveSidechainCache()
 
 bool LoadSidechainProposalCache()
 {
-    fs::path path = GetDataDir() / "sidechainproposals.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainproposals.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5751,7 +5751,7 @@ void DumpSidechainProposalCache()
     int count = vProposal.size();
 
     // Write the sidechain proposal cache
-    fs::path path = GetDataDir() / "sidechainproposals.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainproposals.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5774,7 +5774,7 @@ void DumpSidechainProposalCache()
 
 bool LoadSidechainActivationHashCache()
 {
-    fs::path path = GetDataDir() / "sidechainhashactivate.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainhashactivate.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5816,7 +5816,7 @@ void DumpSidechainActivationHashCache()
     int count = vHash.size();
 
     // Write the sidechain activation hash cache
-    fs::path path = GetDataDir() / "sidechainhashactivate.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainhashactivate.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
