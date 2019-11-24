@@ -2282,15 +2282,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
-
-    if (drivechainsEnabled) {
-        // Update / synchronize SCDB
-        if (!scdb.Update(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx[0]->vout, fJustCheck, true /* fDebug */)) {
-            LogPrintf("%s: SCDB failed to update with block: %s\n", __func__, block.GetHash().ToString());
-            return error("%s: SCDB update failed for block: %s", __func__, block.GetHash().ToString());
-        }
-    }
-
     if (drivechainsEnabled && vDepositTx.size())
         scdb.AddDeposits(vDepositTx, block.GetHash(), fJustCheck);
 
@@ -2306,6 +2297,14 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             if (!scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, fJustCheck, true /* fDebug */)) {
                 return error("ConnectBlock(): Final spend WT^ failed (blind WT^ hash : txid): %s : %s.\n nSidechain: %u\n", hashBWT.ToString(), tx.GetHash().ToString(), nSidechain);
             }
+        }
+    }
+
+    if (drivechainsEnabled) {
+        // Update / synchronize SCDB
+        if (!scdb.Update(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx[0]->vout, fJustCheck, true /* fDebug */)) {
+            LogPrintf("%s: SCDB failed to update with block: %s\n", __func__, block.GetHash().ToString());
+            return error("%s: SCDB update failed for block: %s", __func__, block.GetHash().ToString());
         }
     }
 

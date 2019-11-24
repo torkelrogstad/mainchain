@@ -866,9 +866,6 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     // This will also update the SCDB CTIP
     AddDeposits(std::vector<SidechainDeposit>{deposit}, hashBlock);
 
-    // Remove WT^ work score now that is has been paid out
-    vWTPrimeStatus[nSidechain].clear();
-
     // Find the cached transaction for the WT^ we spent and remove it
     for (size_t i = 0; i < vWTPrimeCache.size(); i++) {
         if (vWTPrimeCache[i].GetHash() == hashBlind) {
@@ -884,6 +881,9 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
 
     // Track the spent WT^
     AddSpentWTPrimes(std::vector<SidechainSpentWTPrime>{ spent });
+
+    // The WT^ will be removed from SCDB when SCDB::Update() is called now that
+    // it has been marked as spent.
 
     LogPrintf("%s WT^ spent: %s for sidechain number: %u.\n", __func__, hashBlind.ToString(), nSidechain);
 
@@ -1026,7 +1026,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         const CScript& scriptPubKey = vMTHashScript.front();
         hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
     }
-
 
     // If there's a MT hash commit in this block, it must be different than
     // the current SCDB hash (WT^ blocks remaining should have at least
@@ -1227,22 +1226,88 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
     }
 
+    // Remove any WT^(s) that were spent in this block. This can happen when a
+    // new block is connected, re-connected, or during SCDB resync.
+    std::vector<SidechainSpentWTPrime> vSpent;
+    vSpent = GetSpentWTPrimesForBlock(hashBlock);
+    for (const SidechainSpentWTPrime& s : vSpent) {
+        if (!IsSidechainNumberValid(s.nSidechain)) {
+            if (fDebug) {
+                LogPrintf("SCDB %s: Spent WT^ has invalid sidechain number: %u at height: %u\n",
+                        __func__,
+                        s.nSidechain,
+                        nHeight);
+            }
+            return false;
+        }
+        bool fRemoved = false;
+        for (size_t i = 0; i < vWTPrimeStatus[s.nSidechain].size(); i++) {
+            const SidechainWTPrimeState wt = vWTPrimeStatus[s.nSidechain][i];
+            if (wt.nSidechain == s.nSidechain &&
+                    wt.hashWTPrime == s.hashWTPrime) {
+
+                if (fDebug && !fJustCheck) {
+                    LogPrintf("SCDB %s: Removing spent WT^: %s for nSidechain: %u in block %s.\n",
+                            __func__,
+                            wt.hashWTPrime.ToString(),
+                            wt.nSidechain,
+                            hashBlock.ToString());
+                }
+
+                fRemoved = true;
+                if (fJustCheck)
+                    break;
+
+                // Remove the spent WT^
+                vWTPrimeStatus[s.nSidechain][i] = vWTPrimeStatus[s.nSidechain].back();
+                vWTPrimeStatus[s.nSidechain].pop_back();
+
+                break;
+            }
+        }
+        if (!fRemoved) {
+            if (fDebug) {
+                LogPrintf("SCDB %s: Failed to remove spent WT^: %s for sidechain: %u at height: %u\n",
+                        __func__,
+                        s.hashWTPrime.ToString(),
+                        s.nSidechain,
+                        nHeight);
+            }
+            return false;
+        }
+    }
+
+
+    if (fDebug && !fJustCheck) {
+        LogPrintf("SCDB: %s: Updated from block %s to block %s.\n",
+                __func__,
+                hashBlockLastSeen.ToString(),
+                hashBlock.ToString());
+    }
+
     // Update hashBLockLastSeen
     if (!fJustCheck)
         hashBlockLastSeen = hashBlock;
+
 
     return true;
 }
 
 bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug)
 {
-    // Note that WT^ and WT^ workscore are handled by ResyncSCDB in validation
-    // and not here
+    // WT^ workscore is recalculated by ResyncSCDB in validation - not here
 
     if (!vtx.size()) {
         LogPrintf("%s: SCDB undo failed for block: %s - vtx is empty!\n", __func__, hashBlock.ToString());
         return false;
     }
+
+    // Remove cached WT^ spends from the block that was disconnected
+    std::map<uint256, std::vector<SidechainSpentWTPrime>>::const_iterator it;
+    it = mapSpentWTPrime.find(hashBlock);
+
+    if (it != mapSpentWTPrime.end())
+        mapSpentWTPrime.erase(it);
 
     // Undo deposits
     // Loop through the transactions in the block being disconnected, and if
