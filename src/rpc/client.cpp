@@ -148,6 +148,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "getaveragefee", 0, "blockcount" },
     { "getaveragefee", 1, "startheight" },
     { "getworkscore", 0, "nsidechain" },
+    { "setwtprimevote", 1, "nsidechain" },
     { "listwtprimestatus", 0, "nsidechain" },
     { "listcachedwtprimetransactions", 0, "nsidechain" },
     // Echo with conversion (For testing only)

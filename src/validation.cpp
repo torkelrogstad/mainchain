@@ -2282,15 +2282,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
-
-    if (drivechainsEnabled) {
-        // Update / synchronize SCDB
-        if (!scdb.Update(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx[0]->vout, fJustCheck, true /* fDebug */)) {
-            LogPrintf("%s: SCDB failed to update with block: %s\n", __func__, block.GetHash().ToString());
-            return error("%s: SCDB update failed for block: %s", __func__, block.GetHash().ToString());
-        }
-    }
-
     if (drivechainsEnabled && vDepositTx.size())
         scdb.AddDeposits(vDepositTx, block.GetHash(), fJustCheck);
 
@@ -2306,6 +2297,14 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             if (!scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, fJustCheck, true /* fDebug */)) {
                 return error("ConnectBlock(): Final spend WT^ failed (blind WT^ hash : txid): %s : %s.\n nSidechain: %u\n", hashBWT.ToString(), tx.GetHash().ToString(), nSidechain);
             }
+        }
+    }
+
+    if (drivechainsEnabled) {
+        // Update / synchronize SCDB
+        if (!scdb.Update(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx[0]->vout, fJustCheck, true /* fDebug */)) {
+            LogPrintf("%s: SCDB failed to update with block: %s\n", __func__, block.GetHash().ToString());
+            return error("%s: SCDB update failed for block: %s", __func__, block.GetHash().ToString());
         }
     }
 
@@ -3649,7 +3648,7 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, c
 }
 
 
-void GenerateSCDBUpdateScript(CBlock& block, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
+void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
 {
     // Check for activation of Drivechains
     if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
@@ -3696,6 +3695,9 @@ void GenerateSCDBUpdateScript(CBlock& block, const std::vector<std::vector<Sidec
         // Add deliminator to script, we're moving on to the next sidechain
         out.scriptPubKey << SC_OP_DELIM;
     }
+
+    // Return the script by reference
+    script = out.scriptPubKey;
 
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);
@@ -5348,9 +5350,75 @@ bool DumpMempool(void)
     return true;
 }
 
+bool LoadCustomVoteCache()
+{
+    fs::path path = GetDataDir() / "drivechain" / "customvotes.dat";
+    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull()) {
+        return false;
+    }
+
+    std::vector<SidechainCustomVote> vCustomVote;
+    try {
+        int nVersionRequired, nVersionThatWrote;
+        filein >> nVersionRequired;
+        filein >> nVersionThatWrote;
+        if (nVersionRequired > CLIENT_VERSION) {
+            return false;
+        }
+
+        int count = 0;
+        filein >> count;
+        for (int i = 0; i < count; i++) {
+            SidechainCustomVote vote;
+            filein >> vote;
+            vCustomVote.push_back(vote);
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Exception: %s\n", __func__, e.what());
+        return false;
+    }
+
+    // Add to SCDB
+    if (!vCustomVote.empty()) {
+        scdb.CacheCustomVotes(vCustomVote);
+    }
+
+    return true;
+}
+
+void DumpCustomVoteCache()
+{
+    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+
+    int count = vCustomVote.size();
+
+    // Write the votes
+    fs::path path = GetDataDir() / "drivechain" / "customvotes.dat";
+    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    if (fileout.IsNull()) {
+        return;
+    }
+
+    try {
+        fileout << 210000; // version required to read: 0.21.00 or later
+        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << count; // Number of deposits in file
+
+        for (const SidechainCustomVote& v : vCustomVote) {
+            fileout << v;
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Exception: %s\n", __func__, e.what());
+        return;
+    }
+}
+
 bool LoadDepositCache()
 {
-    fs::path path = GetDataDir() / "deposit.dat";
+    fs::path path = GetDataDir() / "drivechain" / "deposit.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5399,7 +5467,7 @@ void DumpDepositCache()
     int count = vDeposit.size();
 
     // Write the deposits
-    fs::path path = GetDataDir() / "deposit.dat";
+    fs::path path = GetDataDir() / "drivechain" / "deposit.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5420,15 +5488,16 @@ void DumpDepositCache()
     }
 }
 
-bool LoadWTPrimeCache()
+bool LoadWTPrimeCache(bool fReindex)
 {
-    fs::path path = GetDataDir() / "wtprime.dat";
+    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
     }
 
     std::vector<CTransactionRef> vWTPrime;
+    std::vector<SidechainSpentWTPrime> vSpent;
     try {
         int nVersionRequired, nVersionThatWrote;
         filein >> nVersionRequired;
@@ -5437,12 +5506,22 @@ bool LoadWTPrimeCache()
             return false;
         }
 
-        int count = 0;
-        filein >> count;
-        for (int i = 0; i < count; i++) {
+        int nWT = 0;
+        filein >> nWT;
+        for (int i = 0; i < nWT; i++) {
             CTransactionRef tx;
             filein >> tx;
             vWTPrime.push_back(tx);
+        }
+
+        if (!fReindex) {
+            int nSpent = 0;
+            filein >> nSpent;
+            for (int i = 0; i < nSpent; i++) {
+                SidechainSpentWTPrime spent;
+                filein >> spent;
+                vSpent.push_back(spent);
+            }
         }
     }
     catch (const std::exception& e) {
@@ -5457,29 +5536,40 @@ bool LoadWTPrimeCache()
             return false;
     }
 
+    if (!fReindex)
+        scdb.AddSpentWTPrimes(vSpent);
+
     return true;
 }
 
 void DumpWTPrimeCache()
 {
     std::vector<CMutableTransaction> vWTPrime = scdb.GetWTPrimeCache();
+    std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
 
-    int count = vWTPrime.size();
+    int nWTPrime = vWTPrime.size();
+    int nSpent = vSpent.size();
 
-    // Write the WT^ cache
-    fs::path path = GetDataDir() / "wtprime.dat";
+    // Write the WT^ raw tx cache & spent WT^ cache
+    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
 
     try {
-        fileout << 210000; // version required to read: 0.21.00 or later
+        fileout << 290000; // version required to read: 0.29.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
-        fileout << count; // Number of WT^(s) in file
+        fileout << nWTPrime; // Number of WT^(s) in file
 
         for (const CMutableTransaction& tx : vWTPrime) {
             fileout << MakeTransactionRef(tx);
+        }
+
+        fileout << nSpent; // Number of spent WT^(s) in file
+
+        for (const SidechainSpentWTPrime& s : vSpent) {
+            fileout << s;
         }
     }
     catch (const std::exception& e) {
@@ -5490,7 +5580,7 @@ void DumpWTPrimeCache()
 
 bool LoadSidechainActivationStatusCache()
 {
-    fs::path path = GetDataDir() / "sidechainactivation.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5532,7 +5622,7 @@ void DumpSidechainActivationStatusCache()
     int count = vActivationStatus.size();
 
     // Write the sidechain activation status cache
-    fs::path path = GetDataDir() / "sidechainactivation.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5555,7 +5645,7 @@ void DumpSidechainActivationStatusCache()
 
 bool LoadActiveSidechainCache()
 {
-    fs::path path = GetDataDir() / "activesidechains.dat";
+    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5596,7 +5686,7 @@ void DumpActiveSidechainCache()
     int count = vSidechain.size();
 
     // Write the active sidechain cache
-    fs::path path = GetDataDir() / "activesidechains.dat";
+    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5619,7 +5709,7 @@ void DumpActiveSidechainCache()
 
 bool LoadSidechainProposalCache()
 {
-    fs::path path = GetDataDir() / "sidechainproposals.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainproposals.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5660,7 +5750,7 @@ void DumpSidechainProposalCache()
     int count = vProposal.size();
 
     // Write the sidechain proposal cache
-    fs::path path = GetDataDir() / "sidechainproposals.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainproposals.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5683,7 +5773,7 @@ void DumpSidechainProposalCache()
 
 bool LoadSidechainActivationHashCache()
 {
-    fs::path path = GetDataDir() / "sidechainhashactivate.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainhashactivate.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return false;
@@ -5725,7 +5815,7 @@ void DumpSidechainActivationHashCache()
     int count = vHash.size();
 
     // Write the sidechain activation hash cache
-    fs::path path = GetDataDir() / "sidechainhashactivate.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainhashactivate.dat";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5842,83 +5932,13 @@ bool IsSidechainNumberValid(uint8_t nSidechain)
     return scdb.IsSidechainNumberValid(nSidechain);
 }
 
-bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores)
-{
-    if (!script.IsSCDBUpdate())
-        return false;
-
-    if (vOldScores.empty())
-        return false;
-
-    CScript byteSection = CScript(script.begin() + 5, script.end());
-
-    size_t x = 0; // vOldScores outer vector (sidechains)
-    for (CScript::const_iterator it = script.begin(); it < script.end(); it++) {
-        const unsigned char c = *it;
-        if (c == SC_OP_UPVOTE || c == SC_OP_DOWNVOTE) {
-            // Figure out which WT^ is being upvoted
-            if (vOldScores.size() <= x)
-                return false;
-
-            // Read which WT^ we are voting on from the script and set
-            size_t y = 0; // vOldScores inner vector (WT^(s) per sidechain)
-            if (script.end() - it > 2) {
-                CScript::const_iterator itWT = it + 1;
-                const unsigned char cNext = *itWT;
-                if (cNext != SC_OP_DELIM) {
-                    if ((*itWT) == 0x01)
-                    {
-                        if (!(script.end() - itWT >= 1))
-                            return false;
-
-                        const CScript::const_iterator it1 = itWT + 1;
-                        y = CScriptNum(std::vector<unsigned char>{*it1}, false).getint();
-                    }
-                    else
-                    if ((*itWT) == 0x02)
-                    {
-                        if (!(script.end() - itWT >= 2))
-                            return false;
-
-                        const CScript::const_iterator it1 = itWT + 1;
-                        const CScript::const_iterator it2 = itWT + 2;
-                        y = CScriptNum(std::vector<unsigned char>{*it1, *it2}, false).getint();
-                    }
-                    else
-                    {
-                        // TODO support WT^ indexes requiring more than 2 bytes?
-                        return false;
-                    }
-                }
-            }
-
-            if (vOldScores[x].size() <= y)
-                return false;
-
-            SidechainWTPrimeState newScore = vOldScores[x][y];
-            newScore.nBlocksLeft--;
-
-            c == SC_OP_UPVOTE ? newScore.nWorkScore++ : newScore.nWorkScore--;
-
-            vNewScores.push_back(newScore);
-        }
-        else
-        if (c == SC_OP_DELIM) {
-            // Moving on to the next sidechain
-            x++;
-            continue;
-        }
-    }
-
-    return true;
-}
-
 void DumpSCDBCache()
 {
     // TODO make configurable
 
     // Dump SidechainDB, sidechain activation & optional caches
     DumpDepositCache();
+    DumpCustomVoteCache();
     DumpWTPrimeCache();
     DumpSidechainActivationStatusCache();
     DumpActiveSidechainCache();

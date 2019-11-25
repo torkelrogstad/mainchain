@@ -1266,19 +1266,115 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     return obj;
 }
 
-UniValue vote(const JSONRPCRequest& request)
+UniValue setwtprimevote(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 3)
+        throw std::runtime_error(
+            "setwtprimevote\n"
+            "Set custom vote for sidechain WT^.\n"
+            "\nArguments:\n"
+            "1. vote (\"upvote\"/\"downvote\"/\"abstain\")  (string, required) vote\n"
+            "2. nsidechain                            (numeric, required) Sidechain number of WT^\n"
+            "3. hashwtprime                           (string, required) Hash of the WT^\n"
+            "\nExamples:\n"
+            + HelpExampleCli("setwtprimevote", "")
+            + HelpExampleRpc("setwtprimevote", "")
+            );
+
+    std::string strVote = request.params[0].get_str();
+    if (strVote != "upvote" && strVote != "downvote" && strVote != "abstain")
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid vote (must be \"upvote\", \"downvote\" or \"abstain\")");
+
+    // nSidechain
+    int nSidechain = request.params[1].get_int();
+
+    if (!IsSidechainNumberValid(nSidechain))
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
+
+    std::string strHash = request.params[2].get_str();
+    if (strHash.size() != 64)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash length");
+
+    uint256 hashWTPrime = uint256S(strHash);
+    if (hashWTPrime.IsNull())
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash");
+
+    SidechainCustomVote vote;
+    vote.nSidechain = nSidechain;
+    vote.hashWTPrime = hashWTPrime;
+
+    if (strVote == "upvote") {
+        vote.vote = SCDB_UPVOTE;
+    }
+    else
+    if (strVote == "downvote") {
+        vote.vote = SCDB_DOWNVOTE;
+    }
+    else
+    if (strVote == "abstain") {
+        vote.vote = SCDB_ABSTAIN;
+    }
+
+    // TODO improve error message
+    if (!scdb.CacheCustomVotes(std::vector<SidechainCustomVote> {vote}))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to cache WT^ vote!");
+
+    return NullUniValue;
+}
+
+UniValue clearwtprimevotes(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "clearwtprimevotes\n"
+            "Delete all custom WT^ vote(s).\n"
+            "\nExamples:\n"
+            + HelpExampleCli("clearwtprimevotes", "")
+            + HelpExampleRpc("clearwtprimevotes", "")
+            );
+
+    scdb.ResetWTPrimeVotes();
+
+    return NullUniValue;
+}
+
+UniValue listwtprimevotes(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 0)
         throw std::runtime_error(
-            "vote\n"
-            "Vote on sidechains and WT^(s) etc.\n"
-            "\nArguments:\n"
-            "1. \"type {}\"        (string, required) sidechain title\n"
+            "listwtprimevotes\n"
+            "List custom votes for sidechain WT^(s).\n"
             "\nExamples:\n"
-            + HelpExampleCli("vote", "")
-            + HelpExampleRpc("vote", "")
+            + HelpExampleCli("listwtprimevotes", "")
+            + HelpExampleRpc("listwtprimevotes", "")
             );
-    return NullUniValue;
+
+    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+
+    UniValue ret(UniValue::VARR);
+
+    for (const SidechainCustomVote& v : vCustomVote) {
+        std::string strVote = "";
+        if (v.vote == SCDB_UPVOTE) {
+            strVote = "upvote";
+        }
+        else
+        if (v.vote == SCDB_DOWNVOTE) {
+            strVote = "downvote";
+        }
+        else
+        if (v.vote == SCDB_ABSTAIN) {
+            strVote = "abstain";
+        }
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("nSidechain", v.nSidechain));
+        obj.push_back(Pair("vote", strVote));
+        obj.push_back(Pair("hashWTPrime", v.hashWTPrime.ToString()));
+        ret.push_back(obj);
+    }
+
+    return ret;
 }
 
 UniValue getaveragefee(const JSONRPCRequest& request)
@@ -1479,6 +1575,41 @@ UniValue listcachedwtprimetransactions(const JSONRPCRequest& request)
     return ret;
 }
 
+UniValue listspentwtprimes(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listspentwtprimes\n"
+            "List WT^(s) which have been approved by workscore and spent\n"
+            "\nResult: (array)\n"
+            "{\n"
+            "  \"nsidechain\" : (numeric) Sidechain number of WT^\n"
+            "  \"hashwtprime\" : (string) hash of WT^\n"
+            "  \"hashblock\"   : (string) hash of block WT^ was spent in\n"
+            "}\n"
+            "\n"
+            "\nExample:\n"
+            + HelpExampleCli("listspentwtprimes", "")
+            );
+
+    std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
+    if (vSpent.empty())
+        throw JSONRPCError(RPC_TYPE_ERROR, "No spent WT^(s) in cache!");
+
+    UniValue ret(UniValue::VARR);
+    for (const SidechainSpentWTPrime& s : vSpent) {
+        UniValue obj(UniValue::VOBJ);
+
+        obj.push_back(Pair("nsidechain", s.nSidechain));
+        obj.push_back(Pair("hashwtprime", s.hashWTPrime.ToString()));
+        obj.push_back(Pair("hashblock", s.hashBlock.ToString()));
+
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
+
 UniValue getscdbhash(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
@@ -1562,11 +1693,14 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listsidechainproposals",        &listsidechainproposals,       {}},
     { "DriveChain",  "getsidechainactivationstatus",  &getsidechainactivationstatus, {}},
     { "DriveChain",  "createsidechainproposal",       &createsidechainproposal,      {"title", "description", "keyhash", "nversion", "hashid1", "hashid2"}},
-    { "DriveChain",  "vote",                          &vote,                         {}},
+    { "DriveChain",  "clearwtprimevotes",             &clearwtprimevotes,            {}},
+    { "DriveChain",  "setwtprimevote",                &setwtprimevote,               {"vote", "nsidechain", "hashwtprime"}},
+    { "DriveChain",  "listwtprimevotes",              &listwtprimevotes,             {}},
     { "DriveChain",  "getaveragefee",                 &getaveragefee,                {"numblocks", "startheight"}},
     { "DriveChain",  "getworkscore",                  &getworkscore,                 {"nsidechain", "hashwtprime"}},
     { "DriveChain",  "listcachedwtprimetransactions", &listcachedwtprimetransactions,{"nsidechain"}},
     { "DriveChain",  "listwtprimestatus",             &listwtprimestatus,            {"nsidechain"}},
+    { "DriveChain",  "listspentwtprimes",             &listspentwtprimes,            {}},
     { "DriveChain",  "getscdbhash",                   &getscdbhash,                  {}},
     { "DriveChain",  "gettotalscdbhash",              &gettotalscdbhash,             {}},
 };

@@ -820,7 +820,8 @@ BOOST_AUTO_TEST_CASE(IsSidechainUpdateBytes)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSCDBUpdateScript(block, std::vector<std::vector<SidechainWTPrimeState>>{}, std::vector<SidechainCustomVote>{}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, std::vector<std::vector<SidechainWTPrimeState>>{}, std::vector<SidechainCustomVote>{}, Params().GetConsensus());
 
     BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBUpdate());
 }
@@ -907,9 +908,9 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, std::vector<SidechainCustomVote>{vote}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote}, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1038,9 +1039,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1171,9 +1172,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1259,9 +1260,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4}, Params().GetConsensus());
+    CScript script2;
+    GenerateSCDBUpdateScript(block2, script2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4}, Params().GetConsensus());
 
-    const CScript script2 = block2.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script2.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1382,9 +1383,9 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     for (const Sidechain& s : scdbTestCopy.GetActiveSidechains()) {
         vOldScores.push_back(scdbTestCopy.GetState(s.nSidechain));
     }
-    GenerateSCDBUpdateScript(block, vOldScores, vUserVotes, Params().GetConsensus());
+    CScript script;
+    GenerateSCDBUpdateScript(block, script, vOldScores, vUserVotes, Params().GetConsensus());
 
-    const CScript script = block.vtx[0]->vout[0].scriptPubKey;
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
@@ -1399,6 +1400,126 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
 
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(nBlock, scdbTestCopy.GetSCDBHash(), vNewScores));
     BOOST_CHECK(scdbTest.GetSCDBHash() == scdbTestCopy.GetSCDBHash());
+}
+
+BOOST_AUTO_TEST_CASE(custom_vote_cache)
+{
+    // Test the functionality of the custom vote cache
+
+    unsigned int nMaxSidechain = 256;
+
+    // Test that we can add a vote for every possible sidechain number
+
+    std::vector<SidechainCustomVote> vVoteIn;
+    for (size_t i = 0; i < nMaxSidechain; i++) {
+        SidechainCustomVote vote;
+        vote.nSidechain = i;
+        vote.hashWTPrime = GetRandHash();
+        vote.vote = SCDB_UPVOTE;
+
+        vVoteIn.push_back(vote);
+    }
+    BOOST_CHECK(scdb.CacheCustomVotes(vVoteIn));
+
+    std::vector<SidechainCustomVote> vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_CHECK(vVoteOut.size() == nMaxSidechain);
+
+    // Test that new WT^ votes replace old votes for the same sidechain
+
+    // Add a new vote for each sidechain and check that they have replaced all
+    // of the old votes
+    vVoteIn.clear();
+    for (size_t i = 0; i < nMaxSidechain; i++) {
+        SidechainCustomVote vote;
+        vote.nSidechain = i;
+        vote.hashWTPrime = GetRandHash();
+        vote.vote = SCDB_ABSTAIN;
+
+        vVoteIn.push_back(vote);
+    }
+    BOOST_CHECK(scdb.CacheCustomVotes(vVoteIn));
+
+    vVoteOut.clear();
+    vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_CHECK(vVoteOut.size() == nMaxSidechain);
+    // Check that all of the new votes replaced the old ones (the votes were
+    // set to abstain so this is easy to check)
+    for (const SidechainCustomVote& v : vVoteOut) {
+        BOOST_CHECK(v.vote == SCDB_ABSTAIN);
+    }
+
+    // Test that changing vote type updates the current WT^ vote
+
+    // Pass in the same votes as currently in the cache, but with their vote
+    // type changed to SCDB_DOWNVOTE and make sure they were all changed
+    for (size_t i = 0; i < vVoteOut.size(); i++) {
+        vVoteOut[i].vote = SCDB_DOWNVOTE;
+        BOOST_CHECK(scdb.CacheCustomVotes(std::vector<SidechainCustomVote> { vVoteOut[i] }));
+    }
+    vVoteOut.clear();
+    vVoteOut = scdb.GetCustomVoteCache();
+    for (const SidechainCustomVote& v : vVoteOut) {
+        BOOST_CHECK(v.vote == SCDB_DOWNVOTE);
+    }
+
+    scdb.Reset();
+    // Check that custom vote cache was cleared
+    vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_CHECK(vVoteOut.empty());
+
+    // Test adding each vote type and check that it is set correctly
+    SidechainCustomVote upvote;
+    upvote.nSidechain = 0;
+    upvote.hashWTPrime = GetRandHash();
+    upvote.vote = SCDB_UPVOTE;
+
+    SidechainCustomVote abstain;
+    abstain.nSidechain = 1;
+    abstain.hashWTPrime = GetRandHash();
+    abstain.vote = SCDB_ABSTAIN;
+
+    SidechainCustomVote downvote;
+    downvote.nSidechain = 2;
+    downvote.hashWTPrime = GetRandHash();
+    downvote.vote = SCDB_DOWNVOTE;
+
+    BOOST_CHECK(scdb.CacheCustomVotes(std::vector<SidechainCustomVote> { upvote, abstain, downvote }));
+
+    vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_REQUIRE(vVoteOut.size() == 3);
+    BOOST_CHECK(vVoteOut[0] == upvote);
+    BOOST_CHECK(vVoteOut[1] == abstain);
+    BOOST_CHECK(vVoteOut[2] == downvote);
+
+    scdb.Reset();
+    // Check that custom vote cache was cleared
+    vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_CHECK(vVoteOut.empty());
+
+    // Check that invalid vote types are rejected the current cache size is 3
+    SidechainCustomVote invalidVote;
+    invalidVote.nSidechain = 2;
+    invalidVote.hashWTPrime = GetRandHash();
+    invalidVote.vote = 'z';
+
+    BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ invalidVote }));
+    vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_CHECK(vVoteOut.empty());
+
+    invalidVote.vote = ' ';
+
+    BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ invalidVote }));
+    vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_CHECK(vVoteOut.empty());
+
+    SidechainCustomVote nullHashWTPrime;
+    nullHashWTPrime.nSidechain = 2;
+    nullHashWTPrime.hashWTPrime.SetNull();
+    nullHashWTPrime.vote = SCDB_DOWNVOTE;
+
+    BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ nullHashWTPrime }));
+    vVoteOut = scdb.GetCustomVoteCache();
+    BOOST_CHECK(vVoteOut.empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

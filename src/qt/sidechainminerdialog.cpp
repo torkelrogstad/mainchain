@@ -7,12 +7,14 @@
 
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QTimer>
 
 #include <qt/drivenetunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/sidechainactivationtablemodel.h>
+#include <qt/wtprimevotetablemodel.h>
 #include <qt/walletmodel.h>
 
 #include <core_io.h>
@@ -42,24 +44,35 @@ SidechainMinerDialog::SidechainMinerDialog(QWidget *parent) :
     ui->setupUi(this);
 
     activationModel = new SidechainActivationTableModel(this);
+    wtPrimeVoteModel = new WTPrimeVoteTableModel(this);
 
     ui->tableViewActivation->setModel(activationModel);
+    ui->tableViewWTPrimeVote->setModel(wtPrimeVoteModel);
+
+    // Set resize mode for WT^ vote table
+    ui->tableViewWTPrimeVote->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     // Don't stretch last cell of horizontal header
     ui->tableViewActivation->horizontalHeader()->setStretchLastSection(false);
+    ui->tableViewWTPrimeVote->horizontalHeader()->setStretchLastSection(false);
 
     // Hide vertical header
     ui->tableViewActivation->verticalHeader()->setVisible(false);
+    ui->tableViewWTPrimeVote->verticalHeader()->setVisible(false);
 
     // Left align the horizontal header text
     ui->tableViewActivation->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewWTPrimeVote->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
     ui->tableViewActivation->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewActivation->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewWTPrimeVote->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewWTPrimeVote->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
 
     // Select entire row
     ui->tableViewActivation->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewWTPrimeVote->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     // If the user has WT^ vote parameters set, update the default vote combobox
     std::string strDefault = gArgs.GetArg("-defaultwtprimevote", "");
@@ -70,6 +83,14 @@ SidechainMinerDialog::SidechainMinerDialog(QWidget *parent) :
     if (strDefault == "downvote") {
         ui->comboBoxDefaultWTPrimeVote->setCurrentIndex(WTPRIME_DOWNVOTE);
     }
+
+    // Start the poll timer to update the page
+    pollTimer = new QTimer(this);
+    connect(pollTimer, SIGNAL(timeout()), this, SLOT(Update()));
+    pollTimer->start(1000); // 1 second
+
+    // Update the page
+    Update();
 }
 
 SidechainMinerDialog::~SidechainMinerDialog()
@@ -258,38 +279,62 @@ void SidechainMinerDialog::on_pushButtonReject_clicked()
 
 void SidechainMinerDialog::on_pushButtonUpvoteWTPrime_clicked()
 {
-    // TODO
-    //QModelIndexList selected = ui->tableViewWTPrimes->selectionModel()->selectedIndexes();
+    // Set WT^ vote type
 
-    //for (int i = 0; i < selected.size(); i++) {
-    //    uint256 hash;
-    //    if (wtPrimeVoteModel->GetHashAtRow(selected[i].row(), hash))
-    //        // TODO Store the vote somewhere
-    //}
+    QModelIndexList selected = ui->tableViewWTPrimeVote->selectionModel()->selectedIndexes();
+
+    for (int i = 0; i < selected.size(); i++) {
+        uint256 hash;
+        unsigned int nSidechain;
+        if (wtPrimeVoteModel->GetWTPrimeInfoAtRow(selected[i].row(), hash, nSidechain)) {
+            SidechainCustomVote vote;
+            vote.nSidechain = nSidechain;
+            vote.hashWTPrime = hash;
+            vote.vote = SCDB_UPVOTE;
+
+            scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ vote });
+        }
+    }
 }
 
 void SidechainMinerDialog::on_pushButtonDownvoteWTPrime_clicked()
 {
-    // TODO
-    //QModelIndexList selected = ui->tableViewWTPrimes->selectionModel()->selectedIndexes();
+    // Set WT^ vote type
 
-    //for (int i = 0; i < selected.size(); i++) {
-    //    uint256 hash;
-    //    if (wtPrimeVoteModel->GetHashAtRow(selected[i].row(), hash))
-    //        // TODO Store the vote somewhere
-    //}
+    QModelIndexList selected = ui->tableViewWTPrimeVote->selectionModel()->selectedIndexes();
+
+    for (int i = 0; i < selected.size(); i++) {
+        uint256 hash;
+        unsigned int nSidechain;
+        if (wtPrimeVoteModel->GetWTPrimeInfoAtRow(selected[i].row(), hash, nSidechain)) {
+            SidechainCustomVote vote;
+            vote.nSidechain = nSidechain;
+            vote.hashWTPrime = hash;
+            vote.vote = SCDB_DOWNVOTE;
+
+            scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ vote });
+        }
+    }
 }
 
 void SidechainMinerDialog::on_pushButtonAbstainWTPrime_clicked()
 {
-    // TODO
-    //QModelIndexList selected = ui->tableViewWTPrimes->selectionModel()->selectedIndexes();
+    // Set WT^ vote type
 
-    //for (int i = 0; i < selected.size(); i++) {
-    //    uint256 hash;
-    //    if (wtPrimeVoteModel->GetHashAtRow(selected[i].row(), hash))
-    //        // TODO Store the vote somewhere
-    //}
+    QModelIndexList selected = ui->tableViewWTPrimeVote->selectionModel()->selectedIndexes();
+
+    for (int i = 0; i < selected.size(); i++) {
+        uint256 hash;
+        unsigned int nSidechain;
+        if (wtPrimeVoteModel->GetWTPrimeInfoAtRow(selected[i].row(), hash, nSidechain)) {
+            SidechainCustomVote vote;
+            vote.nSidechain = nSidechain;
+            vote.hashWTPrime = hash;
+            vote.vote = SCDB_ABSTAIN;
+
+            scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ vote });
+        }
+    }
 }
 
 void SidechainMinerDialog::on_pushButtonClose_clicked()
@@ -384,6 +429,21 @@ void SidechainMinerDialog::on_toolButtonSoftwareHashes_clicked()
         QMessageBox::Ok);
 }
 
+void SidechainMinerDialog::on_toolButtonVoteWTPrime_clicked()
+{
+    // TODO move text into static const
+    QMessageBox::information(this, tr("DriveNet - information"),
+        tr("Sidechain WT^ vote signalling:\n\n"
+           "Use this page to set votes for WT^(s).\n\n"
+           "Set Upvote to increase the work score of WT^(s) in blocks "
+           "that you mine. Downvote to decrease the work score, and Abstain "
+           "to ignore a WT^ and not change its workscore.\n\n"
+           "You may also use the RPC command 'setwtprimevote' to set votes "
+           "or 'clearwtprimevotes' to reset and erase any votes you have set."
+           ),
+        QMessageBox::Ok);
+}
+
 void SidechainMinerDialog::on_pushButtonRandomKeyHash_clicked()
 {
     uint256 hash = GetRandHash();
@@ -403,4 +463,16 @@ void SidechainMinerDialog::on_comboBoxDefaultWTPrimeVote_currentIndexChanged(con
     if (i == WTPRIME_DOWNVOTE) {
         gArgs.ForceSetArg("-defaultwtprimevote", "downvote");
     }
+}
+
+void SidechainMinerDialog::Update()
+{
+    // Disable the default vote combo box if custom votes are set, enable it
+    // if they are not.
+    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+    bool fCustomVote = vCustomVote.size();
+    ui->comboBoxDefaultWTPrimeVote->setEnabled(!fCustomVote);
+
+    // Add a tip to the default vote label on how to reset them
+    ui->labelClearVotes->setHidden(!fCustomVote);
 }

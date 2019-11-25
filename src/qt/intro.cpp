@@ -203,6 +203,8 @@ bool Intro::pickDataDirectory()
                 if (TryCreateDirectories(GUIUtil::qstringToBoostPath(dataDir))) {
                     // If a new data directory has been created, make wallets subdirectory too
                     TryCreateDirectories(GUIUtil::qstringToBoostPath(dataDir) / "wallets");
+                    // Also create drivechain subdirectory
+                    TryCreateDirectories(GUIUtil::qstringToBoostPath(dataDir) / "drivechain");
                 }
                 break;
             } catch (const fs::filesystem_error&) {

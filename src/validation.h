@@ -450,7 +450,7 @@ void GenerateSidechainProposalCommitment(CBlock& block, const SidechainProposal&
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams);
 
-void GenerateSCDBUpdateScript(CBlock& block, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams);
+void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams);
 
 /** Return a vector of all of the critical data requests found in a block */
 std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block, const Consensus::Params& consensusParams);
@@ -521,7 +521,11 @@ bool DumpMempool();
 /** Load the mempool from disk. */
 bool LoadMempool();
 
-// TODO replace all of these Drivechain related DAT files with sqlite
+/** Load cache of user set WT^ votes for sidechains */
+bool LoadCustomVoteCache();
+
+/** Dump cache of user set WT^ votes for sidechains */
+void DumpCustomVoteCache();
 
 // TODO Add startup param to enable this, make disabled by default. The other
 // .dat files aren't created unless the user is BMM mining but this cache needs
@@ -533,7 +537,7 @@ bool LoadDepositCache();
 void DumpDepositCache();
 
 /** Load the optional WT^ transaction cache from disk. */
-bool LoadWTPrimeCache();
+bool LoadWTPrimeCache(bool fReindex = false);
 
 /** Dump the WT^ cache to disk. */
 void DumpWTPrimeCache();
@@ -576,9 +580,6 @@ bool VerifyTxOutProof(const std::string& strProof);
 
 /** Verify that nSidechain refers to an active sidechain */
 bool IsSidechainNumberValid(uint8_t nSidechain);
-
-/** Read an SCDB update script and return new scores by reference if valid */
-bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores);
 
 /** Flush SCDB cache data to disk */
 void DumpSCDBCache();

@@ -236,11 +236,11 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         if (scdb.HasState() || mapNewWTPrime.size()) {
             bool fPeriodEnded = (nHeight % SIDECHAIN_VERIFICATION_PERIOD == 0);
             uint256 hashSCDB;
-            std::vector<SidechainWTPrimeState> vUserVotes;
+            std::vector<SidechainWTPrimeState> vNewWTPrime;
+            std::vector<SidechainCustomVote> vCustomVote;
             if (!fPeriodEnded) {
                 // Add new WT^(s)
                 std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.begin();
-                std::vector<SidechainWTPrimeState> vNewWTPrime;
                 while (it != mapNewWTPrime.end()) {
                     SidechainWTPrimeState wtPrime;
                     wtPrime.nSidechain = it->first;
@@ -257,36 +257,83 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     it++;
                 }
 
-                // Check if the user has set a default WT^ vote
-                std::string strDefaultVote = "";
-                strDefaultVote = gArgs.GetArg("-defaultwtprimevote", "");
+                // Note that custom votes have priority, and if custom votes are
+                // set we ignore the default votes.
+                //
+                // TODO if custom votes are set disable the defaultwtprimevote
+                // combobox on the GUI and add a label with a note
 
-                VoteType vote = SCDB_ABSTAIN;
+                // Apply user's custom votes
+                //
+                // Check if the user has set any custom WT^ votes. They can set
+                // custom upvotes, downvotes or abstain by specifying the WT^
+                // hash as a command line param and via GUI.
+                //
+                // This vector has all of the users vote settings. Some of
+                // them could be old / for WT^(s) that don't exist yet. We will
+                // add votes that can actually be applied to vCustomVote.
+                std::vector<SidechainCustomVote> vUserVote = scdb.GetCustomVoteCache();
 
-                if (strDefaultVote == "upvote") {
-                    vote = SCDB_UPVOTE;
+                // This will store the new votes we are making - based on either
+                // default or custom votes
+                std::vector<SidechainWTPrimeState> vWTPrimeVote;
+
+                // If there are custom votes apply them, otherwise check if a
+                // default is set
+                if (vUserVote.size()) {
+                    // TODO changing containers could reduce repeat looping
+                    //
+                    // Apply users custom votes, and save the custom votes for later
+                    // when we generate update bytes
+                    for (const Sidechain& s : vActiveSidechain) {
+                        std::vector<SidechainWTPrimeState> vState = scdb.GetState(s.nSidechain);
+                        for (const SidechainWTPrimeState& wt : vState) {
+                            // Check if this WT^ has a custom vote setting
+                            for (const SidechainCustomVote& vote : vUserVote) {
+                                if (wt.hashWTPrime == vote.hashWTPrime &&
+                                        wt.nSidechain == vote.nSidechain)
+                                {
+                                    // Add custom vote to final vector
+                                    vCustomVote.push_back(vote);
+
+                                    // Add to vWTPrimeVote
+                                    SidechainWTPrimeState wtState = wt;
+
+                                    if (vote.vote == SCDB_UPVOTE) {
+                                        wtState.nWorkScore++;
+                                    }
+                                    else
+                                    if (vote.vote == SCDB_DOWNVOTE) {
+                                        wtState.nWorkScore--;
+                                    }
+
+                                    vWTPrimeVote.push_back(wtState);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Check if the user has set a default WT^ vote
+                    std::string strDefaultVote = "";
+                    strDefaultVote = gArgs.GetArg("-defaultwtprimevote", "");
+
+                    char vote = SCDB_ABSTAIN;
+
+                    if (strDefaultVote == "upvote") {
+                        vote = SCDB_UPVOTE;
+                    }
+                    else
+                    if (strDefaultVote == "downvote") {
+                        vote = SCDB_DOWNVOTE;
+                    }
+
+                    // Get new scores with default votes applied
+                    vWTPrimeVote = scdb.GetLatestStateWithVote(vote, mapNewWTPrime);
                 }
-                else
-                if (strDefaultVote == "downvote") {
-                    vote = SCDB_DOWNVOTE;
-                }
-
-                // Get new scores with default votes applied
-                std::vector<SidechainWTPrimeState> vWTPrimeVote = scdb.GetLatestStateWithVote(vote, mapNewWTPrime);
 
                 // Add new WT^(s) to the list
                 for (const SidechainWTPrimeState& wt : vNewWTPrime)
                     vWTPrimeVote.push_back(wt);
-
-                // TODO
-                // Apply user's custom votes
-                //
-                // Check if the user has set any custom WT^ votes. They can set
-                // custom upvotes and custom downvotes by specifying the WT^
-                // hash as a command line param and via GUI. There can be
-                // multiple custom votes of each type so we use GetArgs()
-                std::vector<std::string> vHashUpvote = gArgs.GetArgs("-upvote");
-                std::vector<std::string> vHashDownvote = gArgs.GetArgs("-downvote");
 
                 hashSCDB = scdb.GetSCDBHashIfUpdate(vWTPrimeVote, nHeight, mapNewWTPrime);
             }
@@ -294,17 +341,48 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                 // Generate SCDB merkle root hash commitment
                 GenerateSCDBHashMerkleRootCommitment(*pblock, hashSCDB, chainparams.GetConsensus());
 
+                // The miner should be passing only the new WT^(s) when checking
+                // MT update here.
+                //
+                // If UpdateSCDBMatchMT doesn't work with just that - which
+                // means other nodes won't be able to update either then
+                // generate SCDB update bytes.
+                //
+                // Test parsing and pass the result of ParseSCDBUpdateScript +
+                // the new WT^(s) into UpdateSCDBMatchMT to check that it works
+                // with the bytes & new WT^ info.
+                //
+                // Nodes connecting the block will add the new WT^(s) to their
+                // db but they wont have the rest of the score changes without
+                // parsing the update bytes in this scenario.
+
                 // Check if we need to generate update bytes
                 SidechainDB scdbCopy = scdb;
-                if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, std::vector<SidechainWTPrimeState> {}, mapNewWTPrime)) {
+                if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vNewWTPrime, mapNewWTPrime)) {
                     // Get SCDB state
                     std::vector<std::vector<SidechainWTPrimeState>> vState;
                     for (const Sidechain& s : vActiveSidechain) {
                         vState.push_back(scdb.GetState(s.nSidechain));
                     }
                     LogPrintf("%s: Miner generating update bytes at height %u.\n", __func__, nHeight);
-                    // TODO
-                    //GenerateSCDBUpdateScript(*pblock, vState, vUserVotes, chainparams.GetConsensus());
+                    CScript script;
+                    GenerateSCDBUpdateScript(*pblock, script, vState, vCustomVote, chainparams.GetConsensus());
+
+                    // Make sure that we can read the update bytes
+                    std::vector<SidechainWTPrimeState> vParsed;
+                    if (!ParseSCDBUpdateScript(script, vState, vParsed)) {
+                        LogPrintf("%s: Miner failed to parse its own update bytes at height %u.\n", __func__, nHeight);
+                        // TODO handle error - generate default votes instead?
+                    }
+                    // Add new WT^(s) to the list
+                    for (const SidechainWTPrimeState& wt : vNewWTPrime)
+                        vParsed.push_back(wt);
+
+                    // Finally, check if we can update with update bytes
+                    if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vParsed, mapNewWTPrime)) {
+                        LogPrintf("%s: Miner failed to update with bytes at height %u.\n", __func__, nHeight);
+                        // TODO handle error - generate default votes instead?
+                    }
                 }
             }
         }
@@ -339,10 +417,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             }
         }
 
-        // TODO for now, if this is set activate any sidechain which has been
-        // proposed. Make this behavior the default unless a list of sha256
-        // hashes of sidechains is also provided to the command line, in which
-        // case only activate those sidechain(s).
+        // TODO rename param to make function more clear
+        // If this is set activate any sidechain which has been proposed.
         bool fAnySidechain = gArgs.GetBoolArg("-activatesidechains", false);
 
         // Commit sidechain activation for proposals in activation status cache

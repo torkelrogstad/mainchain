@@ -6,7 +6,7 @@
 #define BITCOIN_SIDECHAINDB_H
 
 #include <map>
-#include <memory>
+#include <memory> // Required for forward declaration of CTransactionRef typedef
 #include <queue>
 #include <vector>
 
@@ -23,12 +23,12 @@ class uint256;
 
 struct Sidechain;
 struct SidechainActivationStatus;
+struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
 struct SidechainProposal;
 struct SidechainWTPrimeState;
-
-enum VoteType : unsigned int;
+struct SidechainSpentWTPrime;
 
 // TODO custom operator[] or getter functions for private data members which
 // will check the index and throw an error instead of going out of bounds
@@ -50,8 +50,14 @@ public:
     /** Add a new WT^ to SCDB */
     bool AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int nHeight, bool fDebug = false);
 
+    /** Add spent WT^(s) to SCDB */
+    void AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSpent);
+
     /** Add active sidechains to the in-memory cache */
     void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
+
+    /** Add a users custom vote to the in-memory cache */
+    bool CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote);
 
     /** Add SidechainActivationStatus to the in-memory cache */
     void CacheSidechainActivationStatus(const std::vector<SidechainActivationStatus>& vActivationStatusIn);
@@ -83,6 +89,9 @@ public:
 
     /** Return the CTIP (critical transaction index pair) for all sidechains */
     std::map<uint8_t, SidechainCTIP> GetCTIP() const;
+
+    /** Return vector of cached custom sidechain WT^ votes */
+    std::vector<SidechainCustomVote> GetCustomVoteCache() const;
 
     /** Return vector of cached deposits for nSidechain. */
     std::vector<SidechainDeposit> GetDeposits(uint8_t nSidechain) const;
@@ -124,6 +133,9 @@ public:
     /** Get list of sidechains that we have set to ACK */
     std::vector<uint256> GetSidechainsToActivate() const;
 
+    /** Get a list of WT^(s) spent in a given block */
+    std::vector<SidechainSpentWTPrime> GetSpentWTPrimesForBlock(const uint256& hashBlock) const;
+
     /** Get status of nSidechain's WT^(s) (public for unit tests) */
     std::vector<SidechainWTPrimeState> GetState(uint8_t nSidechain) const;
 
@@ -135,10 +147,13 @@ public:
 
     /** Returns SCDB WT^ state with single vote type applied to all of the most
      * recent WT^(s) in the cache */
-    std::vector<SidechainWTPrimeState> GetLatestStateWithVote(VoteType vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const;
+    std::vector<SidechainWTPrimeState> GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const;
 
     /** Return cached WT^ transaction(s) */
     std::vector<CMutableTransaction> GetWTPrimeCache() const;
+
+    /** Return cached spent WT^(s) as a vector for dumping to disk */
+    std::vector<SidechainSpentWTPrime> GetSpentWTPrimeCache() const;
 
     /** Is there anything being tracked by the SCDB? */
     bool HasState() const;
@@ -166,6 +181,9 @@ public:
     /** Reset SCDB and clear out all data tracked by SidechainDB */
     void ResetWTPrimeState();
 
+    /** Clear out the WT^ custom vote cache */
+    void ResetWTPrimeVotes();
+
     /** Reset everything */
     void Reset();
 
@@ -175,7 +193,7 @@ public:
     /** Print SCDB WT^ verification status */
     std::string ToString() const;
 
-    /** Apply the changes in a block to SCDB */
+    /** Check the updates in a block and then apply them */
     bool Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false, bool fResync = false);
 
     /** Undo the changes to SCDB of a block - for block is disconnection */
@@ -195,6 +213,9 @@ private:
      * not contain a valid update. */
     bool ApplyDefaultUpdate();
 
+    /** Apply the changes in a block to SCDB */
+    bool ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false, bool fResync = false);
+
     /** Takes a list of sidechain hashes to upvote */
     void UpdateActivationStatus(const std::vector<uint256>& vHash);
 
@@ -211,6 +232,10 @@ private:
 
     /** Activation status of proposed sidechains */
     std::vector<SidechainActivationStatus> vActivationStatus;
+
+    /** Cache of votes set by the user. These can be set via GUI on the
+     * sidechain manage page, or command line params / config file */
+    std::vector<SidechainCustomVote> vCustomVoteCache;
 
     /** Cache of deposits for each sidechain. TODO optimize with caching
      * so that we don't have to keep all of these in memory.
@@ -235,6 +260,9 @@ private:
      * y = state of WT^(s) for nSidechain */
     std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
 
+    /** Map of spent WT^(s) key: block hash value: State of WT^(s) when spent */
+    std::map<uint256, std::vector<SidechainSpentWTPrime>> mapSpentWTPrime;
+
     /** Calls SortDeposits for all of SCDB's deposit cache */
     bool SortSCDBDeposits();
 
@@ -247,6 +275,9 @@ int GetLastSidechainVerificationPeriod(int nHeight);
 
 /** Return the number of blocks that have been mined in this period so far */
 int GetNumBlocksSinceLastSidechainVerificationPeriod(int nHeight);
+
+/** Read an SCDB update script and return new scores by reference if valid */
+bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores);
 
 /** Sort deposits by CTIP UTXO spending order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);

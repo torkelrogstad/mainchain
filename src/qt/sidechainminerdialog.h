@@ -10,7 +10,12 @@
 #include <QDialog>
 
 class SidechainActivationTableModel;
+class WTPrimeVoteTableModel;
 class WalletModel;
+
+QT_BEGIN_NAMESPACE
+class QTimer;
+QT_END_NAMESPACE
 
 namespace Ui {
 class SidechainMinerDialog;
@@ -63,9 +68,13 @@ public Q_SLOTS:
 
     void on_toolButtonSoftwareHashes_clicked();
 
+    void on_toolButtonVoteWTPrime_clicked();
+
     void on_pushButtonRandomKeyHash_clicked();
 
     void on_comboBoxDefaultWTPrimeVote_currentIndexChanged(const int i);
+
+    void Update();
 
 private:
     Ui::SidechainMinerDialog *ui;
@@ -73,6 +82,9 @@ private:
     WalletModel *walletModel;
 
     SidechainActivationTableModel *activationModel;
+    WTPrimeVoteTableModel *wtPrimeVoteModel;
+
+    QTimer *pollTimer;
 };
 
 #endif // SIDECHAINMINERDIALOG_H

@@ -152,6 +152,20 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int
     return fUpdated;
 }
 
+void SidechainDB::AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSpent)
+{
+    std::map<uint256, std::vector<SidechainSpentWTPrime>>::iterator it;
+
+    for (const SidechainSpentWTPrime& spent : vSpent) {
+        it = mapSpentWTPrime.find(spent.hashBlock);
+        if (it != mapSpentWTPrime.end()) {
+            it->second.push_back(spent);
+        } else {
+            mapSpentWTPrime[spent.hashBlock] = std::vector<SidechainSpentWTPrime>{ spent };
+        }
+    }
+}
+
 void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSidechainIn)
 {
     vActiveSidechain = vActiveSidechainIn;
@@ -161,6 +175,61 @@ void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSid
 
     // Resize vDepositCache to keep track of deposit(s)
     vDepositCache.resize(vActiveSidechain.size());
+}
+
+bool SidechainDB::CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote)
+{
+    // Check for valid vote type and non-null WT^ hash.
+    for (const SidechainCustomVote& v : vCustomVote) {
+        // Check WT^ hash is not null
+        if (v.hashWTPrime.IsNull())
+            return false;
+        // Check that vote type is valid
+        if (v.vote != SCDB_UPVOTE && v.vote != SCDB_DOWNVOTE
+                && v.vote != SCDB_ABSTAIN)
+        {
+            return false;
+        }
+    }
+
+    // For each vote passed in we want to check if it is an update to an
+    // existing vote. If it is, update the old vote. If it is a new vote, add
+    // it to the cache. If the new vote is for a sidechain that already has a
+    // WT^ vote, remove the old vote.
+    for (const SidechainCustomVote& v : vCustomVote) {
+        bool fFound = false;
+        for (size_t i = 0; i < vCustomVoteCache.size(); i++) {
+            if (vCustomVoteCache[i].hashWTPrime == v.hashWTPrime &&
+                    vCustomVoteCache[i].nSidechain == v.nSidechain)
+            {
+                vCustomVoteCache[i].vote = v.vote;
+                fFound = true;
+                break;
+            }
+        }
+        if (!fFound) {
+            // Check if there's already a WT^ vote for this sidechain and remove
+            for (size_t i = 0; i < vCustomVoteCache.size(); i++) {
+                if (vCustomVoteCache[i].nSidechain == v.nSidechain) {
+                    vCustomVoteCache[i] = vCustomVoteCache.back();
+                    vCustomVoteCache.pop_back();
+                    break;
+                }
+            }
+            vCustomVoteCache.push_back(v);
+        }
+    }
+    // TODO right now this is accepting votes for any sidechain, whether active
+    // or not. The function also accepts votes for WT^(s) that do not exist yet
+    // or maybe never will. I'm not sure yet whether that behavior is the best.
+    // Some miner may wish to set votes for a WT^ they create on a sidechain
+    // before it's even added to the SCDB, but it also might be good to give
+    // an error if they do in case it was an accident?
+    //
+    // We can update this function so that it returns false if some or all
+    // votes were not cached, and also return an error string explaining why,
+    // possibly along with a list of the vote(s) that weren't cached.
+    return true;
 }
 
 void SidechainDB::CacheSidechainActivationStatus(const std::vector<SidechainActivationStatus>& vActivationStatusIn)
@@ -265,6 +334,11 @@ bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
 std::map<uint8_t, SidechainCTIP> SidechainDB::GetCTIP() const
 {
     return mapCTIP;
+}
+
+std::vector<SidechainCustomVote> SidechainDB::GetCustomVoteCache() const
+{
+    return vCustomVoteCache;
 }
 
 std::vector<SidechainDeposit> SidechainDB::GetDeposits(uint8_t nSidechain) const
@@ -464,6 +538,17 @@ std::vector<uint256> SidechainDB::GetSidechainsToActivate() const
     return vSidechainHashActivate;
 }
 
+std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimesForBlock(const uint256& hashBlock) const
+{
+    std::map<uint256, std::vector<SidechainSpentWTPrime>>::const_iterator it;
+    it = mapSpentWTPrime.find(hashBlock);
+
+    if (it != mapSpentWTPrime.end())
+        return it->second;
+
+    return std::vector<SidechainSpentWTPrime>{};
+}
+
 std::vector<SidechainWTPrimeState> SidechainDB::GetState(uint8_t nSidechain) const
 {
     if (!HasState() || !IsSidechainNumberValid(nSidechain))
@@ -487,7 +572,7 @@ std::vector<uint256> SidechainDB::GetUncommittedWTPrimeCache(uint8_t nSidechain)
     return vHash;
 }
 
-std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(VoteType vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const
+std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const
 {
     std::vector<SidechainWTPrimeState> vNew;
     for (const Sidechain& s : vActiveSidechain) {
@@ -519,6 +604,16 @@ std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(VoteType 
 std::vector<CMutableTransaction> SidechainDB::GetWTPrimeCache() const
 {
     return vWTPrimeCache;
+}
+
+std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimeCache() const
+{
+    std::vector<SidechainSpentWTPrime> vSpent;
+    for (auto const& it : mapSpentWTPrime) {
+        for (const SidechainSpentWTPrime& s : it.second)
+            vSpent.push_back(s);
+    }
+    return vSpent;
 }
 
 bool SidechainDB::HasState() const
@@ -624,6 +719,11 @@ void SidechainDB::ResetWTPrimeState()
     vWTPrimeStatus.resize(vActiveSidechain.size());
 }
 
+void SidechainDB::ResetWTPrimeVotes()
+{
+    vCustomVoteCache.clear();
+}
+
 void SidechainDB::Reset()
 {
     // Clear out CTIP data
@@ -652,6 +752,12 @@ void SidechainDB::Reset()
 
     // Clear out WT^ state
     ResetWTPrimeState();
+
+    // Clear out custom vote cache
+    vCustomVoteCache.clear();
+
+    // Clear out spent WT^ cache
+    mapSpentWTPrime.clear();
 }
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)
@@ -659,9 +765,9 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     if (!IsSidechainNumberValid(nSidechain)) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^ (txid): %s for sidechain number: %u.\n Invalid sidechain number.\n",
-                    __func__,
-                    tx.GetHash().ToString(),
-                    nSidechain);
+                __func__,
+                tx.GetHash().ToString(),
+                nSidechain);
         }
         return false;
     }
@@ -688,13 +794,13 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     }
 
     // Find the required single output returning to the sidechain script
-    bool fBurnFound = false;
+    bool fReturnFound = false;
     uint32_t n = 0;
     uint8_t nSidechainScript;
     for (size_t i = 0; i < tx.vout.size(); i++) {
         const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
         if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechainScript)) {
-            if (fBurnFound) {
+            if (fReturnFound) {
                 // We already found a sidechain script output. This second
                 // sidechain output makes the WT^ invalid.
                 if (fDebug) {
@@ -708,13 +814,13 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
 
             // Copy output index of deposit burn and move on
             n = i;
-            fBurnFound = true;
+            fReturnFound = true;
             continue;
         }
     }
 
     // Make sure that the sidechain output was found
-    if (!fBurnFound) {
+    if (!fReturnFound) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. No sidechain return output in WT^.\n",
                 __func__,
@@ -760,9 +866,14 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     // This will also update the SCDB CTIP
     AddDeposits(std::vector<SidechainDeposit>{deposit}, hashBlock);
 
-    // Remove WT^ work score now that is has been paid out
-    vWTPrimeStatus[nSidechain].clear();
-
+    // TODO In the event that the block which spent a WT^ is disconnected, a
+    // miner will no longer have the raw WT^ transaction to create a WT^ payout
+    // in the block that replaces the disconnected block. They will either have
+    // to get it from the sidechain again, or this code can be changed to not
+    // removed spent WT^(s) until some number of blocks after it has been spent
+    // to avoid this issue. Another option is to cache all received WT^ raw txns
+    // until the miner manually clears them out with an RPC command or similar.
+    //
     // Find the cached transaction for the WT^ we spent and remove it
     for (size_t i = 0; i < vWTPrimeCache.size(); i++) {
         if (vWTPrimeCache[i].GetHash() == hashBlind) {
@@ -770,6 +881,17 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
             vWTPrimeCache.pop_back();
         }
     }
+
+    SidechainSpentWTPrime spent;
+    spent.nSidechain = nSidechain;
+    spent.hashWTPrime = hashBlind;
+    spent.hashBlock = hashBlock;
+
+    // Track the spent WT^
+    AddSpentWTPrimes(std::vector<SidechainSpentWTPrime>{ spent });
+
+    // The WT^ will be removed from SCDB when SCDB::Update() is called now that
+    // it has been marked as spent.
 
     LogPrintf("%s WT^ spent: %s for sidechain number: %u.\n", __func__, hashBlind.ToString(), nSidechain);
 
@@ -830,6 +952,17 @@ std::string SidechainDB::ToString() const
 
 bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug, bool fResync)
 {
+    // Make a copy of SCDB to test update
+    SidechainDB scdbCopy = (*this);
+    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync)) {
+        return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync);
+    } else {
+        return false;
+    }
+}
+
+bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug, bool fResync)
+{
     if (hashBlock.IsNull()) {
         if (fDebug)
             LogPrintf("SCDB %s: Failed: block hash is null at height: %u\n",
@@ -874,6 +1007,44 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
             LogPrintf("%s: Reset WT^ state at height: %u.\n", __func__, nHeight);
             ResetWTPrimeState();
         }
+    }
+
+    // Scan for updated SCDB MT hash commit
+    std::vector<CScript> vMTHashScript;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+        if (scriptPubKey.IsSCDBHashMerkleRootCommit())
+            vMTHashScript.push_back(scriptPubKey);
+    }
+
+    // Verift that there is only one MT hash commit if any
+    if (vMTHashScript.size() > 1) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
+                __func__,
+                nHeight);
+        }
+        return false;
+    }
+
+    // TODO IsSCDBHashMerkleRootCommit should return the MT hash
+    uint256 hashMerkleRoot;
+    if (vMTHashScript.size()) {
+        // Get MT hash from script
+        const CScript& scriptPubKey = vMTHashScript.front();
+        hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
+    }
+
+    // If there's a MT hash commit in this block, it must be different than
+    // the current SCDB hash (WT^ blocks remaining should have at least
+    // be updated if nothing else)
+    if (!hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
+        if (fDebug)
+            LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
+                    __func__,
+                    hashMerkleRoot.ToString(),
+                    nHeight);
+        return false;
     }
 
     /*
@@ -969,8 +1140,6 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
         UpdateActivationStatus(vActivationHash);
 
     // Scan for new WT^(s) and start tracking them
-    // TODO also return false if there is multiple new WT^ for a sidechain
-    // std::vector<uint256> vHashNewWTPrime;
     std::map<uint8_t, uint256> mapNewWTPrime;
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
@@ -1013,22 +1182,48 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
         }
     }
 
-    // Scan for updated SCDB MT hash and try to update workscore of WT^(s)
-    std::vector<CScript> vMTHashScript;
-    for (const CTxOut& out : vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-        if (scriptPubKey.IsSCDBHashMerkleRootCommit())
-            vMTHashScript.push_back(scriptPubKey);
-    }
+    // Update SCDB to match new SCDB MT (hashMerkleRoot) from block
+    if (!fJustCheck && !hashMerkleRoot.IsNull()) {
 
-    // Only one MT hash commit is allowed per coinbase
-    if (!fJustCheck && vMTHashScript.size() == 1) {
-        const CScript& scriptPubKey = vMTHashScript.front();
+        // Check if there are update bytes
+        std::vector<CScript> vUpdateBytes;
+        for (const CTxOut& out : vout) {
+            const CScript scriptPubKey = out.scriptPubKey;
+            if (scriptPubKey.IsSCDBUpdate())
+                vUpdateBytes.push_back(scriptPubKey);
+        }
+        // There is a maximum of 1 update bytes script
+        if (vUpdateBytes.size() > 1) {
+            if (fDebug)
+                LogPrintf("SCDB %s: Error: multiple update byte scripts at height: %u\n",
+                       __func__,
+                       nHeight);
+            return false;
+        }
 
-        // TODO IsSCDBHashMerkleRootCommit should return the MT hash
-        // Get MT hash from script
-        uint256 hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
-        bool fUpdated = UpdateSCDBMatchMT(nHeight, hashMerkleRoot, std::vector<SidechainWTPrimeState> {}, mapNewWTPrime);
+        std::vector<SidechainWTPrimeState> vNewScores;
+        if (vUpdateBytes.size()) {
+            // Get old (current) state
+            std::vector<std::vector<SidechainWTPrimeState>> vOldState;
+            for (const Sidechain& s : vActiveSidechain) {
+                vOldState.push_back(GetState(s.nSidechain));
+            }
+
+            // Parse SCDB update bytes for new WT^ scores
+            if (!ParseSCDBUpdateScript(vUpdateBytes.front(), vOldState, vNewScores)) {
+                if (fDebug)
+                    LogPrintf("SCDB %s: Error: Failed to parse update bytes at height: %u\n",
+                            __func__,
+                            nHeight);
+                return false;
+            }
+            if (fDebug)
+                LogPrintf("SCDB %s: Parsed update bytes at height: %u\n",
+                        __func__,
+                        nHeight);
+        }
+
+        bool fUpdated = UpdateSCDBMatchMT(nHeight, hashMerkleRoot, vNewScores, mapNewWTPrime);
         if (!fUpdated) {
             if (fDebug)
                 LogPrintf("SCDB %s: Failed to match MT: %s at height: %u\n",
@@ -1039,22 +1234,88 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
         }
     }
 
+    // Remove any WT^(s) that were spent in this block. This can happen when a
+    // new block is connected, re-connected, or during SCDB resync.
+    std::vector<SidechainSpentWTPrime> vSpent;
+    vSpent = GetSpentWTPrimesForBlock(hashBlock);
+    for (const SidechainSpentWTPrime& s : vSpent) {
+        if (!IsSidechainNumberValid(s.nSidechain)) {
+            if (fDebug) {
+                LogPrintf("SCDB %s: Spent WT^ has invalid sidechain number: %u at height: %u\n",
+                        __func__,
+                        s.nSidechain,
+                        nHeight);
+            }
+            return false;
+        }
+        bool fRemoved = false;
+        for (size_t i = 0; i < vWTPrimeStatus[s.nSidechain].size(); i++) {
+            const SidechainWTPrimeState wt = vWTPrimeStatus[s.nSidechain][i];
+            if (wt.nSidechain == s.nSidechain &&
+                    wt.hashWTPrime == s.hashWTPrime) {
+
+                if (fDebug && !fJustCheck) {
+                    LogPrintf("SCDB %s: Removing spent WT^: %s for nSidechain: %u in block %s.\n",
+                            __func__,
+                            wt.hashWTPrime.ToString(),
+                            wt.nSidechain,
+                            hashBlock.ToString());
+                }
+
+                fRemoved = true;
+                if (fJustCheck)
+                    break;
+
+                // Remove the spent WT^
+                vWTPrimeStatus[s.nSidechain][i] = vWTPrimeStatus[s.nSidechain].back();
+                vWTPrimeStatus[s.nSidechain].pop_back();
+
+                break;
+            }
+        }
+        if (!fRemoved) {
+            if (fDebug) {
+                LogPrintf("SCDB %s: Failed to remove spent WT^: %s for sidechain: %u at height: %u\n",
+                        __func__,
+                        s.hashWTPrime.ToString(),
+                        s.nSidechain,
+                        nHeight);
+            }
+            return false;
+        }
+    }
+
+
+    if (fDebug && !fJustCheck) {
+        LogPrintf("SCDB: %s: Updated from block %s to block %s.\n",
+                __func__,
+                hashBlockLastSeen.ToString(),
+                hashBlock.ToString());
+    }
+
     // Update hashBLockLastSeen
     if (!fJustCheck)
         hashBlockLastSeen = hashBlock;
+
 
     return true;
 }
 
 bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug)
 {
-    // Note that WT^ and WT^ workscore are handled by ResyncSCDB in validation
-    // and not here
+    // WT^ workscore is recalculated by ResyncSCDB in validation - not here
 
     if (!vtx.size()) {
         LogPrintf("%s: SCDB undo failed for block: %s - vtx is empty!\n", __func__, hashBlock.ToString());
         return false;
     }
+
+    // Remove cached WT^ spends from the block that was disconnected
+    std::map<uint256, std::vector<SidechainSpentWTPrime>>::const_iterator it;
+    it = mapSpentWTPrime.find(hashBlock);
+
+    if (it != mapSpentWTPrime.end())
+        mapSpentWTPrime.erase(it);
 
     // Undo deposits
     // Loop through the transactions in the block being disconnected, and if
@@ -1126,13 +1387,6 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
 
 bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug, const std::map<uint8_t, uint256>& mapNewWTPrime)
 {
-    if (vNewScores.empty()) {
-        if (fDebug)
-            LogPrintf("SCDB %s: Update failed! No new scores at height: %u\n",
-                    __func__,
-                    nHeight);
-        return false;
-    }
     if (vWTPrimeStatus.empty()) {
         if (fDebug)
             LogPrintf("SCDB %s: Update failed: vWTPrimeStatus is empty!\n",
@@ -1269,10 +1523,6 @@ bool SidechainDB::UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, 
 {
     // Note: vScores is an optional vector of scores that we have parsed from
     // an update script, the network or otherwise.
-
-    // First see if we are already synchronized
-    if (GetSCDBHash() == hashMerkleRoot)
-        return true;
 
     // Try testing out most likely updates
     std::vector<SidechainWTPrimeState> vUpvote = GetLatestStateWithVote(SCDB_UPVOTE, mapNewWTPrime);
@@ -1491,6 +1741,77 @@ int GetNumBlocksSinceLastSidechainVerificationPeriod(int nHeight)
 {
     int nPeriodStart = GetLastSidechainVerificationPeriod(nHeight);
     return nHeight - nPeriodStart;
+}
+
+bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores)
+{
+    if (!script.IsSCDBUpdate())
+        return false;
+
+    if (vOldScores.empty())
+        return false;
+
+    CScript byteSection = CScript(script.begin() + 5, script.end());
+
+    size_t x = 0; // vOldScores outer vector (sidechains)
+    for (CScript::const_iterator it = script.begin(); it < script.end(); it++) {
+        const unsigned char c = *it;
+        if (c == SC_OP_UPVOTE || c == SC_OP_DOWNVOTE) {
+            // Figure out which WT^ is being upvoted
+            if (vOldScores.size() <= x)
+                return false;
+
+            // Read which WT^ we are voting on from the script and set
+            size_t y = 0; // vOldScores inner vector (WT^(s) per sidechain)
+            if (script.end() - it > 2) {
+                CScript::const_iterator itWT = it + 1;
+                const unsigned char cNext = *itWT;
+                if (cNext != SC_OP_DELIM) {
+                    if ((*itWT) == 0x01)
+                    {
+                        if (!(script.end() - itWT >= 1))
+                            return false;
+
+                        const CScript::const_iterator it1 = itWT + 1;
+                        y = CScriptNum(std::vector<unsigned char>{*it1}, false).getint();
+                    }
+                    else
+                    if ((*itWT) == 0x02)
+                    {
+                        if (!(script.end() - itWT >= 2))
+                            return false;
+
+                        const CScript::const_iterator it1 = itWT + 1;
+                        const CScript::const_iterator it2 = itWT + 2;
+                        y = CScriptNum(std::vector<unsigned char>{*it1, *it2}, false).getint();
+                    }
+                    else
+                    {
+                        // TODO support WT^ indexes requiring more than 2 bytes?
+                        return false;
+                    }
+                }
+            }
+
+            if (vOldScores[x].size() <= y)
+                return false;
+
+            SidechainWTPrimeState newScore = vOldScores[x][y];
+            newScore.nBlocksLeft--;
+
+            c == SC_OP_UPVOTE ? newScore.nWorkScore++ : newScore.nWorkScore--;
+
+            vNewScores.push_back(newScore);
+        }
+        else
+        if (c == SC_OP_DELIM) {
+            // Moving on to the next sidechain
+            x++;
+            continue;
+        }
+    }
+
+    return true;
 }
 
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted)
