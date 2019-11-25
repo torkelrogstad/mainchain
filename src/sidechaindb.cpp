@@ -866,6 +866,14 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     // This will also update the SCDB CTIP
     AddDeposits(std::vector<SidechainDeposit>{deposit}, hashBlock);
 
+    // TODO In the event that the block which spent a WT^ is disconnected, a
+    // miner will no longer have the raw WT^ transaction to create a WT^ payout
+    // in the block that replaces the disconnected block. They will either have
+    // to get it from the sidechain again, or this code can be changed to not
+    // removed spent WT^(s) until some number of blocks after it has been spent
+    // to avoid this issue. Another option is to cache all received WT^ raw txns
+    // until the miner manually clears them out with an RPC command or similar.
+    //
     // Find the cached transaction for the WT^ we spent and remove it
     for (size_t i = 0; i < vWTPrimeCache.size(); i++) {
         if (vWTPrimeCache[i].GetHash() == hashBlind) {
