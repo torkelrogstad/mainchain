@@ -5936,6 +5936,9 @@ void DumpSCDBCache()
 {
     // TODO make configurable
 
+    // Create ~/.drivechain/drivechain
+    TryCreateDirectories(GetDataDir() / "drivechain");
+
     // Dump SidechainDB, sidechain activation & optional caches
     DumpDepositCache();
     DumpCustomVoteCache();
