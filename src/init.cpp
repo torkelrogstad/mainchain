@@ -1739,6 +1739,15 @@ bool AppInitMain()
 
     bool fReadLoadedCoins = gArgs.GetBoolArg("-loadedcoins", true);
 
+    // TODO loaded coins are disabled for this release. Setting fReadLoadedCoins
+    // to false no matter what settings are applied means that loaded coins will
+    // not be read and cannot be used by other nodes without violating consensus
+    // rules.
+    //
+    // If loaded coins are to be removed entirely the code should be deleted.
+    // Or if loaded coins are to be re-enabled the next line can be deleted.
+    fReadLoadedCoins = false;
+
     // TODO improve this check... Right now we're just checking if the last
     // loaded coin that will be written can currently be looked up by pcoinsTip.
     // That does basically ensure that we have loaded all of the coins, but I'm
