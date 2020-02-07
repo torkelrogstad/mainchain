@@ -137,6 +137,10 @@ Intro::Intro(QWidget *parent) :
         tr("The wallet will also be stored in this directory.")
     );
     startThread();
+
+    // TODO loaded coins are disabled
+    // Remove this to re-show the loaded coins notice on the intro page
+    ui->labelLoadedCoins->setHidden(true);
 }
 
 Intro::~Intro()
