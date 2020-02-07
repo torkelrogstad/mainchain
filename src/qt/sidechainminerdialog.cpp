@@ -277,6 +277,10 @@ void SidechainMinerDialog::on_pushButtonReject_clicked()
     }
 }
 
+// TODO
+// refactor all of the voting pushButton slots to use one function for
+// setting WT^ vote type.
+
 void SidechainMinerDialog::on_pushButtonUpvoteWTPrime_clicked()
 {
     // Set WT^ vote type
@@ -380,9 +384,9 @@ void SidechainMinerDialog::on_toolButtonKeyHash_clicked()
            "Each sidechain must use a unique address or the sidechain software "
            "will be confused.\n\n"
            "The address will be based on 256 bits (encoded as 32 bytes of hex) "
-           "- you get to choose what these bits are. Either select them "
-           "yourself or click the random button, and paste these bytes into "
-           "the src/sidechain.h file.\n\n"
+           "- you get to choose what these bits are.\n\n"
+           "Add the address bytes to the src/sidechain.h file of the sidechain."
+           "\n\n"
            "Example:\n"
            "static const std::string SIDECHAIN_ADDRESS_BYTES = \"6e1f86cb9785d4484750970c7f4cd42a142d3c50974a0a3128f562934774b191\";"),
         QMessageBox::Ok);
