@@ -16,7 +16,15 @@
 #include <qt/walletmodel.h>
 
 #include <QAbstractItemDelegate>
+#include <QDateTime>
 #include <QPainter>
+#include <QTimer>
+
+// TODO get data from a model instead of including validation & sidechaindb
+// TODO also list sidechain activity like recent WT^(s) or CTIP updates etc
+// For listing sidechain data
+#include <sidechaindb.h>
+#include <validation.h>
 
 #define DECORATION_SIZE 54
 #define NUM_ITEMS 5
@@ -141,6 +149,19 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     showOutOfSyncWarning(true);
     connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
     connect(ui->labelTransactionsStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
+
+    // Start with the "more" frame invisible
+    ui->frameMore->setVisible(false);
+    fShowMore = false;
+
+    updateTimer = new QTimer(this);
+    updateTimer->start(1000 * 30);
+
+    lastBlockDate = new QDateTime();
+
+    connect(updateTimer, SIGNAL(timeout()), this, SLOT(refresh()));
+
+    refresh();
 }
 
 void OverviewPage::handleTransactionClicked(const QModelIndex &index)
@@ -157,6 +178,7 @@ void OverviewPage::handleOutOfSyncWarningClicks()
 OverviewPage::~OverviewPage()
 {
     delete ui;
+    delete lastBlockDate;
 }
 
 void OverviewPage::setBalance(const CAmount& balance, const CAmount& unconfirmedBalance, const CAmount& immatureBalance, const CAmount& watchOnlyBalance, const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance)
@@ -207,9 +229,18 @@ void OverviewPage::setClientModel(ClientModel *model)
     this->clientModel = model;
     if(model)
     {
+        // Keep up to date with client stats
+        connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
+        numBlocksChanged(clientModel->getNumBlocks(), clientModel->getLastBlockDate(), clientModel->getVerificationProgress(nullptr), false);
+        connect(clientModel, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)), this, SLOT(numBlocksChanged(int,QDateTime,double,bool)));
+        connect(clientModel, SIGNAL(mempoolSizeChanged(long,size_t)), this, SLOT(setMempoolSize(long,size_t)));
+
         // Show warning if this is a prerelease version
         connect(model, SIGNAL(alertsChanged(QString)), this, SLOT(updateAlerts(QString)));
         updateAlerts(model->getStatusBarWarnings());
+
+        // Call refresh again to update last block time & sidechain status
+        refresh();
     }
 }
 
@@ -270,4 +301,72 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
     ui->labelWalletStatus->setVisible(fShow);
     ui->labelTransactionsStatus->setVisible(fShow);
+}
+
+void OverviewPage::on_pushButtonMore_clicked()
+{
+    if (fShowMore) {
+        ui->pushButtonMore->setText("Show More");
+        ui->frameMore->setVisible(false);
+        fShowMore = false;
+    } else {
+        ui->pushButtonMore->setText("Show Less");
+        ui->frameMore->setVisible(true);
+        fShowMore = true;
+    }
+}
+
+void OverviewPage::setNumConnections(int count)
+{
+    ui->labelNumPeers->setText(QString::number(count));
+}
+
+void OverviewPage::numBlocksChanged(int count, const QDateTime& blockDate, double nVerificationProgress, bool header)
+{
+    // Cache the last block time
+    *lastBlockDate = blockDate;
+
+    ui->labelLastBlock->setText("Just now");
+    ui->labelNumBlocks->setText(QString::number(count));
+
+    // Update the active sidechain count
+    unsigned int nSidechains = scdb.GetActiveSidechainCount();
+    ui->labelNumSidechains->setText(QString::number(nSidechains) + " / 256");
+}
+
+void OverviewPage::setMempoolSize(long nTxn, size_t dynUsage)
+{
+    if (nTxn == 0 || nTxn > 1)
+        ui->labelMempool->setText(QString::number(nTxn) + " Transactions");
+    else
+        ui->labelMempool->setText(QString::number(nTxn) + " Transaction");
+}
+
+void OverviewPage::refresh()
+{
+    QDateTime currentDate = QDateTime::currentDateTime();
+    qint64 secs = lastBlockDate->secsTo(currentDate);
+
+    int nMinutes = secs / 60;
+    if (nMinutes >= 1 && nMinutes < 60) {
+        if (nMinutes == 1)
+            ui->labelLastBlock->setText(QString::number(nMinutes) + " Minute ago");
+        else
+            ui->labelLastBlock->setText(QString::number(nMinutes) + " Minutes ago");
+    }
+    else
+    if (nMinutes > 60) {
+        int nHours = nMinutes / 60;
+        if (nHours == 1)
+            ui->labelLastBlock->setText("> " + QString::number(nMinutes / 60) + " Hour ago");
+        else
+            ui->labelLastBlock->setText("> " + QString::number(nMinutes / 60) + " Hours ago");
+    }
+    else {
+        ui->labelLastBlock->setText("Seconds ago");
+    }
+
+    // Update the active sidechain count
+    unsigned int nSidechains = scdb.GetActiveSidechainCount();
+    ui->labelNumSidechains->setText(QString::number(nSidechains) + " / 256");
 }

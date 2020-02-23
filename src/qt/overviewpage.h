@@ -21,7 +21,9 @@ namespace Ui {
 }
 
 QT_BEGIN_NAMESPACE
+class QDateTime;
 class QModelIndex;
+class QTimer;
 QT_END_NAMESPACE
 
 /** Overview ("home") page widget */
@@ -59,12 +61,27 @@ private:
     TxViewDelegate *txdelegate;
     std::unique_ptr<TransactionFilterProxy> filter;
 
+    bool fShowMore;
+    QDateTime* lastBlockDate;
+    QTimer* updateTimer;
+
 private Q_SLOTS:
     void updateDisplayUnit();
     void handleTransactionClicked(const QModelIndex &index);
     void updateAlerts(const QString &warnings);
     void updateWatchOnlyLabels(bool showWatchOnly);
     void handleOutOfSyncWarningClicks();
+
+    void on_pushButtonMore_clicked();
+
+    /** Set number of connections shown in the UI */
+    void setNumConnections(int count);
+    /** Set number of blocks and last block date shown in the UI */
+    void numBlocksChanged(int count, const QDateTime& blockDate, double nVerificationProgress, bool headers);
+    /** Set size (number of transactions) of the mempool in the UI */
+    void setMempoolSize(long nTxn, size_t dynUsage);
+    /** Refresh "more" data based on timer */
+    void refresh();
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H
