@@ -219,7 +219,7 @@
    <item>
     <widget class="QLabel" name="lblExplanation1">
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When you click OK, %1 will begin to import the Bitcoin Core UTXO set. After that you will begin downloading new blocks.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When you click OK, %1 will begin downloading new blocks.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
