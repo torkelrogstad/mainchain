@@ -87,7 +87,6 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     // Clicking on "Refresh replay status" will fetch updated replay info
     connect(refreshReplayButton, SIGNAL(clicked()), transactionView, SLOT(refreshReplayClicked()));
 
-
     // Clicking on "Export" allows to export the transaction list
     connect(exportButton, SIGNAL(clicked()), transactionView, SLOT(exportClicked()));
 
