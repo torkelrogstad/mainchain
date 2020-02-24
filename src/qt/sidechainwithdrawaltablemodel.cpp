@@ -98,6 +98,14 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
             return object.hashWTPrime;
         }
     }
+    case AcksRole:
+    {
+        return object.nAcks;
+    }
+    case HashRole:
+    {
+        return object.hashWTPrime;
+    }
     }
     return QVariant();
 }

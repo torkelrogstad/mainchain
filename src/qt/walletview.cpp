@@ -81,12 +81,14 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), transactionView, SLOT(focusTransaction(QModelIndex)));
     connect(overviewPage, SIGNAL(outOfSyncWarningClicked()), this, SLOT(requestedSyncWarningInfo()));
 
+    // Clicking on a WT^ on the overview sends the user to the WT^ table of the sidechain page
+    connect(overviewPage, SIGNAL(SidechainWTClicked()), sidechainPage, SLOT(gotoWTPage()));
+
     // Double-clicking on a transaction on the transaction history page shows details
     connect(transactionView, SIGNAL(doubleClicked(QModelIndex)), transactionView, SLOT(showDetails()));
 
     // Clicking on "Refresh replay status" will fetch updated replay info
     connect(refreshReplayButton, SIGNAL(clicked()), transactionView, SLOT(refreshReplayClicked()));
-
 
     // Clicking on "Export" allows to export the transaction list
     connect(exportButton, SIGNAL(clicked()), transactionView, SLOT(exportClicked()));
@@ -107,6 +109,9 @@ void WalletView::setBitcoinGUI(BitcoinGUI *gui)
     {
         // Clicking on a transaction on the overview page simply sends you to transaction history page
         connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), gui, SLOT(gotoHistoryPage()));
+
+        // Clicking on a WT^ on the overview page sends the user to the sidechain page
+        connect(overviewPage, SIGNAL(SidechainWTClicked()), gui, SLOT(gotoSidechainPage()));
 
         // Receive and report messages
         connect(this, SIGNAL(message(QString,QString,unsigned int)), gui, SLOT(message(QString,QString,unsigned int)));

@@ -11,12 +11,22 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/transactionfilterproxy.h>
 #include <qt/transactiontablemodel.h>
 #include <qt/walletmodel.h>
 
 #include <QAbstractItemDelegate>
+#include <QDateTime>
 #include <QPainter>
+#include <QTimer>
+
+// TODO get data from a model instead of including validation & sidechaindb
+// TODO also list sidechain activity like recent WT^(s) or CTIP updates etc
+// For listing sidechain data
+#include <sidechain.h>
+#include <sidechaindb.h>
+#include <validation.h>
 
 #define DECORATION_SIZE 54
 #define NUM_ITEMS 5
@@ -106,6 +116,68 @@ public:
     const PlatformStyle *platformStyle;
 
 };
+
+class WTPrimeViewDelegate : public QAbstractItemDelegate
+{
+    Q_OBJECT
+public:
+    explicit WTPrimeViewDelegate(const PlatformStyle *_platformStyle, QObject *parent=nullptr):
+        QAbstractItemDelegate(parent), unit(BitcoinUnits::BTC),
+        platformStyle(_platformStyle)
+    {
+
+    }
+
+    inline void paint(QPainter *painter, const QStyleOptionViewItem &option,
+                      const QModelIndex &index ) const
+    {
+        painter->save();
+
+        QIcon icon = QIcon(":/icons/tx_output");
+        QRect mainRect = option.rect;
+        QRect decorationRect(mainRect.topLeft(), QSize(DECORATION_SIZE, DECORATION_SIZE));
+        int xspace = DECORATION_SIZE + 8;
+        int ypad = 6;
+        int halfheight = (mainRect.height() - 2*ypad)/2;
+
+        QRect acksRect(mainRect.left() + xspace, mainRect.top()+ypad, mainRect.width() - xspace, halfheight);
+        QRect hashRect(mainRect.left() + xspace, mainRect.top()+ypad+halfheight, mainRect.width() - xspace, halfheight);
+
+        icon = platformStyle->SingleColorIcon(icon);
+        icon.paint(painter, decorationRect);
+
+        // Data that will be added to the item
+        QString hashRaw = index.data(SidechainWithdrawalTableModel::HashRole).toString();
+        QString hash = "(" + hashRaw + ")";
+        QString title = index.data(Qt::DisplayRole).toString();
+        QString minWork = QString::number(SIDECHAIN_MIN_WORKSCORE);
+        QString acks = "Acks: " +
+                index.data(SidechainWithdrawalTableModel::AcksRole).toString() +
+                " / " + minWork;
+
+        // Draw the data
+
+        QRect boundingRect;
+        painter->setPen(QColor(COLOR_BAREADDRESS));
+        painter->drawText(hashRect, Qt::AlignLeft|Qt::AlignVCenter, hash, &boundingRect);
+
+        QColor foreground = option.palette.color(QPalette::Text);
+        painter->setPen(foreground);
+
+        painter->drawText(acksRect, Qt::AlignRight|Qt::AlignVCenter, acks);
+        painter->drawText(acksRect, Qt::AlignLeft|Qt::AlignVCenter, title);
+        painter->restore();
+    }
+
+    inline QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+    {
+        return QSize(DECORATION_SIZE, DECORATION_SIZE);
+    }
+
+    int unit;
+    const PlatformStyle *platformStyle;
+
+};
 #include <qt/overviewpage.moc>
 
 OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) :
@@ -119,7 +191,8 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     currentWatchOnlyBalance(-1),
     currentWatchUnconfBalance(-1),
     currentWatchImmatureBalance(-1),
-    txdelegate(new TxViewDelegate(platformStyle, this))
+    txdelegate(new TxViewDelegate(platformStyle, this)),
+    wtdelegate(new WTPrimeViewDelegate(platformStyle, this))
 {
     ui->setupUi(this);
 
@@ -128,6 +201,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     icon.addPixmap(icon.pixmap(QSize(64,64), QIcon::Normal), QIcon::Disabled); // also set the disabled icon because we are using a disabled QPushButton to work around missing HiDPI support of QLabel (https://bugreports.qt.io/browse/QTBUG-42503)
     ui->labelTransactionsStatus->setIcon(icon);
     ui->labelWalletStatus->setIcon(icon);
+    ui->labelSidechainStatus->setIcon(icon);
 
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
@@ -136,17 +210,47 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->listTransactions->setAttribute(Qt::WA_MacShowFocusRect, false);
 
     connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
+    connect(ui->listViewWT, SIGNAL(clicked(QModelIndex)), this, SLOT(handleSidechainWTClicked()));
 
     // start with displaying the "out of sync" warnings
     showOutOfSyncWarning(true);
     connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
     connect(ui->labelTransactionsStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
+    connect(ui->labelSidechainStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
+
+    // TODO add withdrawal model to walletmodel
+    // Setup the WT^ list
+    withdrawalModel = new SidechainWithdrawalTableModel(this);
+    ui->listViewWT->setModel(withdrawalModel);
+    ui->listViewWT->setItemDelegate(wtdelegate);
+    ui->listViewWT->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
+    ui->listViewWT->setMinimumHeight(1 * (DECORATION_SIZE + 2));
+    ui->listViewWT->setAttribute(Qt::WA_MacShowFocusRect, false);
+
+
+    // Start with the "more" frame invisible
+    ui->frameMore->setVisible(false);
+    fShowMore = false;
+
+    updateTimer = new QTimer(this);
+    updateTimer->start(1000 * 30);
+
+    lastBlockDate = new QDateTime();
+
+    connect(updateTimer, SIGNAL(timeout()), this, SLOT(refresh()));
+
+    refresh();
 }
 
 void OverviewPage::handleTransactionClicked(const QModelIndex &index)
 {
     if(filter)
         Q_EMIT transactionClicked(filter->mapToSource(index));
+}
+
+void OverviewPage::handleSidechainWTClicked()
+{
+    Q_EMIT SidechainWTClicked();
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()
@@ -157,6 +261,7 @@ void OverviewPage::handleOutOfSyncWarningClicks()
 OverviewPage::~OverviewPage()
 {
     delete ui;
+    delete lastBlockDate;
 }
 
 void OverviewPage::setBalance(const CAmount& balance, const CAmount& unconfirmedBalance, const CAmount& immatureBalance, const CAmount& watchOnlyBalance, const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance)
@@ -207,9 +312,18 @@ void OverviewPage::setClientModel(ClientModel *model)
     this->clientModel = model;
     if(model)
     {
+        // Keep up to date with client stats
+        connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
+        numBlocksChanged(clientModel->getNumBlocks(), clientModel->getLastBlockDate(), clientModel->getVerificationProgress(nullptr), false);
+        connect(clientModel, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)), this, SLOT(numBlocksChanged(int,QDateTime,double,bool)));
+        connect(clientModel, SIGNAL(mempoolSizeChanged(long,size_t)), this, SLOT(setMempoolSize(long,size_t)));
+
         // Show warning if this is a prerelease version
         connect(model, SIGNAL(alertsChanged(QString)), this, SLOT(updateAlerts(QString)));
         updateAlerts(model->getStatusBarWarnings());
+
+        // Call refresh again to update last block time & sidechain status
+        refresh();
     }
 }
 
@@ -270,4 +384,73 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
     ui->labelWalletStatus->setVisible(fShow);
     ui->labelTransactionsStatus->setVisible(fShow);
+    ui->labelSidechainStatus->setVisible(fShow);
+}
+
+void OverviewPage::on_pushButtonMore_clicked()
+{
+    if (fShowMore) {
+        ui->pushButtonMore->setText("Show More");
+        ui->frameMore->setVisible(false);
+        fShowMore = false;
+    } else {
+        ui->pushButtonMore->setText("Show Less");
+        ui->frameMore->setVisible(true);
+        fShowMore = true;
+    }
+}
+
+void OverviewPage::setNumConnections(int count)
+{
+    ui->labelNumPeers->setText(QString::number(count));
+}
+
+void OverviewPage::numBlocksChanged(int count, const QDateTime& blockDate, double nVerificationProgress, bool header)
+{
+    // Cache the last block time
+    *lastBlockDate = blockDate;
+
+    ui->labelLastBlock->setText("Just now");
+    ui->labelNumBlocks->setText(QString::number(count));
+
+    // Update the active sidechain count
+    unsigned int nSidechains = scdb.GetActiveSidechainCount();
+    ui->labelNumSidechains->setText(QString::number(nSidechains) + " / 256");
+}
+
+void OverviewPage::setMempoolSize(long nTxn, size_t dynUsage)
+{
+    if (nTxn == 0 || nTxn > 1)
+        ui->labelMempool->setText(QString::number(nTxn) + " Transactions");
+    else
+        ui->labelMempool->setText(QString::number(nTxn) + " Transaction");
+}
+
+void OverviewPage::refresh()
+{
+    QDateTime currentDate = QDateTime::currentDateTime();
+    qint64 secs = lastBlockDate->secsTo(currentDate);
+
+    int nMinutes = secs / 60;
+    if (nMinutes >= 1 && nMinutes < 60) {
+        if (nMinutes == 1)
+            ui->labelLastBlock->setText(QString::number(nMinutes) + " Minute ago");
+        else
+            ui->labelLastBlock->setText(QString::number(nMinutes) + " Minutes ago");
+    }
+    else
+    if (nMinutes > 60) {
+        int nHours = nMinutes / 60;
+        if (nHours == 1)
+            ui->labelLastBlock->setText("> " + QString::number(nMinutes / 60) + " Hour ago");
+        else
+            ui->labelLastBlock->setText("> " + QString::number(nMinutes / 60) + " Hours ago");
+    }
+    else {
+        ui->labelLastBlock->setText("Seconds ago");
+    }
+
+    // Update the active sidechain count
+    unsigned int nSidechains = scdb.GetActiveSidechainCount();
+    ui->labelNumSidechains->setText(QString::number(nSidechains) + " / 256");
 }
