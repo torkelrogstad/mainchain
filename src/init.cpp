@@ -536,7 +536,7 @@ std::string HelpMessage(HelpMessageMode mode)
 
 std::string LicenseInfo()
 {
-    const std::string URL_SOURCE_CODE = "<https://github.com/DriveNetTESTDRIVE/DriveNet>";
+    const std::string URL_SOURCE_CODE = "<https://github.com/drivechain-project/mainchain>";
     const std::string URL_WEBSITE = "<http://drivechain.info>";
 
     return CopyrightHolders(strprintf(_("Copyright (C) %i-%i"), 2009, COPYRIGHT_YEAR) + " ") + "\n" +
