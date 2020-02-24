@@ -13,7 +13,9 @@
 class ClientModel;
 class TransactionFilterProxy;
 class TxViewDelegate;
+class WTPrimeViewDelegate;
 class PlatformStyle;
+class SidechainWithdrawalTableModel;
 class WalletModel;
 
 namespace Ui {
@@ -50,6 +52,7 @@ Q_SIGNALS:
 private:
     Ui::OverviewPage *ui;
     ClientModel *clientModel;
+    SidechainWithdrawalTableModel *withdrawalModel = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
     CAmount currentUnconfirmedBalance;
@@ -59,6 +62,7 @@ private:
     CAmount currentWatchImmatureBalance;
 
     TxViewDelegate *txdelegate;
+    WTPrimeViewDelegate *wtdelegate;
     std::unique_ptr<TransactionFilterProxy> filter;
 
     bool fShowMore;
@@ -68,6 +72,7 @@ private:
 private Q_SLOTS:
     void updateDisplayUnit();
     void handleTransactionClicked(const QModelIndex &index);
+    // TODO handle sidechain withdraw clicked (go to sidechain withdraw page table)
     void updateAlerts(const QString &warnings);
     void updateWatchOnlyLabels(bool showWatchOnly);
     void handleOutOfSyncWarningClicks();

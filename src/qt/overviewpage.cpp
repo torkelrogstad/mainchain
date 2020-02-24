@@ -11,6 +11,7 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/transactionfilterproxy.h>
 #include <qt/transactiontablemodel.h>
 #include <qt/walletmodel.h>
@@ -23,6 +24,7 @@
 // TODO get data from a model instead of including validation & sidechaindb
 // TODO also list sidechain activity like recent WT^(s) or CTIP updates etc
 // For listing sidechain data
+#include <sidechain.h>
 #include <sidechaindb.h>
 #include <validation.h>
 
@@ -114,6 +116,68 @@ public:
     const PlatformStyle *platformStyle;
 
 };
+
+class WTPrimeViewDelegate : public QAbstractItemDelegate
+{
+    Q_OBJECT
+public:
+    explicit WTPrimeViewDelegate(const PlatformStyle *_platformStyle, QObject *parent=nullptr):
+        QAbstractItemDelegate(parent), unit(BitcoinUnits::BTC),
+        platformStyle(_platformStyle)
+    {
+
+    }
+
+    inline void paint(QPainter *painter, const QStyleOptionViewItem &option,
+                      const QModelIndex &index ) const
+    {
+        painter->save();
+
+        QIcon icon = QIcon(":/icons/tx_output");
+        QRect mainRect = option.rect;
+        QRect decorationRect(mainRect.topLeft(), QSize(DECORATION_SIZE, DECORATION_SIZE));
+        int xspace = DECORATION_SIZE + 8;
+        int ypad = 6;
+        int halfheight = (mainRect.height() - 2*ypad)/2;
+
+        QRect acksRect(mainRect.left() + xspace, mainRect.top()+ypad, mainRect.width() - xspace, halfheight);
+        QRect hashRect(mainRect.left() + xspace, mainRect.top()+ypad+halfheight, mainRect.width() - xspace, halfheight);
+
+        icon = platformStyle->SingleColorIcon(icon);
+        icon.paint(painter, decorationRect);
+
+        // Data that will be added to the item
+        QString hashRaw = index.data(SidechainWithdrawalTableModel::HashRole).toString();
+        QString hash = "(" + hashRaw + ")";
+        QString title = index.data(Qt::DisplayRole).toString();
+        QString minWork = QString::number(SIDECHAIN_MIN_WORKSCORE);
+        QString acks = "Acks: " +
+                index.data(SidechainWithdrawalTableModel::AcksRole).toString() +
+                " / " + minWork;
+
+        // Draw the data
+
+        QRect boundingRect;
+        painter->setPen(QColor(COLOR_BAREADDRESS));
+        painter->drawText(hashRect, Qt::AlignLeft|Qt::AlignVCenter, hash, &boundingRect);
+
+        QColor foreground = option.palette.color(QPalette::Text);
+        painter->setPen(foreground);
+
+        painter->drawText(acksRect, Qt::AlignRight|Qt::AlignVCenter, acks);
+        painter->drawText(acksRect, Qt::AlignLeft|Qt::AlignVCenter, title);
+        painter->restore();
+    }
+
+    inline QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+    {
+        return QSize(DECORATION_SIZE, DECORATION_SIZE);
+    }
+
+    int unit;
+    const PlatformStyle *platformStyle;
+
+};
 #include <qt/overviewpage.moc>
 
 OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) :
@@ -127,7 +191,8 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     currentWatchOnlyBalance(-1),
     currentWatchUnconfBalance(-1),
     currentWatchImmatureBalance(-1),
-    txdelegate(new TxViewDelegate(platformStyle, this))
+    txdelegate(new TxViewDelegate(platformStyle, this)),
+    wtdelegate(new WTPrimeViewDelegate(platformStyle, this))
 {
     ui->setupUi(this);
 
@@ -136,6 +201,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     icon.addPixmap(icon.pixmap(QSize(64,64), QIcon::Normal), QIcon::Disabled); // also set the disabled icon because we are using a disabled QPushButton to work around missing HiDPI support of QLabel (https://bugreports.qt.io/browse/QTBUG-42503)
     ui->labelTransactionsStatus->setIcon(icon);
     ui->labelWalletStatus->setIcon(icon);
+    ui->labelSidechainStatus->setIcon(icon);
 
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
@@ -149,6 +215,17 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     showOutOfSyncWarning(true);
     connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
     connect(ui->labelTransactionsStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
+    connect(ui->labelSidechainStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
+
+    // TODO add withdrawal model to walletmodel
+    // Setup the WT^ list
+    withdrawalModel = new SidechainWithdrawalTableModel(this);
+    ui->listViewWT->setModel(withdrawalModel);
+    ui->listViewWT->setItemDelegate(wtdelegate);
+    ui->listViewWT->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
+    ui->listViewWT->setMinimumHeight(1 * (DECORATION_SIZE + 2));
+    ui->listViewWT->setAttribute(Qt::WA_MacShowFocusRect, false);
+
 
     // Start with the "more" frame invisible
     ui->frameMore->setVisible(false);
@@ -301,6 +378,7 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
     ui->labelWalletStatus->setVisible(fShow);
     ui->labelTransactionsStatus->setVisible(fShow);
+    ui->labelSidechainStatus->setVisible(fShow);
 }
 
 void OverviewPage::on_pushButtonMore_clicked()
