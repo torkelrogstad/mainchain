@@ -68,6 +68,8 @@ public Q_SLOTS:
 
     void CheckForSidechainUpdates();
 
+    void gotoWTPage();
+
 private:
     Ui::SidechainPage *ui;
 

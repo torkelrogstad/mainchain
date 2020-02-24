@@ -210,6 +210,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->listTransactions->setAttribute(Qt::WA_MacShowFocusRect, false);
 
     connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
+    connect(ui->listViewWT, SIGNAL(clicked(QModelIndex)), this, SLOT(handleSidechainWTClicked()));
 
     // start with displaying the "out of sync" warnings
     showOutOfSyncWarning(true);
@@ -245,6 +246,11 @@ void OverviewPage::handleTransactionClicked(const QModelIndex &index)
 {
     if(filter)
         Q_EMIT transactionClicked(filter->mapToSource(index));
+}
+
+void OverviewPage::handleSidechainWTClicked()
+{
+    Q_EMIT SidechainWTClicked();
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()

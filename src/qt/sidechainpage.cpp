@@ -401,3 +401,10 @@ void SidechainPage::CheckForSidechainUpdates()
         SetupTables();
     }
 }
+
+void SidechainPage::gotoWTPage()
+{
+    // Go to the WT^ table
+    ui->tabWidget->setCurrentIndex(1);
+    ui->tabWidget_2->setCurrentIndex(1);
+}
