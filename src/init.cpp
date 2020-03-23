@@ -1780,6 +1780,11 @@ bool AppInitMain()
         }
     }
 
+    //
+    // TODO
+    // Loaded coins disabled in this release, so don't show ui message
+    // about loaded coins or scan for wallet's loaded coins.
+    /*
     if (!vpwallets.empty()) {
         uiInterface.InitMessage(_("Reading wallet's loaded coins."));
         CWalletRef pwallet = vpwallets.front();
@@ -1788,6 +1793,7 @@ bool AppInitMain()
         vLoadedCoin = pcoinsTip->ReadMyLoadedCoins();
         pwallet->AddLoadedCoins(vLoadedCoin);
     }
+    */
 #endif
 
     // ********************************************************* Step 13: start node
