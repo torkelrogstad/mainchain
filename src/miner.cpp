@@ -170,7 +170,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         std::vector<uint256> vHashRemoved;
         mempool.RemoveExpiredCriticalRequests(vHashRemoved);
 
-        // Abandon expired BMM requests from the wallet
+        // Abandon expired BMM requests from the wallet if they were created
+        // by our node
         if (!vpwallets.empty()) {
             for (const uint256& u : vHashRemoved) {
                 if (vpwallets[0]->mapWallet.count(u))
@@ -178,8 +179,17 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             }
         }
 
+        vHashRemoved.clear();
+
         // Select which BMM requests (if any) to include
-        mempool.SelectBMMRequests();
+        mempool.SelectBMMRequests(vHashRemoved);
+
+        if (!vpwallets.empty()) {
+            for (const uint256& u : vHashRemoved) {
+                if (vpwallets[0]->mapWallet.count(u))
+                    vpwallets[0]->AbandonTransaction(u);
+            }
+        }
     }
 #endif
 

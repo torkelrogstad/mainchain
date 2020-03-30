@@ -1015,11 +1015,14 @@ void CTxMemPool::RemoveExpiredCriticalRequests(std::vector<uint256>& vHashRemove
         }
     }
 
-    // UNKNOWN also means manually removed
-    RemoveStaged(txToRemove, false, MemPoolRemovalReason::UNKNOWN);
+    for (const txiter& it : txToRemove) {
+        const CTransaction tx = it->GetTx();
+        ClearPrioritisation(tx.GetHash());
+        removeRecursive(tx);
+    }
 }
 
-void CTxMemPool::SelectBMMRequests()
+void CTxMemPool::SelectBMMRequests(std::vector<uint256>& vHashRemoved)
 {
     // TODO
     // For now, this is just making sure that we only accept 1 BMM request
@@ -1066,8 +1069,12 @@ void CTxMemPool::SelectBMMRequests()
         }
     }
 
-    // UNKNOWN also means manually removed
-    RemoveStaged(txToRemove, false, MemPoolRemovalReason::UNKNOWN);
+    for (const txiter& it : txToRemove) {
+        const CTransaction tx = it->GetTx();
+        ClearPrioritisation(tx.GetHash());
+        removeRecursive(tx);
+        vHashRemoved.push_back(tx.GetHash());
+    }
 }
 
 void CTxMemPool::UpdateCTIP(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fJustCheck)

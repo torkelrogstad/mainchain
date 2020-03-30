@@ -506,7 +506,7 @@ public:
 
     void RemoveExpiredCriticalRequests(std::vector<uint256>& vHashRemoved);
 
-    void SelectBMMRequests();
+    void SelectBMMRequests(std::vector<uint256>& vHashRemoved);
 
     void UpdateCTIP(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fJustCheck = false);
 
