@@ -166,30 +166,16 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
 #ifdef ENABLE_WALLET
     if (fDrivechainEnabled) {
+
         // Remove expired BMM requests from our memory pool
         std::vector<uint256> vHashRemoved;
         mempool.RemoveExpiredCriticalRequests(vHashRemoved);
-
-        // Abandon expired BMM requests from the wallet if they were created
-        // by our node
-        if (!vpwallets.empty()) {
-            for (const uint256& u : vHashRemoved) {
-                if (vpwallets[0]->mapWallet.count(u))
-                    vpwallets[0]->AbandonTransaction(u);
-            }
-        }
-
-        vHashRemoved.clear();
-
         // Select which BMM requests (if any) to include
         mempool.SelectBMMRequests(vHashRemoved);
 
-        if (!vpwallets.empty()) {
-            for (const uint256& u : vHashRemoved) {
-                if (vpwallets[0]->mapWallet.count(u))
-                    vpwallets[0]->AbandonTransaction(u);
-            }
-        }
+        // Track what was removed from the mempool so that we can abandon later
+        for (const uint256& u : vHashRemoved)
+            scdb.AddRemovedBMM(u);
     }
 #endif
 

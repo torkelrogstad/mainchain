@@ -18,6 +18,11 @@ SidechainDB::SidechainDB()
     Reset();
 }
 
+void SidechainDB::AddRemovedBMM(const uint256& hashRemoved)
+{
+    vRemovedBMM.push_back(hashRemoved);
+}
+
 void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
@@ -290,6 +295,11 @@ bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime,
     return false;
 }
 
+void SidechainDB::ClearRemovedBMM()
+{
+    vRemovedBMM.clear();
+}
+
 unsigned int SidechainDB::GetActiveSidechainCount() const
 {
     return vActiveSidechain.size();
@@ -315,6 +325,11 @@ bool SidechainDB::GetActivateSidechain(const uint256& u) const
 std::vector<Sidechain> SidechainDB::GetActiveSidechains() const
 {
     return vActiveSidechain;
+}
+
+std::vector<uint256> SidechainDB::GetRemovedBMM() const
+{
+    return vRemovedBMM;
 }
 
 bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const

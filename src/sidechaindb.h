@@ -41,6 +41,9 @@ class SidechainDB
 public:
     SidechainDB();
 
+    /** Add txid of removed BMM transaction */
+    void AddRemovedBMM(const uint256& hashRemoved);
+
     /** Add deposit(s) to cache - from block */
     void AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck = false);
 
@@ -74,6 +77,9 @@ public:
     /** Check SCDB WT^ verification status */
     bool CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime, bool fDebug = false) const;
 
+    /** Clear out the cached list of removed BMM transactions */
+    void ClearRemovedBMM();
+
     /** Return number of active sidechains */
     unsigned int GetActiveSidechainCount() const;
 
@@ -83,6 +89,9 @@ public:
 
     /** Get list of currently active sidechains */
     std::vector<Sidechain> GetActiveSidechains() const;
+
+    /** Get list of BMM txid that miner removed from the mempool. */
+    std::vector<uint256> GetRemovedBMM() const;
 
     /** Return the CTIP (critical transaction index pair) for nSidechain */
     bool GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const;
@@ -262,6 +271,11 @@ private:
 
     /** Map of spent WT^(s) key: block hash value: State of WT^(s) when spent */
     std::map<uint256, std::vector<SidechainSpentWTPrime>> mapSpentWTPrime;
+
+    /** List of BMM request txid that the miner removed from the mempool.
+     * TODO: Change to a map and erase elements once they are abandoned.
+     * TODO: Persist on disk */
+    std::vector<uint256> vRemovedBMM;
 
     /** Calls SortDeposits for all of SCDB's deposit cache */
     bool SortSCDBDeposits();
