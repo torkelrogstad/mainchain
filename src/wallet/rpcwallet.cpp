@@ -2223,6 +2223,72 @@ UniValue abandontransaction(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+UniValue abandonbmm(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size()) {
+        throw std::runtime_error(
+            "abandonbmm\n"
+            "\nRemove expired BMM requests and BMM requests not selected by "
+            "our SelectBMMRequests settings. Then try to abandon the BMM "
+            "requests from our wallet if we created them.\n"
+            "This will mark the transaction and all in-wallet descendants "
+            "as abandoned which will allow for their inputs to be respent.\n"
+            "It only works on transactions which are not included in a block.\n"
+            "It has no effect on transactions which are already abandoned.\n"
+            "\nResult:\n"
+            "[\n"
+            "   {\n"
+            "       \"status\" : txid, (string) abandon transaction result : txid\n"
+            "   }"
+            "\n]\n"
+            "\nExamples:\n"
+            + HelpExampleCli("abandonbmm", "")
+            + HelpExampleRpc("abandonbmm", "")
+        );
+    }
+
+    ObserveSafeMode();
+
+    std::vector<uint256> vHashRemoved;
+    mempool.SelectBMMRequests(vHashRemoved);
+    mempool.RemoveExpiredCriticalRequests(vHashRemoved);
+
+    // Also try to abandon cached BMM txid previously removed from our mempool
+    std::vector<uint256> vCached= scdb.GetRemovedBMM();
+    vHashRemoved.reserve(vCached.size());
+    vHashRemoved.insert(vHashRemoved.end(), vCached.begin(), vCached.end());
+
+    SyncWithValidationInterfaceQueue();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    UniValue results(UniValue::VARR);
+    for (const uint256& u : vHashRemoved) {
+        UniValue entry(UniValue::VOBJ);
+
+        if (!pwallet->mapWallet.count(u)) {
+            entry.push_back(Pair("not-in-wallet", u.ToString()));
+            results.push_back(entry);
+            continue;
+        }
+        std::string strReason = "";
+        if (!pwallet->AbandonTransaction(u, &strReason)) {
+            entry.push_back(Pair(strprintf("cannot-abandon: %s", strReason), u.ToString()));
+            results.push_back(entry);
+            continue;
+        }
+        entry.push_back(Pair("abandoned", u.ToString()));
+        results.push_back(entry);
+    }
+    scdb.ClearRemovedBMM();
+
+    return results;
+}
 
 UniValue backupwallet(const JSONRPCRequest& request)
 {
@@ -3728,6 +3794,7 @@ static const CRPCCommand commands[] =
     { "rawtransactions",    "fundrawtransaction",       &fundrawtransaction,       {"hexstring","options","iswitness"} },
     { "hidden",             "resendwallettransactions", &resendwallettransactions, {} },
     { "wallet",             "abandontransaction",       &abandontransaction,       {"txid"} },
+    { "wallet",             "abandonbmm",               &abandonbmm,               {} },
     { "wallet",             "abortrescan",              &abortrescan,              {} },
     { "wallet",             "addmultisigaddress",       &addmultisigaddress,       {"nrequired","keys","account","address_type"} },
     { "hidden",             "addwitnessaddress",        &addwitnessaddress,        {"address","p2sh"} },
