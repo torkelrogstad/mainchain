@@ -1736,6 +1736,9 @@ void SidechainDB::UpdateCTIP(const uint256& hashBlock)
             std::map<uint8_t, SidechainCTIP>::const_iterator it;
             it = mapCTIP.find(x);
             mapCTIP.erase(it);
+
+            LogPrintf("SCDB %s: Removed sidechain CTIP.\n",
+                    __func__);
         }
     }
 }

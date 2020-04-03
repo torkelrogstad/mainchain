@@ -694,11 +694,11 @@ UniValue listsidechainctip(const JSONRPCRequest& request)
     // Is nSidechain valid?
     int nSidechain = request.params[0].get_int();
     if (!IsSidechainNumberValid(nSidechain))
-        throw std::runtime_error("Invalid sidechain number!");
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number!");
 
     SidechainCTIP ctip;
     if (!scdb.GetCTIP(nSidechain, ctip))
-        throw std::runtime_error("No CTIP found for sidechain!");
+        throw JSONRPCError(RPC_MISC_ERROR, "No CTIP found for sidechain!");
 
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("txid", ctip.out.hash.ToString()));
@@ -730,6 +730,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     std::string strError;
     if (vpwallets.empty()) {
         strError = "Error: no wallets are available";
+        LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
 #endif
@@ -737,8 +738,11 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     // Is sidechain build commit hash valid?
     std::string strSidechain = request.params[0].get_str();
     uint256 hashSidechain = uint256S(strSidechain);
-    if (hashSidechain.IsNull())
-        throw std::runtime_error("Invalid sidechain key!");
+    if (hashSidechain.IsNull()) {
+        std::string strError = "Invalid sidechain key!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Figure out the base58 encoding of the private key
     CKey key;
@@ -757,8 +761,11 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
 
 #ifdef ENABLE_WALLET
     std::vector<SidechainDeposit> vDeposit = scdb.GetDeposits(vchSecret.ToString());
-    if (!vDeposit.size())
-        throw std::runtime_error("No deposits in cache for this sidechain!");
+    if (!vDeposit.size()) {
+        std::string strError = "No deposits in cache for this sidechain!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     for (auto rit = vDeposit.crbegin(); rit != vDeposit.crend(); rit++) {
         const SidechainDeposit d = *rit;
@@ -774,28 +781,42 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
 
         BlockMap::iterator it = mapBlockIndex.find(d.hashBlock);
         if (it == mapBlockIndex.end()) {
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Block hash not found");
+            std::string strError = "Block hash not found";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
         }
 
         CBlockIndex* pblockindex = it->second;
-        if (pblockindex == NULL)
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Block index null");
+        if (pblockindex == NULL) {
+            std::string strError = "Block index null";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
 
-        if (!chainActive.Contains(pblockindex))
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Block not in active chain");
+        if (!chainActive.Contains(pblockindex)) {
+            std::string strError = "Block not in active chain";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
 
         // Read block containing deposit output
         CBlock block;
-        if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+        if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus())) {
+            std::string strError = "Can't read block from disk";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
 
         // Look for deposit transaction
         bool found = false;
         for (const auto& tx : block.vtx)
             if (tx->GetHash() == txid)
                 found = true;
-        if (!found)
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "transaction not found in specified block");
+        if (!found) {
+            std::string strError = "transaction not found in specified block";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
 
         // Serialize and take hex of txout proof
         CDataStream ssMB(SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS);
@@ -851,7 +872,7 @@ UniValue countsidechaindeposits(const JSONRPCRequest& request)
     // Is nSidechain valid?
     int nSidechain = request.params[0].get_int();
     if (!IsSidechainNumberValid(nSidechain))
-        throw std::runtime_error("Invalid sidechain number");
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number");
 
     int count = 0;
 
@@ -876,52 +897,79 @@ UniValue receivewtprime(const JSONRPCRequest& request)
             + HelpExampleRpc("receivewtprime", "")
      );
 
+#ifndef ENABLE_WALLET
+    strError = "Error: Wallet disabled";
+    LogPrintf("%s: %s\n", __func__, strError);
+    throw JSONRPCError(RPC_WALLET_ERROR, strError);
+#endif
+
 #ifdef ENABLE_WALLET
     // Check for active wallet
     std::string strError;
     CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) {
         strError = "Error: no wallets are available";
+        LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
-    LOCK2(cs_main, &pwallet->cs_wallet);
 #endif
 
     // Is nSidechain valid?
     int nSidechain = request.params[0].get_int();
-    if (!IsSidechainNumberValid(nSidechain))
-        throw std::runtime_error("Invalid sidechain number!");
+    if (!IsSidechainNumberValid(nSidechain)) {
+        strError = "Invalid sidechain number!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Create CTransaction from hex
     CMutableTransaction mtx;
     std::string hex = request.params[1].get_str();
-    if (!DecodeHexTx(mtx, hex))
-        throw std::runtime_error("Invalid transaction hex!");
+    if (!DecodeHexTx(mtx, hex)) {
+        strError = "Invalid transaction hex!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     CTransaction wtPrime(mtx);
 
-    if (wtPrime.IsNull())
-        throw std::runtime_error("Invalid WT^ hex");
+    if (wtPrime.IsNull()) {
+        strError = "Invalid WT^ hex";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Reject the WT^ if it spends more than the sidechain's CTIP as it won't
     // be accepted anyway
     CAmount amount = wtPrime.GetValueOut();
     std::vector<COutput> vSidechainCoin;
     CScript scriptPubKey;
-    if (!scdb.GetSidechainScript(nSidechain, scriptPubKey))
-        throw std::runtime_error("Invalid sidechain!");
+    if (!scdb.GetSidechainScript(nSidechain, scriptPubKey)) {
+        strError = "Cannot get script for sidechain!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     SidechainCTIP ctip;
-    if (!scdb.GetCTIP(nSidechain, ctip))
-        throw std::runtime_error("Rejecting WT^: No CTIP found!");
+    if (!scdb.GetCTIP(nSidechain, ctip)) {
+        strError = "Rejecting WT^: No CTIP found!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
-    if (amount > ctip.amount)
-        throw std::runtime_error("Rejecting WT^: Withdrawn amount greater than CTIP amount!");
+    if (amount > ctip.amount) {
+        strError = "Rejecting WT^: Withdrawn amount greater than CTIP amount!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Add WT^ to our local cache so that we can create a WT^ hash commitment
     // in the next block we mine to begin the verification process
-    if (!scdb.CacheWTPrime(wtPrime))
-        throw std::runtime_error("WT^ rejected (duplicate?)");
+    if (!scdb.CacheWTPrime(wtPrime)) {
+        strError = "WT^ rejected from cache (duplicate?)";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Return WT^ hash to verify it has been received
     UniValue ret(UniValue::VOBJ);
@@ -948,19 +996,33 @@ UniValue getbmmproof(const JSONRPCRequest& request)
     uint256 hashBlock = uint256S(request.params[0].get_str());
     uint256 hashCritical = uint256S(request.params[1].get_str());
 
-    if (!mapBlockIndex.count(hashBlock))
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Block not found");
+    if (!mapBlockIndex.count(hashBlock)) {
+        std::string strError = "Block not found";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
 
     CBlockIndex* pblockindex = mapBlockIndex[hashBlock];
     if (pblockindex == NULL)
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "pblockindex null");
+    {
+        std::string strError = "pblockindex null";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
 
     CBlock block;
     if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Failed to read block from disk");
+    {
+        std::string strError = "Failed to read block from disk";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
 
-    if (!block.vtx.size())
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "No txns in block");
+    if (!block.vtx.size()) {
+        std::string strError = "No txns in block";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
 
     bool fCriticalHashFound = false;
     const CTransaction &txCoinbase = *(block.vtx[0]);
@@ -985,12 +1047,18 @@ UniValue getbmmproof(const JSONRPCRequest& request)
             fCriticalHashFound = true;
     }
 
-    if (!fCriticalHashFound)
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "H* not found in block");
+    if (!fCriticalHashFound) {
+        std::string strError = "H* not found in block";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
 
     std::string strProof = "";
-    if (!GetTxOutProof(txCoinbase.GetHash(), hashBlock, strProof))
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Could not get txoutproof...");
+    if (!GetTxOutProof(txCoinbase.GetHash(), hashBlock, strProof)) {
+        std::string strError = "Could not get txoutproof...";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
 
     std::string strCoinbaseHex = EncodeHexTx(txCoinbase);
 

@@ -1155,8 +1155,10 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                 return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool full");
         }
     }
-    if (fCTIPUpdated)
+    if (fCTIPUpdated) {
+        LogPrintf("%s: mapLastSidechainDeposit updated!\n", __func__);
         mempool.mapLastSidechainDeposit = mapCTIPCopy;
+    }
 
     GetMainSignals().TransactionAddedToMempool(ptx);
 
