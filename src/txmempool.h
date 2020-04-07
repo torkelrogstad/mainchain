@@ -73,6 +73,11 @@ private:
     unsigned int entryHeight;  //!< Chain height when entering the mempool
     bool spendsCoinbase;       //!< keep track of transactions that spend a coinbase
     bool spendsCriticalData;   //!< keep track of transactions that spend a critical data request
+
+    // Sidechain deposit info
+    bool fSidechainDeposit;
+    uint8_t nSidechain;
+
     int64_t sigOpCost;         //!< Total sigop cost
     int64_t feeDelta;          //!< Used for determining the priority of the transaction for mining in a block
     LockPoints lockPoints;     //!< Track the height and time at which tx was final
@@ -90,11 +95,14 @@ private:
     CAmount nModFeesWithAncestors;
     int64_t nSigOpCostWithAncestors;
 
+
 public:
     CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,
                     int64_t _nTime, unsigned int _entryHeight,
                     bool spendsCoinbase,
                     bool spendsCriticalData,
+                    bool fSidechainDeposit,
+                    uint8_t nSidechain,
                     int64_t nSigOpsCost, LockPoints lp);
 
     const CTransaction& GetTx() const { return *this->tx; }
@@ -126,6 +134,9 @@ public:
     bool GetSpendsCoinbase() const { return spendsCoinbase; }
     bool GetSpendsCriticalData() const { return spendsCriticalData; }
     bool HasCriticalData() const { return !this->tx->criticalData.IsNull(); }
+
+    bool GetSidechainDeposit() const { return fSidechainDeposit; }
+    uint8_t GetSidechainNumber() const { return nSidechain; }
 
     uint64_t GetCountWithAncestors() const { return nCountWithAncestors; }
     uint64_t GetSizeWithAncestors() const { return nSizeWithAncestors; }

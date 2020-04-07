@@ -664,6 +664,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     bool fCTIPUpdated = false;
     std::map<uint8_t, SidechainCTIP> mapCTIPCopy;
     mapCTIPCopy = mempool.mapLastSidechainDeposit;
+    bool fSidechainOutput = false;
+    uint8_t nSidechain;
     if (drivechainsEnabled)
     {
         // TODO be more selective about which transactions have
@@ -687,10 +689,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             // M5 Deposit
 
             // Check format
-            uint8_t nSidechain;
             COutPoint outpoint;
             bool fFormatChecked = false;
-            bool fSidechainOutput = false;
             for (size_t i = 0; i < tx.vout.size(); i++) {
                 const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
@@ -889,7 +889,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         }
 
         CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
-                              fSpendsCoinbase, fSpendsCriticalData, nSigOpsCost, lp);
+                              fSpendsCoinbase, fSpendsCriticalData,
+                              fSidechainOutput, nSidechain, nSigOpsCost, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of

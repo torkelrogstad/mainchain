@@ -24,9 +24,9 @@
 
 CTxMemPoolEntry::CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,
                                  int64_t _nTime, unsigned int _entryHeight,
-                                 bool _spendsCoinbase, bool _spendsCriticalData, int64_t _sigOpsCost, LockPoints lp):
+                                 bool _spendsCoinbase, bool _spendsCriticalData, bool _fSidechainDeposit, uint8_t _nSidechain, int64_t _sigOpsCost, LockPoints lp):
     tx(_tx), nFee(_nFee), nTime(_nTime), entryHeight(_entryHeight),
-    spendsCoinbase(_spendsCoinbase), spendsCriticalData(_spendsCriticalData), sigOpCost(_sigOpsCost), lockPoints(lp)
+    spendsCoinbase(_spendsCoinbase), spendsCriticalData(_spendsCriticalData), fSidechainDeposit(_fSidechainDeposit), nSidechain(_nSidechain), sigOpCost(_sigOpsCost), lockPoints(lp)
 {
     nTxWeight = GetTransactionWeight(*tx);
     nUsageSize = RecursiveDynamicUsage(tx);
