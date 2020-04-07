@@ -3703,7 +3703,7 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
     CCoinControl cc;
     cc.signalRbf = false;
     if (!pwallet->CreateTransaction(vecSend, wtx, reservekey, nFeeRequired, nChangePosRet, strError, cc, true, 3, nHeight, criticalData)) {
-        if (nAmount + nFeeRequired > pwallet->GetBalance())
+        if (nAmount + nFeeRequired > pwallet->GetBalance() || nAmount < nFeeRequired)
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s", FormatMoney(nFeeRequired));
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
