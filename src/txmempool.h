@@ -519,9 +519,13 @@ public:
 
     void SelectBMMRequests(std::vector<uint256>& vHashRemoved);
 
-    void UpdateCTIP(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fJustCheck = false);
+    void UpdateCTIPFromMempool(const std::map<uint8_t, SidechainCTIP>& mapCTIP);
+
+    void UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fDisconnect, bool fJustCheck = false);
 
     bool GetMemPoolCTIP(uint8_t nSidechain, SidechainCTIP& ctip) const;
+
+    void RemoveSidechainDeposits(uint8_t nSidechain, const setEntries& setKeep);
 
 private:
     typedef std::map<txiter, setEntries, CompareIteratorByHash> cacheMap;

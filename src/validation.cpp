@@ -1158,7 +1158,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     }
     if (fCTIPUpdated) {
         LogPrintf("%s: mapLastSidechainDeposit updated!\n", __func__);
-        mempool.mapLastSidechainDeposit = mapCTIPCopy;
+        mempool.UpdateCTIPFromMempool(mapCTIPCopy);
     }
 
     GetMainSignals().TransactionAddedToMempool(ptx);
@@ -1830,7 +1830,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     }
 
     // Update mempool CTIP
-    mempool.UpdateCTIP(scdb.GetCTIP());
+    mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), true /* fDisconnect */);
 
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
@@ -2288,9 +2288,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     if (drivechainsEnabled && vDepositTx.size())
         scdb.AddDeposits(vDepositTx, block.GetHash(), fJustCheck);
 
-    if (drivechainsEnabled)
-        mempool.UpdateCTIP(scdb.GetCTIP(), fJustCheck);
-
     if (drivechainsEnabled && vWTPrimeToSpend.size()) {
         for (size_t i = 0; i < vWTPrimeToSpend.size(); i++) {
             uint8_t nSidechain = vWTPrimeToSpend[i].first;
@@ -2700,9 +2697,16 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
         return false;
     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;
     LogPrint(BCLog::BENCH, "  - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
+
     // Remove conflicting transactions from the mempool.;
     mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight);
     disconnectpool.removeForBlock(blockConnecting.vtx);
+
+    // Update mempool CTIP
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+    if (drivechainsEnabled)
+        mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
+
     // Update chainActive & related variables.
     chainActive.SetTip(pindexNew);
     UpdateTip(pindexNew, chainparams);
@@ -5452,7 +5456,7 @@ bool LoadDepositCache()
     // Add to SCDB
     if (!vDeposit.empty()) {
         scdb.AddDeposits(vDeposit, uint256());
-        mempool.UpdateCTIP(scdb.GetCTIP());
+        mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
     }
 
     return true;
