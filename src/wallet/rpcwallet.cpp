@@ -3533,7 +3533,7 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
 
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
-    pwallet->BlockUntilSyncedToCurrentChain();
+    SyncWithValidationInterfaceQueue();
 
     LOCK2(cs_main, pwallet->cs_wallet);
 

@@ -3129,6 +3129,8 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     // The deposit transaction
     CMutableTransaction mtx;
 
+    SyncWithValidationInterfaceQueue();
+
     LOCK2(cs_main, vpwallets[0]->cs_wallet);
 
     // Select coins to cover sidechain deposit
