@@ -1103,8 +1103,13 @@ void CTxMemPool::UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& map
     // Set the CTIP to either the block level ctip or the last non-removed ctip
     // in the mempool
     //
+    // If a block was disconnected revert CTIP
+    //
 
-    // TODO handle fDisconnect
+    if (fDisconnect) {
+        mapLastSidechainDeposit = mapCTIP;
+        return;
+    }
 
     LOCK(cs);
 
