@@ -719,7 +719,9 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
             "deposits which are currently cached.\n"
             "\nArguments:\n"
             "1. \"sidechainkey\"  (string, required) The sidechain key\n"
-            "2. \"count\"         (numeric, optional) The number of most recent deposits to list\n"
+            "2. \"txid\"          (string, optional) Only return deposits after this deposit TXID\n"
+            "3. \"n\"             (numeric, optional, required if txid is set) The output index of the previous argument txn\n"
+            "4. \"count\"         (numeric, optional) The number of most recent deposits to list\n"
             "\nExamples:\n"
             + HelpExampleCli("listsidechaindeposits", "\"sidechainkey\", \"count\"")
             + HelpExampleRpc("listsidechaindeposits", "\"sidechainkey\", \"count\"")
@@ -744,6 +746,31 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
+    // If TXID was passed in, make sure we also received N
+    if (request.params.size() > 1 && request.params.size() < 3) {
+        std::string strError = "Output index 'n' is required if TXID is provided!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    // Was a TXID passed in?
+    uint256 txidKnown;
+    if (request.params.size() > 1) {
+        std::string strTXID = request.params[1].get_str();
+        txidKnown = uint256S(strTXID);
+        if (txidKnown.IsNull()) {
+            std::string strError = "Invalid TXID!";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_MISC_ERROR, strError);
+        }
+    }
+
+    // Was N passed in?
+    uint32_t nKnown = 0;
+    if (request.params.size() > 2) {
+        nKnown = request.params[2].get_int();
+    }
+
     // Figure out the base58 encoding of the private key
     CKey key;
     key.Set(hashSidechain.begin(), hashSidechain.end(), false);
@@ -752,9 +779,9 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     // Get number of recent deposits to return (default is all cached deposits)
     bool fLimit = false;
     int count = 0;
-    if (request.params.size() == 2) {
+    if (request.params.size() == 4) {
         fLimit = true;
-        count = request.params[1].get_int();
+        count = request.params[3].get_int();
     }
 
     UniValue arr(UniValue::VARR);
@@ -769,6 +796,16 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
 
     for (auto rit = vDeposit.crbegin(); rit != vDeposit.crend(); rit++) {
         const SidechainDeposit d = *rit;
+
+        // Check if we have reached a deposit the sidechain already has. The
+        // sidechain can pass in a TXID & output index 'n' to let us know what
+        // the latest deposit they've already received is.
+        if (!txidKnown.IsNull() && d.tx.GetHash() == txidKnown && d.n == nKnown)
+        {
+            LogPrintf("%s: Reached known deposit. TXID: %s n: %u\n",
+                    __func__, txidKnown.ToString(), nKnown);
+            break;
+        }
 
         // Add deposit txid to set
         uint256 txid = d.tx.GetHash();
