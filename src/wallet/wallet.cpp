@@ -3129,7 +3129,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     // The deposit transaction
     CMutableTransaction mtx;
 
-    SyncWithValidationInterfaceQueue();
+    BlockUntilSyncedToCurrentChain();
 
     LOCK2(cs_main, vpwallets[0]->cs_wallet);
 

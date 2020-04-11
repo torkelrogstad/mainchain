@@ -2263,7 +2263,9 @@ UniValue abandonbmm(const JSONRPCRequest& request)
     vHashRemoved.reserve(vCached.size());
     vHashRemoved.insert(vHashRemoved.end(), vCached.begin(), vCached.end());
 
-    SyncWithValidationInterfaceQueue();
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    pwallet->BlockUntilSyncedToCurrentChain();
 
     LOCK2(cs_main, pwallet->cs_wallet);
 
@@ -3533,7 +3535,7 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
 
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
-    SyncWithValidationInterfaceQueue();
+    pwallet->BlockUntilSyncedToCurrentChain();
 
     LOCK2(cs_main, pwallet->cs_wallet);
 
