@@ -1205,7 +1205,7 @@ void CTxMemPool::RemoveSidechainDeposits(uint8_t nSidechain, const setEntries& s
     } // end lock
 
     for (const txiter& it : txToRemove) {
-        // TODO abandon after removing
+        scdb.AddRemovedDeposit(it->GetTx().GetHash());
         removeBMM(it);
     }
 }
