@@ -355,6 +355,12 @@ unsigned int CTxMemPool::GetTransactionsUpdated() const
     return nTransactionsUpdated;
 }
 
+bool CTxMemPool::GetCriticalTxnAddedSinceBlock()
+{
+    LOCK(cs);
+    return fCriticalTxnAddedSinceBlock;
+}
+
 void CTxMemPool::AddTransactionsUpdated(unsigned int n)
 {
     LOCK(cs);
@@ -393,6 +399,7 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,
         mapNextTx.insert(std::make_pair(&tx.vin[i].prevout, &tx));
         setParentTransactions.insert(tx.vin[i].prevout.hash);
     }
+
     // Don't bother worrying about child transactions of this one.
     // Normal case of a new transaction arriving is that there can't be any
     // children, because such children would be orphans.
@@ -416,6 +423,9 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,
 
     vTxHashes.emplace_back(tx.GetWitnessHash(), newit);
     newit->vTxHashesIdx = vTxHashes.size() - 1;
+
+    if (!tx.criticalData.IsNull())
+        fCriticalTxnAddedSinceBlock = true;
 
     return true;
 }
@@ -587,6 +597,7 @@ void CTxMemPool::removeConflicts(const CTransaction &tx)
 void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight)
 {
     LOCK(cs);
+    fCriticalTxnAddedSinceBlock = false;
     std::vector<const CTxMemPoolEntry*> entries;
     for (const auto& tx : vtx)
     {
