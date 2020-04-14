@@ -121,6 +121,12 @@ void BlockAssembler::resetBlock()
 
 std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx)
 {
+    bool fAddedBMM = false;
+    return CreateNewBlock(scriptPubKeyIn, fMineWitnessTx, fAddedBMM);
+}
+
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool& fAddedBMM)
+{
     int64_t nTimeStart = GetTimeMicros();
 
     resetBlock();
@@ -460,6 +466,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Handle / create critical fee tx (collects bmm / critical data fees)
     if (fDrivechainEnabled && fNeedCriticalFeeTx) {
+        fAddedBMM = true;
         // Create critical fee tx
         CMutableTransaction feeTx;
         feeTx.vout.resize(1);
@@ -846,6 +853,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         }
 
         if (packageFees < blockMinFeeRate.GetFee(packageSize)) {
+            std::cout << "PACKAGE FEE RATE!\n";
             // Everything else we might consider has a lower fee rate
             return;
         }
@@ -1004,6 +1012,10 @@ void static BitcoinMiner(const CChainParams& chainparams)
     std::shared_ptr<CReserveScript> coinbaseScript;
     vpwallets[0]->GetScriptForMining(coinbaseScript);
 
+    bool fAddedBMM = false;
+
+    bool fBreakForBMM = gArgs.GetBoolArg("-minerbreakforbmm", false);
+
     try {
         // Throw an error if no script was provided.  This can happen
         // due to some internal error but also if the keypool is empty.
@@ -1040,7 +1052,9 @@ void static BitcoinMiner(const CChainParams& chainparams)
             if (nMinerSleep)
                 MilliSleep(nMinerSleep);
 
-            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript));
+            fAddedBMM = false;
+
+            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true /* mine segwit */, fAddedBMM));
             if (!pblocktemplate.get())
             {
                 LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
@@ -1097,6 +1111,15 @@ void static BitcoinMiner(const CChainParams& chainparams)
                 if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev) < 0)
                     break; // Recreate the block if the clock has run backwards,
                            // so that we can use the correct time.
+
+                // If the user has set --minerbreakforbmm, and BMM txns were not
+                // already added to this block but exist in the mempool, break
+                // the miner so that it recreates the block.
+                if (fBreakForBMM && !fAddedBMM &&
+                        mempool.GetCriticalTxnAddedSinceBlock()) {
+                    break;
+                }
+
                 if (chainparams.GetConsensus().fPowAllowMinDifficultyBlocks)
                 {
                     // Changing pblock->nTime can change work required on testnet:
