@@ -622,13 +622,14 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     }
 
     // Reject critical data / Drivechain BMM transactions before Drivechains are activated (override with -prematuredrivechains)
-    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
-    if (!gArgs.GetBoolArg("-prematuredrivechains", false) && !tx.criticalData.IsNull() && !drivechainsEnabled) {
+    bool fCriticalData = !tx.criticalData.IsNull();
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
+    if (!gArgs.GetBoolArg("-prematuredrivechains", false) && fCriticalData && !drivechainsEnabled) {
         return state.DoS(0, false, REJECT_NONSTANDARD, "no-drivechains-yet", true);
     }
 
     // Reject BMM requests with invalid prevBytes
-    if (drivechainsEnabled && !tx.criticalData.IsNull()) {
+    if (drivechainsEnabled && fCriticalData) {
         uint8_t nSidechain;
         uint16_t nPrevBlockRef;
         std::string strPrevBlock = "";
