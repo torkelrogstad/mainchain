@@ -855,7 +855,6 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         }
 
         if (packageFees < blockMinFeeRate.GetFee(packageSize)) {
-            std::cout << "PACKAGE FEE RATE!\n";
             // Everything else we might consider has a lower fee rate
             return;
         }
