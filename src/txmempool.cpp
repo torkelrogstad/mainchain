@@ -484,7 +484,7 @@ void CTxMemPool::CalculateDescendants(txiter entryit, setEntries &setDescendants
     }
 }
 
-void CTxMemPool::removeBMM(const txiter& it)
+void CTxMemPool::removeIfExists(const txiter& it)
 {
     LOCK(cs);
 
@@ -1038,7 +1038,7 @@ void CTxMemPool::RemoveExpiredCriticalRequests(std::vector<uint256>& vHashRemove
 
     for (const txiter& it : txToRemove) {
         vHashRemoved.push_back(it->GetTx().GetHash());
-        removeBMM(it);
+        removeIfExists(it);
     }
 }
 
@@ -1094,12 +1094,13 @@ void CTxMemPool::SelectBMMRequests(std::vector<uint256>& vHashRemoved)
 
     for (const txiter& it : txToRemove) {
         vHashRemoved.push_back(it->GetTx().GetHash());
-        removeBMM(it);
+        removeIfExists(it);
     }
 }
 
 void CTxMemPool::UpdateCTIPFromMempool(const std::map<uint8_t, SidechainCTIP>& mapCTIP)
 {
+    LOCK(cs);
     mapLastSidechainDeposit = mapCTIP;
 }
 
@@ -1117,12 +1118,12 @@ void CTxMemPool::UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& map
     // If a block was disconnected revert CTIP
     //
 
+    LOCK(cs);
+
     if (fDisconnect) {
         mapLastSidechainDeposit = mapCTIP;
         return;
     }
-
-    LOCK(cs);
 
     // For each sidechain:
     std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
@@ -1217,7 +1218,7 @@ void CTxMemPool::RemoveSidechainDeposits(uint8_t nSidechain, const setEntries& s
 
     for (const txiter& it : txToRemove) {
         scdb.AddRemovedDeposit(it->GetTx().GetHash());
-        removeBMM(it);
+        removeIfExists(it);
     }
 }
 
