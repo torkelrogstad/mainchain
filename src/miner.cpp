@@ -172,6 +172,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
 #ifdef ENABLE_WALLET
     if (fDrivechainEnabled) {
+        // Make sure that the mempool has only valid deposits to choose from
+        mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
 
         // Remove expired BMM requests from our memory pool
         std::vector<uint256> vHashRemoved;
