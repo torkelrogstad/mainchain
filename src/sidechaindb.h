@@ -36,6 +36,9 @@ struct SidechainSpentWTPrime;
 // TODO Refactor: remove AddWTPrime() and UpdateSCDBIndex() - handle both inside
 // of SCDB::Update()
 
+// TODO use the bitcoin core lock system or std::mutex & std::lock_guard to
+// protect private data structures.
+
 class SidechainDB
 {
 public:
@@ -48,7 +51,7 @@ public:
     void AddRemovedDeposit(const uint256& hashRemoved);
 
     /** Add deposit(s) to cache - from block */
-    void AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck = false);
+    bool AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck = false);
 
     /** Add deposit(s) to cache - from disk cache */
     void AddDeposits(const std::vector<SidechainDeposit>& vDeposit, const uint256& hashBlock);

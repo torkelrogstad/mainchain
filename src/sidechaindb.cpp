@@ -28,7 +28,7 @@ void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
     vRemovedDeposit.push_back(hashRemoved);
 }
 
-void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
+bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
     // be done after verifying all of the deposits
@@ -85,10 +85,19 @@ void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint25
         }
     }
 
+    // Check that deposits can be sorted
+    std::vector<SidechainDeposit> vDepositSorted;
+    if (!SortDeposits(vDeposit, vDepositSorted))
+        return false;
+
+    if (fJustCheck)
+        return true;
+
     // Add deposits to cache, note that this AddDeposit call will split deposits
     // by nSidechain and sort them
-    if (!fJustCheck)
-        AddDeposits(vDeposit, hashBlock);
+    AddDeposits(vDeposit, hashBlock);
+
+    return true;
 }
 
 void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, const uint256& hashBlock)
