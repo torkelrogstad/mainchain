@@ -622,13 +622,14 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     }
 
     // Reject critical data / Drivechain BMM transactions before Drivechains are activated (override with -prematuredrivechains)
-    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
-    if (!gArgs.GetBoolArg("-prematuredrivechains", false) && !tx.criticalData.IsNull() && !drivechainsEnabled) {
+    bool fCriticalData = !tx.criticalData.IsNull();
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
+    if (!gArgs.GetBoolArg("-prematuredrivechains", false) && fCriticalData && !drivechainsEnabled) {
         return state.DoS(0, false, REJECT_NONSTANDARD, "no-drivechains-yet", true);
     }
 
     // Reject BMM requests with invalid prevBytes
-    if (drivechainsEnabled && !tx.criticalData.IsNull()) {
+    if (drivechainsEnabled && fCriticalData) {
         uint8_t nSidechain;
         uint16_t nPrevBlockRef;
         std::string strPrevBlock = "";
@@ -664,6 +665,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     bool fCTIPUpdated = false;
     std::map<uint8_t, SidechainCTIP> mapCTIPCopy;
     mapCTIPCopy = mempool.mapLastSidechainDeposit;
+    bool fSidechainOutput = false;
+    uint8_t nSidechain;
     if (drivechainsEnabled)
     {
         // TODO be more selective about which transactions have
@@ -687,10 +690,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             // M5 Deposit
 
             // Check format
-            uint8_t nSidechain;
             COutPoint outpoint;
             bool fFormatChecked = false;
-            bool fSidechainOutput = false;
             for (size_t i = 0; i < tx.vout.size(); i++) {
                 const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
@@ -889,7 +890,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         }
 
         CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
-                              fSpendsCoinbase, fSpendsCriticalData, nSigOpsCost, lp);
+                              fSpendsCoinbase, fSpendsCriticalData,
+                              fSidechainOutput, nSidechain, nSigOpsCost, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -1155,8 +1157,10 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                 return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool full");
         }
     }
-    if (fCTIPUpdated)
-        mempool.mapLastSidechainDeposit = mapCTIPCopy;
+    if (fCTIPUpdated) {
+        LogPrintf("%s: mapLastSidechainDeposit updated!\n", __func__);
+        mempool.UpdateCTIPFromMempool(mapCTIPCopy);
+    }
 
     GetMainSignals().TransactionAddedToMempool(ptx);
 
@@ -1827,7 +1831,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     }
 
     // Update mempool CTIP
-    mempool.UpdateCTIP(scdb.GetCTIP());
+    mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), true /* fDisconnect */);
 
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
@@ -2282,11 +2286,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
-    if (drivechainsEnabled && vDepositTx.size())
-        scdb.AddDeposits(vDepositTx, block.GetHash(), fJustCheck);
-
-    if (drivechainsEnabled)
-        mempool.UpdateCTIP(scdb.GetCTIP(), fJustCheck);
+    if (drivechainsEnabled && vDepositTx.size()) {
+        if (!scdb.AddDeposits(vDepositTx, block.GetHash(), fJustCheck)) {
+            LogPrintf("%s: SCDB Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
+            return error("%s: SCDB Deposits invalid from block: %s", __func__, block.GetHash().ToString());
+        }
+    }
 
     if (drivechainsEnabled && vWTPrimeToSpend.size()) {
         for (size_t i = 0; i < vWTPrimeToSpend.size(); i++) {
@@ -2697,9 +2702,16 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
         return false;
     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;
     LogPrint(BCLog::BENCH, "  - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
+
     // Remove conflicting transactions from the mempool.;
     mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight);
     disconnectpool.removeForBlock(blockConnecting.vtx);
+
+    // Update mempool CTIP
+    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
+    if (drivechainsEnabled)
+        mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
+
     // Update chainActive & related variables.
     chainActive.SetTip(pindexNew);
     UpdateTip(pindexNew, chainparams);
@@ -5449,7 +5461,7 @@ bool LoadDepositCache()
     // Add to SCDB
     if (!vDeposit.empty()) {
         scdb.AddDeposits(vDeposit, uint256());
-        mempool.UpdateCTIP(scdb.GetCTIP());
+        mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
     }
 
     return true;

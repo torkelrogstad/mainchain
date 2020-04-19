@@ -1300,6 +1300,7 @@ bool AppInitMain()
     // until the very end ("start node") as the UTXO/block state
     // is not yet setup and may end up being set up twice if we
     // need to reindex later.
+    uiInterface.InitMessage(_("Network initialization..."));
 
     assert(!g_connman);
     g_connman = std::unique_ptr<CConnman>(new CConnman(GetRand(std::numeric_limits<uint64_t>::max()), GetRand(std::numeric_limits<uint64_t>::max())));
@@ -1409,6 +1410,7 @@ bool AppInitMain()
     }
 
     // ********************************************************* Step 7: load caches
+    uiInterface.InitMessage(_("Loading active sidechain & deposit cache..."));
     fReindex = gArgs.GetBoolArg("-reindex", false);
 
     bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
@@ -1780,6 +1782,11 @@ bool AppInitMain()
         }
     }
 
+    //
+    // TODO
+    // Loaded coins disabled in this release, so don't show ui message
+    // about loaded coins or scan for wallet's loaded coins.
+    /*
     if (!vpwallets.empty()) {
         uiInterface.InitMessage(_("Reading wallet's loaded coins."));
         CWalletRef pwallet = vpwallets.front();
@@ -1788,9 +1795,11 @@ bool AppInitMain()
         vLoadedCoin = pcoinsTip->ReadMyLoadedCoins();
         pwallet->AddLoadedCoins(vLoadedCoin);
     }
+    */
 #endif
 
     // ********************************************************* Step 13: start node
+    uiInterface.InitMessage(_("Starting node..."));
 
     int chain_active_height;
 
@@ -1867,9 +1876,9 @@ bool AppInitMain()
     }
 
     // ********************************************************* Step 14: finished
-    SetRPCWarmupFinished();
-
     uiInterface.InitMessage(_("DriveNet ready to TESTDRIVE"));
+
+    SetRPCWarmupFinished();
 
     return !fRequestShutdown;
 }

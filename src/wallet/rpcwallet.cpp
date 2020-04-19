@@ -2223,6 +2223,134 @@ UniValue abandontransaction(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+UniValue abandonbmm(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size()) {
+        throw std::runtime_error(
+            "abandonbmm\n"
+            "\nRemove expired BMM requests and BMM requests not selected by "
+            "our SelectBMMRequests settings. Then try to abandon the BMM "
+            "requests from our wallet if we created them.\n"
+            "This will mark the transaction and all in-wallet descendants "
+            "as abandoned which will allow for their inputs to be respent.\n"
+            "It only works on transactions which are not included in a block.\n"
+            "It has no effect on transactions which are already abandoned.\n"
+            "\nResult:\n"
+            "[\n"
+            "   {\n"
+            "       \"status\" : txid, (string) abandon transaction result : txid\n"
+            "   }"
+            "\n]\n"
+            "\nExamples:\n"
+            + HelpExampleCli("abandonbmm", "")
+            + HelpExampleRpc("abandonbmm", "")
+        );
+    }
+
+    ObserveSafeMode();
+
+    std::vector<uint256> vHashRemoved;
+    mempool.SelectBMMRequests(vHashRemoved);
+    mempool.RemoveExpiredCriticalRequests(vHashRemoved);
+
+    // Also try to abandon cached BMM txid previously removed from our mempool
+    std::vector<uint256> vCached = scdb.GetRemovedBMM();
+    vHashRemoved.reserve(vCached.size());
+    vHashRemoved.insert(vHashRemoved.end(), vCached.begin(), vCached.end());
+
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    UniValue results(UniValue::VARR);
+    for (const uint256& u : vHashRemoved) {
+        UniValue entry(UniValue::VOBJ);
+
+        if (!pwallet->mapWallet.count(u)) {
+            entry.push_back(Pair("not-in-wallet", u.ToString()));
+            results.push_back(entry);
+            continue;
+        }
+        std::string strReason = "";
+        if (!pwallet->AbandonTransaction(u, &strReason)) {
+            entry.push_back(Pair(strprintf("cannot-abandon: %s", strReason), u.ToString()));
+            results.push_back(entry);
+            continue;
+        }
+        entry.push_back(Pair("abandoned", u.ToString()));
+        results.push_back(entry);
+    }
+    scdb.ClearRemovedBMM();
+
+    return results;
+}
+
+UniValue abandondeposits(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size()) {
+        throw std::runtime_error(
+            "abandondeposits\n"
+            "\nAbandon sidechain deposits which were removed from the mempool."
+            "\nThis will mark the transaction and all in-wallet descendants "
+            "as abandoned which will allow for their inputs to be respent.\n"
+            "It only works on transactions which are not included in a block.\n"
+            "It has no effect on transactions which are already abandoned.\n"
+            "\nResult:\n"
+            "[\n"
+            "   {\n"
+            "       \"status\" : txid, (string) abandon transaction result : txid\n"
+            "   }"
+            "\n]\n"
+            "\nExamples:\n"
+            + HelpExampleCli("abandondeposits", "")
+            + HelpExampleRpc("abandondeposits", "")
+        );
+    }
+
+    ObserveSafeMode();
+
+    std::vector<uint256> vHashRemoved = scdb.GetRemovedDeposits();
+
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    UniValue results(UniValue::VARR);
+    for (const uint256& u : vHashRemoved) {
+        UniValue entry(UniValue::VOBJ);
+
+        if (!pwallet->mapWallet.count(u)) {
+            entry.push_back(Pair("not-in-wallet", u.ToString()));
+            results.push_back(entry);
+            continue;
+        }
+        std::string strReason = "";
+        if (!pwallet->AbandonTransaction(u, &strReason)) {
+            entry.push_back(Pair(strprintf("cannot-abandon: %s", strReason), u.ToString()));
+            results.push_back(entry);
+            continue;
+        }
+        entry.push_back(Pair("abandoned", u.ToString()));
+        results.push_back(entry);
+    }
+    scdb.ClearRemovedDeposits();
+
+    return results;
+}
 
 UniValue backupwallet(const JSONRPCRequest& request)
 {
@@ -3459,8 +3587,11 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
 
     // nSidechain
     unsigned int nSidechain = request.params[0].get_int();
-    if (!IsSidechainNumberValid(nSidechain))
-        throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number");
+    if (!IsSidechainNumberValid(nSidechain)) {
+        std::string strError = "Invalid sidechain number";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
@@ -3471,23 +3602,35 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
     CSidechainAddress address(request.params[1].get_str());
     CKeyID keyID;
     if (!address.GetKeyID(keyID)) {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid sidechain address");
+        std::string strError = "Invalid sidechain address";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strError);
     }
 
     // Amount
     CAmount nAmount = AmountFromValue(request.params[2]);
-    if (nAmount <= 0)
-        throw JSONRPCError(RPC_MISC_ERROR, "Invalid amount for send");
+    if (nAmount <= 0) {
+        std::string strError = "Invalid amount for send";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Fee
     CAmount nFee = AmountFromValue(request.params[3]);
-    if (nFee <= 0)
-        throw JSONRPCError(RPC_MISC_ERROR, "Invalid fee amount");
+    if (nFee <= 0) {
+        std::string strError = "Invalid fee amount";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     // Get sidechain script
     CScript scriptPubKey;
     if (!scdb.GetSidechainScript(nSidechain, scriptPubKey))
-        throw JSONRPCError(RPC_MISC_ERROR, "Failed to lookup sidechain script");
+    {
+        std::string strError = "Failed to lookup sidechain script";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     EnsureWalletIsUnlocked(pwallet);
 
@@ -3495,6 +3638,7 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
     std::string strFail = "";
     if (!pwallet->CreateSidechainDeposit(tx, strFail, scriptPubKey, nSidechain, nAmount, nFee, keyID))
     {
+        LogPrintf("%s: %s\n", __func__, strFail);
         throw JSONRPCError(RPC_MISC_ERROR, strFail);
     }
 
@@ -3528,12 +3672,14 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
 
     ObserveSafeMode();
 
-    LOCK2(cs_main, pwallet->cs_wallet);
 
     // Amount
     CAmount nAmount = AmountFromValue(request.params[0]);
-    if (nAmount <= 0)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
+    if (nAmount <= 0) {
+        std::string strError = "Invalid amount for send";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_TYPE_ERROR, strError);
+    }
 
     // Height
     int nHeight = request.params[1].get_int();
@@ -3544,29 +3690,42 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
 
     // Critical hash
     uint256 hashCritical = uint256S(request.params[2].get_str());
-    if (hashCritical.IsNull())
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid h*");
+    if (hashCritical.IsNull()) {
+        std::string strError = "Invalid h*";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_TYPE_ERROR, strError);
+    }
 
     // nSidechain
     int nSidechain = request.params[3].get_int();
 
     if (!IsSidechainNumberValid(nSidechain))
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
+    {
+        std::string strError = "Invalid Sidechain number";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_TYPE_ERROR, strError);
+    }
 
     // nDAG
     int nDAG = request.params[4].get_int();
 
     // prevBlockHash bytes
     std::string strPrevBlock = request.params[5].get_str();
-    if (strPrevBlock.size() != 4)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid prevBlockHash bytes size");
+    if (strPrevBlock.size() != 4) {
+        std::string strError = "Invalid prevBlockHash bytes size";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_TYPE_ERROR, strError);
+    }
 
     std::string strTip = chainActive.Tip()->GetBlockHash().ToString();
     strTip = strTip.substr(strTip.size() - 4, strTip.size() - 1);
 
     // Check the 4 prev block hash bytes
-    if (strTip != strPrevBlock)
-        throw (JSONRPCError(RPC_TYPE_ERROR, "Invalid prevBlockHash bytes incorrect"));
+    if (strTip != strPrevBlock) {
+        std::string strError = "Invalid prevBlockHash bytes - incorrect";
+        LogPrintf("%s: %s. %s != %s\n", __func__, strError, strTip, strPrevBlock);
+        throw (JSONRPCError(RPC_TYPE_ERROR, strError));
+    }
 
     // Create critical data
     CScript bytes;
@@ -3584,6 +3743,8 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
     criticalData.hashCritical = hashCritical;
 
 #ifdef ENABLE_WALLET
+    LOCK2(cs_main, pwallet->cs_wallet);
+
     // Create and send the transaction
     std::string strError;
 
@@ -3604,13 +3765,15 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
     CCoinControl cc;
     cc.signalRbf = false;
     if (!pwallet->CreateTransaction(vecSend, wtx, reservekey, nFeeRequired, nChangePosRet, strError, cc, true, 3, nHeight, criticalData)) {
-        if (nAmount + nFeeRequired > pwallet->GetBalance())
+        if (nAmount + nFeeRequired > pwallet->GetBalance() || nAmount < nFeeRequired)
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s", FormatMoney(nFeeRequired));
+        LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     CValidationState state;
     if (!pwallet->CommitTransaction(wtx, reservekey, g_connman.get(), state)) {
         strError = strprintf("Error: The transaction was rejected! Reason given: %s", state.GetRejectReason());
+        LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
 #endif
@@ -3724,10 +3887,12 @@ extern UniValue rescanblockchain(const JSONRPCRequest& request);
 
 static const CRPCCommand commands[] =
 { //  category              name                        actor (function)           argNames
-    //  --------------------- ------------------------    -----------------------  ----------
+    //------------------    ------------------------    ----------------------     ----------
     { "rawtransactions",    "fundrawtransaction",       &fundrawtransaction,       {"hexstring","options","iswitness"} },
     { "hidden",             "resendwallettransactions", &resendwallettransactions, {} },
     { "wallet",             "abandontransaction",       &abandontransaction,       {"txid"} },
+    { "wallet",             "abandonbmm",               &abandonbmm,               {} },
+    { "wallet",             "abandondeposits",          &abandondeposits,          {} },
     { "wallet",             "abortrescan",              &abortrescan,              {} },
     { "wallet",             "addmultisigaddress",       &addmultisigaddress,       {"nrequired","keys","account","address_type"} },
     { "hidden",             "addwitnessaddress",        &addwitnessaddress,        {"address","p2sh"} },

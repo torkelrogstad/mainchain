@@ -18,8 +18,9 @@ static void AddTx(const CTransaction& tx, const CAmount& nFee, CTxMemPool& pool)
     unsigned int sigOpCost = 4;
     LockPoints lp;
     pool.addUnchecked(tx.GetHash(), CTxMemPoolEntry(
-                                        MakeTransactionRef(tx), nFee, nTime, nHeight,
-                                        spendsCoinbase, spendsBMMRequest, sigOpCost, lp));
+                                        MakeTransactionRef(tx), nFee, nTime,
+                                        nHeight, spendsCoinbase, spendsBMMRequest,
+                                        false, 0, sigOpCost, lp));
 }
 
 // Right now this is only testing eviction performance in an extremely small
