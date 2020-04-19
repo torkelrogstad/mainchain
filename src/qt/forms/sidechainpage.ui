@@ -91,7 +91,7 @@
             </property>
             <widget class="QWidget" name="tab_3">
              <attribute name="title">
-              <string>Deposit</string>
+              <string>Make a Deposit</string>
              </attribute>
              <layout class="QVBoxLayout" name="verticalLayout_3">
               <item>
@@ -324,7 +324,7 @@
             </widget>
             <widget class="QWidget" name="tab">
              <attribute name="title">
-              <string>Withdrawal status</string>
+              <string>Observe Withdrawals</string>
              </attribute>
              <layout class="QVBoxLayout" name="verticalLayout_5">
               <item>
