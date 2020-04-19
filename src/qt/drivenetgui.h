@@ -11,6 +11,7 @@
 
 #include <amount.h>
 
+#include <QDateTime>
 #include <QLabel>
 #include <QMainWindow>
 #include <QMap>
@@ -27,15 +28,13 @@ class RPCConsole;
 class SendCoinsRecipient;
 class SidechainTableDialog;
 class SidechainPage;
-class UnitDisplayStatusBarControl;
 class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
 
 QT_BEGIN_NAMESPACE
 class QAction;
-class QProgressBar;
-class QProgressDialog;
+class QTimer;
 QT_END_NAMESPACE
 
 /**
@@ -81,14 +80,13 @@ private:
     ClientModel *clientModel;
     WalletFrame *walletFrame;
 
-    UnitDisplayStatusBarControl *unitDisplayControl;
     QLabel *labelWalletEncryptionIcon;
-    QLabel *labelWalletHDStatusIcon;
     QLabel *connectionsControl;
     QLabel *labelBlocksIcon;
-    QLabel *progressBarLabel;
-    QProgressBar *progressBar;
-    QProgressDialog *progressDialog;
+    QLabel *labelProgressReason;
+    QLabel *labelProgressPercentage;
+    QLabel *labelNumBlocks;
+    QLabel *labelLastBlock;
 
     QMenuBar *appMenuBar;
     QAction *overviewAction;
@@ -121,6 +119,8 @@ private:
     RPCConsole *rpcConsole;
     HelpMessageDialog *helpMessageDialog;
 
+    QTimer *pollTimer;
+
 #ifdef ENABLE_WALLET
     /** Sidechain table dialog (for testing) */
     SidechainTableDialog *sidechainTableDialog;
@@ -129,6 +129,7 @@ private:
     /** Keep track of previous number of blocks, to detect progress */
     int prevBlocks;
     int spinnerFrame;
+    QDateTime prevBlockTime;
 
     const PlatformStyle *platformStyle;
 
@@ -155,6 +156,8 @@ private:
     void updateNetworkState();
 
     void updateHeadersSyncProgressLabel();
+
+    QFrame* CreateVLine();
 
 Q_SIGNALS:
     /** Signal raised when a URI was entered or dragged to the GUI */
@@ -186,12 +189,6 @@ public Q_SLOTS:
        @see WalletModel::EncryptionStatus
     */
     void setEncryptionStatus(int status);
-
-    /** Set the hd-enabled status as shown in the UI.
-     @param[in] status            current hd enabled status
-     @see WalletModel::EncryptionStatus
-     */
-    void setHDStatus(int hdEnabled);
 
     bool handlePaymentRequest(const SendCoinsRecipient& recipient);
 
@@ -257,35 +254,9 @@ private Q_SLOTS:
 
     /** Update the theme */
     void updateTheme(int nTheme);
-};
 
-class UnitDisplayStatusBarControl : public QLabel
-{
-    Q_OBJECT
-
-public:
-    explicit UnitDisplayStatusBarControl(const PlatformStyle *platformStyle);
-    /** Lets the control know about the Options Model (and its signals) */
-    void setOptionsModel(OptionsModel *optionsModel);
-
-protected:
-    /** So that it responds to left-button clicks */
-    void mousePressEvent(QMouseEvent *event);
-
-private:
-    OptionsModel *optionsModel;
-    QMenu* menu;
-
-    /** Shows context menu with Display Unit options by the mouse coordinates */
-    void onDisplayUnitsClicked(const QPoint& point);
-    /** Creates context menu, its actions, and wires up all the relevant signals for mouse events. */
-    void createContextMenu();
-
-private Q_SLOTS:
-    /** When Display Units are changed on OptionsModel it will refresh the display text of the control on the status bar */
-    void updateDisplayUnit(int newUnits);
-    /** Tells underlying optionsModel to update its current display unit. */
-    void onMenuSelection(QAction* action);
+    /** Refresh the last block time */
+    void updateBlockTime();
 };
 
 #endif // BITCOIN_QT_BITCOINGUI_H
