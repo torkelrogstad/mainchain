@@ -1086,7 +1086,7 @@ bool CWallet::TransactionCanBeAbandoned(const uint256& hashTx) const
     return wtx && !wtx->isAbandoned() && wtx->GetDepthInMainChain() == 0 && !wtx->InMempool();
 }
 
-bool CWallet::AbandonTransaction(const uint256& hashTx)
+bool CWallet::AbandonTransaction(const uint256& hashTx, std::string* pstrReason)
 {
     LOCK2(cs_main, cs_wallet);
 
@@ -1099,7 +1099,14 @@ bool CWallet::AbandonTransaction(const uint256& hashTx)
     auto it = mapWallet.find(hashTx);
     assert(it != mapWallet.end());
     CWalletTx& origtx = it->second;
-    if (origtx.GetDepthInMainChain() != 0 || origtx.InMempool()) {
+    if (origtx.GetDepthInMainChain() != 0) {
+        if (pstrReason)
+            *pstrReason = "Already confirmed in block!";
+        return false;
+    }
+    if (origtx.InMempool()) {
+        if (pstrReason)
+            *pstrReason = "In mempool!";
         return false;
     }
 
@@ -3071,7 +3078,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     if (gArgs.GetBoolArg("-walletrejectlongchains", DEFAULT_WALLET_REJECT_LONG_CHAINS)) {
         // Lastly, ensure this tx will pass the mempool's chain limits
         LockPoints lp;
-        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, false, 0, lp);
+        CTxMemPoolEntry entry(wtxNew.tx, 0, 0, 0, false, false, false, 0, 0, lp);
         CTxMemPool::setEntries setAncestors;
         size_t nLimitAncestors = gArgs.GetArg("-limitancestorcount", DEFAULT_ANCESTOR_LIMIT);
         size_t nLimitAncestorSize = gArgs.GetArg("-limitancestorsize", DEFAULT_ANCESTOR_SIZE_LIMIT)*1000;
@@ -3121,6 +3128,8 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
 
     // The deposit transaction
     CMutableTransaction mtx;
+
+    BlockUntilSyncedToCurrentChain();
 
     LOCK2(cs_main, vpwallets[0]->cs_wallet);
 

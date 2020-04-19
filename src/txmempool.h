@@ -73,6 +73,11 @@ private:
     unsigned int entryHeight;  //!< Chain height when entering the mempool
     bool spendsCoinbase;       //!< keep track of transactions that spend a coinbase
     bool spendsCriticalData;   //!< keep track of transactions that spend a critical data request
+
+    // Sidechain deposit info
+    bool fSidechainDeposit;
+    uint8_t nSidechain;
+
     int64_t sigOpCost;         //!< Total sigop cost
     int64_t feeDelta;          //!< Used for determining the priority of the transaction for mining in a block
     LockPoints lockPoints;     //!< Track the height and time at which tx was final
@@ -90,11 +95,14 @@ private:
     CAmount nModFeesWithAncestors;
     int64_t nSigOpCostWithAncestors;
 
+
 public:
     CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,
                     int64_t _nTime, unsigned int _entryHeight,
                     bool spendsCoinbase,
                     bool spendsCriticalData,
+                    bool fSidechainDeposit,
+                    uint8_t nSidechain,
                     int64_t nSigOpsCost, LockPoints lp);
 
     const CTransaction& GetTx() const { return *this->tx; }
@@ -126,6 +134,9 @@ public:
     bool GetSpendsCoinbase() const { return spendsCoinbase; }
     bool GetSpendsCriticalData() const { return spendsCriticalData; }
     bool HasCriticalData() const { return !this->tx->criticalData.IsNull(); }
+
+    bool GetSidechainDeposit() const { return fSidechainDeposit; }
+    uint8_t GetSidechainNumber() const { return nSidechain; }
 
     uint64_t GetCountWithAncestors() const { return nCountWithAncestors; }
     uint64_t GetSizeWithAncestors() const { return nSizeWithAncestors; }
@@ -447,6 +458,7 @@ class CTxMemPool
 private:
     uint32_t nCheckFrequency; //!< Value n means that n times in 2^32 we check.
     unsigned int nTransactionsUpdated; //!< Used by getblocktemplate to trigger CreateNewBlock() invocation
+    bool fCriticalTxnAddedSinceBlock;
     CBlockPolicyEstimator* minerPolicyEstimator;
 
     uint64_t totalTxSize;      //!< sum of all mempool tx's virtual sizes. Differs from serialized tx size since witness data is discounted. Defined in BIP 141.
@@ -506,11 +518,15 @@ public:
 
     void RemoveExpiredCriticalRequests(std::vector<uint256>& vHashRemoved);
 
-    void SelectBMMRequests();
+    void SelectBMMRequests(std::vector<uint256>& vHashRemoved);
 
-    void UpdateCTIP(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fJustCheck = false);
+    void UpdateCTIPFromMempool(const std::map<uint8_t, SidechainCTIP>& mapCTIP);
+
+    void UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fDisconnect, bool fJustCheck = false);
 
     bool GetMemPoolCTIP(uint8_t nSidechain, SidechainCTIP& ctip) const;
+
+    void RemoveSidechainDeposits(uint8_t nSidechain, const setEntries& setKeep);
 
 private:
     typedef std::map<txiter, setEntries, CompareIteratorByHash> cacheMap;
@@ -557,6 +573,7 @@ public:
     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, bool validFeeEstimate = true);
     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, setEntries &setAncestors, bool validFeeEstimate = true);
 
+    void removeIfExists(const txiter& it);
     void removeRecursive(const CTransaction &tx, MemPoolRemovalReason reason = MemPoolRemovalReason::UNKNOWN);
     void removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight, int flags);
     void removeConflicts(const CTransaction &tx);
@@ -568,6 +585,7 @@ public:
     void queryHashes(std::vector<uint256>& vtxid);
     bool isSpent(const COutPoint& outpoint);
     unsigned int GetTransactionsUpdated() const;
+    bool GetCriticalTxnAddedSinceBlock();
     void AddTransactionsUpdated(unsigned int n);
     /**
      * Check that none of this transactions inputs are in the mempool, and thus

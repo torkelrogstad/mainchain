@@ -48,7 +48,12 @@ CAmount GetMinimumFee(unsigned int nTxBytes, const CCoinControl& coin_control, c
         if (coin_control.m_fee_mode == FeeEstimateMode::CONSERVATIVE) conservative_estimate = true;
         else if (coin_control.m_fee_mode == FeeEstimateMode::ECONOMICAL) conservative_estimate = false;
 
-        fee_needed = estimator.estimateSmartFee(target, feeCalc, conservative_estimate).GetFee(nTxBytes);
+        // TODO update BMM / deposit mempool removal code & re-enable smart fee
+        // calculator. Disabled right now because after some BMM requests or
+        // deposits are removed from the mempool, the smart fee estimation will
+        // estimate absurdly high fees.
+        fee_needed = 0;
+        //estimator.estimateSmartFee(target, feeCalc, conservative_estimate).GetFee(nTxBytes);
         if (fee_needed == 0) {
             // if we don't have enough data for estimateSmartFee, then use fallbackFee
             fee_needed = CWallet::fallbackFee.GetFee(nTxBytes);

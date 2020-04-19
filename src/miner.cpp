@@ -121,6 +121,12 @@ void BlockAssembler::resetBlock()
 
 std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx)
 {
+    bool fAddedBMM = false;
+    return CreateNewBlock(scriptPubKeyIn, fMineWitnessTx, fAddedBMM);
+}
+
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx, bool& fAddedBMM)
+{
     int64_t nTimeStart = GetTimeMicros();
 
     resetBlock();
@@ -166,27 +172,52 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
 #ifdef ENABLE_WALLET
     if (fDrivechainEnabled) {
+        // Make sure that the mempool has only valid deposits to choose from
+        mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
+
         // Remove expired BMM requests from our memory pool
         std::vector<uint256> vHashRemoved;
         mempool.RemoveExpiredCriticalRequests(vHashRemoved);
-
-        // Abandon expired BMM requests from the wallet
-        if (!vpwallets.empty()) {
-            for (const uint256& u : vHashRemoved) {
-                if (vpwallets[0]->mapWallet.count(u))
-                    vpwallets[0]->AbandonTransaction(u);
-            }
-        }
-
         // Select which BMM requests (if any) to include
-        mempool.SelectBMMRequests();
+        mempool.SelectBMMRequests(vHashRemoved);
+
+        // Track what was removed from the mempool so that we can abandon later
+        for (const uint256& u : vHashRemoved)
+            scdb.AddRemovedBMM(u);
     }
 #endif
+
+    // Collect active sidechains
+    std::vector<Sidechain> vActiveSidechain;
+    if (fDrivechainEnabled)
+        vActiveSidechain = scdb.GetActiveSidechains();
+
+    // If a WT^ has sufficient workscore and this block isn't the last in the
+    // verification period, create the payout transaction. We will add any
+    // generated payout transactions to the block later.
+    //
+    // Keep track of which sidechains will have a WT^ in this block. We will
+    // need this when deciding what transactions to add from the mempool.
+    std::set<uint8_t> setSidechainsWithWTPrime;
+    // Keep track of the created WT^(s) to be added to the block later
+    std::vector<CMutableTransaction> vWTPrime;
+    if (fDrivechainEnabled && nHeight % SIDECHAIN_VERIFICATION_PERIOD != 0) {
+        for (const Sidechain& s : vActiveSidechain) {
+            CMutableTransaction wtx;
+            bool fCreated = CreateWTPrimePayout(s.nSidechain, wtx);
+            if (fCreated && wtx.vout.size() && wtx.vin.size()) {
+                LogPrintf("%s: Created WT^ payout for sidechain: %u with: %u outputs!\ntxid: %s.\n",
+                        __func__, s.nSidechain, wtx.vout.size(), wtx.GetHash().ToString());
+                vWTPrime.push_back(wtx);
+                setSidechainsWithWTPrime.insert(s.nSidechain);
+            }
+        }
+    }
 
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
     bool fNeedCriticalFeeTx = false;
-    addPackageTxs(nPackagesSelected, nDescendantsUpdated, fDrivechainEnabled, fNeedCriticalFeeTx);
+    addPackageTxs(nPackagesSelected, nDescendantsUpdated, fDrivechainEnabled, fNeedCriticalFeeTx, setSidechainsWithWTPrime);
 
     int64_t nTime1 = GetTimeMicros();
 
@@ -206,11 +237,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Add coinbase to block
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
-
-    // Collect active sidechains
-    std::vector<Sidechain> vActiveSidechain;
-    if (fDrivechainEnabled)
-        vActiveSidechain = scdb.GetActiveSidechains();
 
     // TODO make selection of WT^(s) to accept / commit interactive - GUI
     // Commit WT^(s) which we have received locally
@@ -435,24 +461,14 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
     }
 
-    // TODO It would be possible to spend a WT^ in the last block of the
-    // verification period but WT^ state is cleared in connectblock before
-    // the workscore would be checked.
-    //
-    // If a WT^ has sufficient workscore and this block isn't the last in the
-    // verification period, create the payout transaction.
-    if (fDrivechainEnabled && nHeight % SIDECHAIN_VERIFICATION_PERIOD != 0) {
-        for (const Sidechain& s : vActiveSidechain) {
-            CMutableTransaction wtx;
-            bool fCreated = CreateWTPrimePayout(s.nSidechain, wtx);
-            if (fCreated && wtx.vout.size() && wtx.vin.size()) {
-                pblock->vtx.push_back(MakeTransactionRef(std::move(wtx)));
-            }
-        }
+    // Add WT^(s) that we created earlier to the block
+    for (const CMutableTransaction& mtx : vWTPrime) {
+        pblock->vtx.push_back(MakeTransactionRef(std::move(mtx)));
     }
 
     // Handle / create critical fee tx (collects bmm / critical data fees)
     if (fDrivechainEnabled && fNeedCriticalFeeTx) {
+        fAddedBMM = true;
         // Create critical fee tx
         CMutableTransaction feeTx;
         feeTx.vout.resize(1);
@@ -676,6 +692,9 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
 
     mtx.vin.push_back(CTxIn(ctip.out));
 
+    LogPrintf("%s: WT^ will spend CTIP: %s : %u.\n", __func__,
+            ctip.out.hash.ToString(), ctip.out.n);
+
     // Start calculating amount returning to sidechain
     CAmount returnAmount = ctip.amount;
     mtx.vout.back().nValue += returnAmount;
@@ -761,7 +780,7 @@ void BlockAssembler::SortForBlock(const CTxMemPool::setEntries& package, CTxMemP
 // Each time through the loop, we compare the best transaction in
 // mapModifiedTxs with the next transaction in the mempool to decide what
 // transaction package to work on next.
-void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, bool fDrivechainEnabled, bool& fNeedCriticalFeeTx)
+void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, bool fDrivechainEnabled, bool& fNeedCriticalFeeTx, const std::set<uint8_t>& setSidechainsWithWTPrime)
 {
     // mapModifiedTx will store sorted packages after they are modified
     // because some of their txs are already in the block
@@ -784,6 +803,11 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
 
     while (mi != mempool.mapTx.get<ancestor_score>().end() || !mapModifiedTx.empty())
     {
+        if (mi->GetSidechainDeposit() &&
+                setSidechainsWithWTPrime.count(mi->GetSidechainNumber())) {
+            ++mi;
+            continue;
+        }
         // First try to find a new transaction in mapTx to evaluate.
         if (mi != mempool.mapTx.get<ancestor_score>().end() &&
                 SkipMapTxEntry(mempool.mapTx.project<0>(mi), mapModifiedTx, failedTx)) {
@@ -989,6 +1013,10 @@ void static BitcoinMiner(const CChainParams& chainparams)
     std::shared_ptr<CReserveScript> coinbaseScript;
     vpwallets[0]->GetScriptForMining(coinbaseScript);
 
+    bool fAddedBMM = false;
+
+    bool fBreakForBMM = gArgs.GetBoolArg("-minerbreakforbmm", false);
+
     try {
         // Throw an error if no script was provided.  This can happen
         // due to some internal error but also if the keypool is empty.
@@ -1025,7 +1053,9 @@ void static BitcoinMiner(const CChainParams& chainparams)
             if (nMinerSleep)
                 MilliSleep(nMinerSleep);
 
-            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript));
+            fAddedBMM = false;
+
+            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true /* mine segwit */, fAddedBMM));
             if (!pblocktemplate.get())
             {
                 LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
@@ -1082,6 +1112,15 @@ void static BitcoinMiner(const CChainParams& chainparams)
                 if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev) < 0)
                     break; // Recreate the block if the clock has run backwards,
                            // so that we can use the correct time.
+
+                // If the user has set --minerbreakforbmm, and BMM txns were not
+                // already added to this block but exist in the mempool, break
+                // the miner so that it recreates the block.
+                if (fBreakForBMM && !fAddedBMM &&
+                        mempool.GetCriticalTxnAddedSinceBlock()) {
+                    break;
+                }
+
                 if (chainparams.GetConsensus().fPowAllowMinDifficultyBlocks)
                 {
                     // Changing pblock->nTime can change work required on testnet:

@@ -18,7 +18,17 @@ SidechainDB::SidechainDB()
     Reset();
 }
 
-void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
+void SidechainDB::AddRemovedBMM(const uint256& hashRemoved)
+{
+    vRemovedBMM.push_back(hashRemoved);
+}
+
+void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
+{
+    vRemovedDeposit.push_back(hashRemoved);
+}
+
+bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
     // be done after verifying all of the deposits
@@ -75,10 +85,19 @@ void SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint25
         }
     }
 
+    // Check that deposits can be sorted
+    std::vector<SidechainDeposit> vDepositSorted;
+    if (!SortDeposits(vDeposit, vDepositSorted))
+        return false;
+
+    if (fJustCheck)
+        return true;
+
     // Add deposits to cache, note that this AddDeposit call will split deposits
     // by nSidechain and sort them
-    if (!fJustCheck)
-        AddDeposits(vDeposit, hashBlock);
+    AddDeposits(vDeposit, hashBlock);
+
+    return true;
 }
 
 void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, const uint256& hashBlock)
@@ -290,6 +309,16 @@ bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime,
     return false;
 }
 
+void SidechainDB::ClearRemovedBMM()
+{
+    vRemovedBMM.clear();
+}
+
+void SidechainDB::ClearRemovedDeposits()
+{
+    vRemovedDeposit.clear();
+}
+
 unsigned int SidechainDB::GetActiveSidechainCount() const
 {
     return vActiveSidechain.size();
@@ -315,6 +344,16 @@ bool SidechainDB::GetActivateSidechain(const uint256& u) const
 std::vector<Sidechain> SidechainDB::GetActiveSidechains() const
 {
     return vActiveSidechain;
+}
+
+std::vector<uint256> SidechainDB::GetRemovedBMM() const
+{
+    return vRemovedBMM;
+}
+
+std::vector<uint256> SidechainDB::GetRemovedDeposits() const
+{
+    return vRemovedDeposit;
 }
 
 bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
@@ -1721,6 +1760,9 @@ void SidechainDB::UpdateCTIP(const uint256& hashBlock)
             std::map<uint8_t, SidechainCTIP>::const_iterator it;
             it = mapCTIP.find(x);
             mapCTIP.erase(it);
+
+            LogPrintf("SCDB %s: Removed sidechain CTIP.\n",
+                    __func__);
         }
     }
 }
