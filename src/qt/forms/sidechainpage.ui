@@ -324,42 +324,14 @@
             </widget>
             <widget class="QWidget" name="tab">
              <attribute name="title">
-              <string>Tables</string>
+              <string>Withdrawal status</string>
              </attribute>
              <layout class="QVBoxLayout" name="verticalLayout_5">
               <item>
-               <widget class="QTabWidget" name="tabWidget_2">
-                <property name="currentIndex">
-                 <number>0</number>
+               <widget class="QTableView" name="tableViewWT">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
                 </property>
-                <widget class="QWidget" name="tab_4">
-                 <attribute name="title">
-                  <string>Escrow status</string>
-                 </attribute>
-                 <layout class="QVBoxLayout" name="verticalLayout_8">
-                  <item>
-                   <widget class="QTableView" name="tableViewEscrow">
-                    <property name="frameShape">
-                     <enum>QFrame::NoFrame</enum>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-                <widget class="QWidget" name="tab_5">
-                 <attribute name="title">
-                  <string>WT^ status</string>
-                 </attribute>
-                 <layout class="QVBoxLayout" name="verticalLayout_7">
-                  <item>
-                   <widget class="QTableView" name="tableViewWT">
-                    <property name="frameShape">
-                     <enum>QFrame::NoFrame</enum>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
                </widget>
               </item>
              </layout>

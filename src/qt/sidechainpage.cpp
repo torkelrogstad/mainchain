@@ -10,7 +10,6 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/sidechaindepositconfirmationdialog.h>
-#include <qt/sidechainescrowtablemodel.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/sidechainminerdialog.h>
 #include <qt/walletmodel.h>
@@ -140,48 +139,36 @@ void SidechainPage::SetupSidechainList()
 
 void SidechainPage::SetupTables()
 {
-    if (escrowModel)
-        delete escrowModel;
     if (withdrawalModel)
         delete withdrawalModel;
 
     // Initialize table models
-    escrowModel = new SidechainEscrowTableModel(this);
     withdrawalModel = new SidechainWithdrawalTableModel(this);
 
     // Add models to table views
-    ui->tableViewEscrow->setModel(escrowModel);
     ui->tableViewWT->setModel(withdrawalModel);
 
     // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000
-    ui->tableViewEscrow->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewWT->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
 #else
-    ui->tableViewEscrow->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #endif
 
     // Don't stretch last cell of horizontal header
-    ui->tableViewEscrow->horizontalHeader()->setStretchLastSection(false);
     ui->tableViewWT->horizontalHeader()->setStretchLastSection(false);
 
     // Hide vertical header
-    ui->tableViewEscrow->verticalHeader()->setVisible(false);
     ui->tableViewWT->verticalHeader()->setVisible(false);
 
     // Left align the horizontal header text
-    ui->tableViewEscrow->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
     ui->tableViewWT->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
-    ui->tableViewEscrow->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewWT->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-    ui->tableViewEscrow->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
     ui->tableViewWT->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
 
     // Disable word wrap
-    ui->tableViewEscrow->setWordWrap(false);
     ui->tableViewWT->setWordWrap(false);
 }
 
@@ -406,5 +393,4 @@ void SidechainPage::gotoWTPage()
 {
     // Go to the WT^ table
     ui->tabWidget->setCurrentIndex(1);
-    ui->tabWidget_2->setCurrentIndex(1);
 }
