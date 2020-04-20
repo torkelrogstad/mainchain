@@ -414,6 +414,21 @@ void SidechainPage::on_pushButtonManageSidechains_clicked()
     minerDialog->show();
 }
 
+void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
+{
+    QMessageBox::information(this, tr("DriveNet - information"),
+        tr("If you have a sidechain full node, and have granted it RPC-access, "
+           "then your mainchain node will periodically receive a cache of raw "
+           "WT^ transactions. From this cache, the WT^ transaction-details can "
+           "be obtained and displayed.\n\n"
+           "If you do not have a sidechain full node connected, then you have no "
+           "direct firsthand knowledge about WT^s. You do NOT know how much money "
+           "the WT^ is withdrawing, nor where that money is trying to go, nor if "
+           "the WT^ is sidechain-valid. Until the WT^ accumulates sufficient ACK-score, "
+           "you will not even know if it is mainchain-valid.\n"),
+        QMessageBox::Ok);
+}
+
 void SidechainPage::CheckForSidechainUpdates()
 {
     std::vector<Sidechain> vSidechainNew = scdb.GetActiveSidechains();

@@ -74,6 +74,8 @@ public Q_SLOTS:
 
     void on_pushButtonManageSidechains_clicked();
 
+    void on_pushButtonWTDoubleClickHelp_clicked();
+
     void CheckForSidechainUpdates();
 
     void gotoWTPage();
