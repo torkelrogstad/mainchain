@@ -28,6 +28,7 @@ class RPCConsole;
 class SendCoinsRecipient;
 class SidechainTableDialog;
 class SidechainPage;
+class SidechainWithdrawalTableModel;
 class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
@@ -57,6 +58,8 @@ public:
     */
     void setClientModel(ClientModel *clientModel);
 
+    void setWithdrawalModel(SidechainWithdrawalTableModel *model);
+
 #ifdef ENABLE_WALLET
     /** Set the wallet model.
         The wallet model represents a bitcoin wallet, and offers access to the list of transactions, address book and sending
@@ -79,6 +82,7 @@ protected:
 private:
     ClientModel *clientModel;
     WalletFrame *walletFrame;
+    SidechainWithdrawalTableModel *withdrawalModel;
 
     QLabel *labelWalletEncryptionIcon;
     QLabel *connectionsControl;

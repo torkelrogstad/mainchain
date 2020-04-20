@@ -20,6 +20,7 @@ class TransactionView;
 class WalletModel;
 class AddressBookPage;
 class SidechainPage;
+class SidechainWithdrawalTableModel;
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
@@ -51,6 +52,8 @@ public:
     */
     void setWalletModel(WalletModel *walletModel);
 
+    void setWithdrawalModel(SidechainWithdrawalTableModel* model);
+
     bool handlePaymentRequest(const SendCoinsRecipient& recipient);
 
     void showOutOfSyncWarning(bool fShow);
@@ -66,6 +69,7 @@ private:
     AddressBookPage *usedSendingAddressesPage;
     AddressBookPage *usedReceivingAddressesPage;
     SidechainPage *sidechainPage;
+    SidechainWithdrawalTableModel* withdrawalModel;
 
     TransactionView *transactionView;
 

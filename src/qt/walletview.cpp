@@ -16,6 +16,7 @@
 #include <qt/sendcoinsdialog.h>
 #include <qt/sidechainpage.h>
 #include <qt/signverifymessagedialog.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/transactiontablemodel.h>
 #include <qt/transactionview.h>
 #include <qt/walletmodel.h>
@@ -34,6 +35,7 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     QStackedWidget(parent),
     clientModel(0),
     walletModel(0),
+    withdrawalModel(0),
     platformStyle(_platformStyle)
 {
     // Create tabs
@@ -133,6 +135,7 @@ void WalletView::setClientModel(ClientModel *_clientModel)
 
     overviewPage->setClientModel(_clientModel);
     sendCoinsPage->setClientModel(_clientModel);
+    sidechainPage->setClientModel(_clientModel);
 }
 
 void WalletView::setWalletModel(WalletModel *_walletModel)
@@ -169,6 +172,15 @@ void WalletView::setWalletModel(WalletModel *_walletModel)
 
         // Show progress dialog
         connect(_walletModel, SIGNAL(showProgress(QString,int)), this, SLOT(showProgress(QString,int)));
+    }
+}
+
+void WalletView::setWithdrawalModel(SidechainWithdrawalTableModel* model)
+{
+    this->withdrawalModel = model;
+    if (model) {
+        sidechainPage->setWithdrawalModel(model);
+        overviewPage->setWithdrawalModel(model);
     }
 }
 

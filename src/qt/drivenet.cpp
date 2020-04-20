@@ -18,6 +18,7 @@
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/splashscreen.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/utilitydialog.h>
 #include <qt/winshutdownmonitor.h>
 
@@ -245,6 +246,7 @@ private:
     QThread *coreThread;
     OptionsModel *optionsModel;
     ClientModel *clientModel;
+    SidechainWithdrawalTableModel *withdrawalModel;
     BitcoinGUI *window;
     QTimer *pollShutdownTimer;
 #ifdef ENABLE_WALLET
@@ -327,6 +329,7 @@ BitcoinApplication::BitcoinApplication(int &argc, char **argv):
     coreThread(0),
     optionsModel(0),
     clientModel(0),
+    withdrawalModel(0),
     window(0),
     pollShutdownTimer(0),
 #ifdef ENABLE_WALLET
@@ -445,6 +448,7 @@ void BitcoinApplication::requestShutdown()
     startThread();
     window->hide();
     window->setClientModel(0);
+    window->setWithdrawalModel(0);
     pollShutdownTimer->stop();
 
 #ifdef ENABLE_WALLET
@@ -454,6 +458,9 @@ void BitcoinApplication::requestShutdown()
 #endif
     delete clientModel;
     clientModel = 0;
+
+    delete withdrawalModel;
+    withdrawalModel = 0;
 
     StartShutdown();
 
@@ -477,6 +484,9 @@ void BitcoinApplication::initializeResult(bool success)
 
         clientModel = new ClientModel(optionsModel);
         window->setClientModel(clientModel);
+
+        withdrawalModel = new SidechainWithdrawalTableModel(this);
+        window->setWithdrawalModel(withdrawalModel);
 
 #ifdef ENABLE_WALLET
         // TODO: Expose secondary wallets

@@ -5,6 +5,7 @@
 #include <qt/sidechainpage.h>
 #include <qt/forms/ui_sidechainpage.h>
 
+#include <qt/clientmodel.h>
 #include <qt/drivenetunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
@@ -49,24 +50,29 @@ SidechainPage::SidechainPage(QWidget *parent) :
     // Setup sidechain list widget & combo box
     SetupSidechainList();
 
-    // Setup the tables
-    SetupTables();
-
     // Initialize deposit confirmation dialog
     depositConfirmationDialog = new SidechainDepositConfirmationDialog(this);
 
     // Initialize miner popup window. We want users to be able to keep this
     // window open while using the rest of the software.
     minerDialog = new SidechainMinerDialog(this);
-
-    pollTimer = new QTimer(this);
-    connect(pollTimer, SIGNAL(timeout()), this, SLOT(CheckForSidechainUpdates()));
-    pollTimer->start(MODEL_UPDATE_DELAY);
 }
 
 SidechainPage::~SidechainPage()
 {
     delete ui;
+}
+
+void SidechainPage::setClientModel(ClientModel *model)
+{
+    this->clientModel = model;
+    if(model)
+    {
+        numBlocksChanged();
+
+        connect(model, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
+                this, SLOT(numBlocksChanged()));
+    }
 }
 
 void SidechainPage::setWalletModel(WalletModel *model)
@@ -76,6 +82,39 @@ void SidechainPage::setWalletModel(WalletModel *model)
     {
         connect(model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this,
                 SLOT(setBalance(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)));
+    }
+}
+
+void SidechainPage::setWithdrawalModel(SidechainWithdrawalTableModel *model)
+{
+    this->withdrawalModel = model;
+
+    if (model) {
+        // Add model to table view
+        ui->tableViewWT->setModel(withdrawalModel);
+
+        // Resize cells (in a backwards compatible way)
+    #if QT_VERSION < 0x050000
+        ui->tableViewWT->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    #else
+        ui->tableViewWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    #endif
+
+        // Don't stretch last cell of horizontal header
+        ui->tableViewWT->horizontalHeader()->setStretchLastSection(false);
+
+        // Hide vertical header
+        ui->tableViewWT->verticalHeader()->setVisible(false);
+
+        // Left align the horizontal header text
+        ui->tableViewWT->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+
+        // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
+        ui->tableViewWT->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+        ui->tableViewWT->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+
+        // Disable word wrap
+        ui->tableViewWT->setWordWrap(false);
     }
 }
 
@@ -135,41 +174,6 @@ void SidechainPage::SetupSidechainList()
     }
 
     ui->listWidgetSidechains->setCurrentRow(0);
-}
-
-void SidechainPage::SetupTables()
-{
-    if (withdrawalModel)
-        delete withdrawalModel;
-
-    // Initialize table models
-    withdrawalModel = new SidechainWithdrawalTableModel(this);
-
-    // Add models to table views
-    ui->tableViewWT->setModel(withdrawalModel);
-
-    // Resize cells (in a backwards compatible way)
-#if QT_VERSION < 0x050000
-    ui->tableViewWT->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
-#else
-    ui->tableViewWT->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-#endif
-
-    // Don't stretch last cell of horizontal header
-    ui->tableViewWT->horizontalHeader()->setStretchLastSection(false);
-
-    // Hide vertical header
-    ui->tableViewWT->verticalHeader()->setVisible(false);
-
-    // Left align the horizontal header text
-    ui->tableViewWT->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
-
-    // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
-    ui->tableViewWT->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-    ui->tableViewWT->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
-
-    // Disable word wrap
-    ui->tableViewWT->setWordWrap(false);
 }
 
 void SidechainPage::on_pushButtonDeposit_clicked()
@@ -385,7 +389,6 @@ void SidechainPage::CheckForSidechainUpdates()
         vSidechain = vSidechainNew;
 
         SetupSidechainList();
-        SetupTables();
     }
 }
 
@@ -393,4 +396,10 @@ void SidechainPage::gotoWTPage()
 {
     // Go to the WT^ table
     ui->tabWidget->setCurrentIndex(1);
+}
+
+void SidechainPage::numBlocksChanged()
+{
+    // Check for sidechain activation updates
+    CheckForSidechainUpdates();
 }

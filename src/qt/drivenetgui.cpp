@@ -18,6 +18,7 @@
 #include <qt/utilitydialog.h>
 #include <qt/sidechainpage.h>
 #include <qt/sidechaintabledialog.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 
 #ifdef ENABLE_WALLET
 #include <qt/walletframe.h>
@@ -82,6 +83,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     enableWallet(false),
     clientModel(0),
     walletFrame(0),
+    withdrawalModel(0),
     labelWalletEncryptionIcon(0),
     connectionsControl(0),
     labelBlocksIcon(0),
@@ -528,6 +530,32 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
         if (walletFrame)
         {
             walletFrame->setClientModel(nullptr);
+        }
+#endif // ENABLE_WALLET
+    }
+}
+
+void BitcoinGUI::setWithdrawalModel(SidechainWithdrawalTableModel *model)
+{
+    this->withdrawalModel = model;
+    if(model)
+    {
+#ifdef ENABLE_WALLET
+        if (walletFrame)
+        {
+            walletFrame->setWithdrawalModel(model);
+            if (clientModel) {
+                withdrawalModel->numBlocksChanged();
+                connect(clientModel, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
+                        withdrawalModel, SLOT(numBlocksChanged()));
+            }
+        }
+#endif // ENABLE_WALLET
+    } else {
+#ifdef ENABLE_WALLET
+        if (walletFrame)
+        {
+            walletFrame->setWithdrawalModel(nullptr);
         }
 #endif // ENABLE_WALLET
     }

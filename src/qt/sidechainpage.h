@@ -15,11 +15,12 @@
 #include <string>
 
 class CBlock;
-class WalletModel;
 
 class SidechainDepositConfirmationDialog;
 class SidechainWithdrawalTableModel;
 class SidechainMinerDialog;
+class WalletModel;
+class ClientModel;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
@@ -44,7 +45,11 @@ public:
     explicit SidechainPage(QWidget *parent = 0);
     ~SidechainPage();
 
+    void setClientModel(ClientModel *model);
+
     void setWalletModel(WalletModel *model);
+
+    void setWithdrawalModel(SidechainWithdrawalTableModel *model);
 
     QString GetSidechainIconPath(uint8_t nSidechain) const;
 
@@ -69,12 +74,13 @@ public Q_SLOTS:
 
     void gotoWTPage();
 
+    void numBlocksChanged();
+
 private:
     Ui::SidechainPage *ui;
 
+    ClientModel *clientModel;
     WalletModel *walletModel;
-
-    QTimer *pollTimer;
 
     SidechainDepositConfirmationDialog *depositConfirmationDialog = nullptr;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
@@ -84,8 +90,6 @@ private:
 
     bool validateDepositAmount();
     bool validateFeeAmount();
-
-    void SetupTables();
 
     // The sidechains that are currently cached for the list widget
     std::vector<Sidechain> vSidechain;
