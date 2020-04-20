@@ -54,6 +54,8 @@ public:
     QString GetSidechainIconPath(uint8_t nSidechain) const;
 
 public Q_SLOTS:
+    // TODO make slots that don't need to be public private
+
     void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance,
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
@@ -67,6 +69,8 @@ public Q_SLOTS:
     void on_comboBoxSidechains_currentIndexChanged(const int index);
 
     void on_listWidgetSidechains_doubleClicked(const QModelIndex& index);
+
+    void on_tableViewWT_doubleClicked(const QModelIndex& index);
 
     void on_pushButtonManageSidechains_clicked();
 

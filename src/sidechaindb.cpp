@@ -370,6 +370,18 @@ bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
     return false;
 }
 
+bool SidechainDB::GetCachedWTPrime(const uint256& hashWTPrime, CMutableTransaction& mtx) const
+{
+    // Find the WT^
+    for (const CMutableTransaction& t : vWTPrimeCache) {
+        if (t.GetHash() == hashWTPrime) {
+            mtx = t;
+            return true;
+        }
+    }
+    return false;
+}
+
 std::map<uint8_t, SidechainCTIP> SidechainDB::GetCTIP() const
 {
     return mapCTIP;

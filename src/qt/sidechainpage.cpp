@@ -13,6 +13,7 @@
 #include <qt/sidechaindepositconfirmationdialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/sidechainminerdialog.h>
+#include <qt/sidechainwtprimedetails.h>
 #include <qt/walletmodel.h>
 
 #include <base58.h>
@@ -319,6 +320,37 @@ void SidechainPage::on_comboBoxSidechains_currentIndexChanged(const int i)
 void SidechainPage::on_listWidgetSidechains_doubleClicked(const QModelIndex& i)
 {
     ui->comboBoxSidechains->setCurrentIndex(i.row());
+}
+
+void SidechainPage::on_tableViewWT_doubleClicked(const QModelIndex& index)
+{
+    int row = index.row();
+    QString qHash = index.sibling(row, 5).data().toString();
+
+    QMessageBox messageBox;
+    messageBox.setWindowTitle("Failed to locate WT^ raw transaction!");
+
+    uint256 hash = uint256S(qHash.toStdString());
+    if (hash.IsNull()) {
+        messageBox.setText("Invalid WT^ hash!");
+        messageBox.exec();
+        return;
+    }
+
+    CMutableTransaction mtx;
+    if (!scdb.GetCachedWTPrime(hash, mtx)) {
+        QString error;
+        error += "WT^ not in cache!\n\n";
+        error += "Try using the 'rebroadcastwtprimehex' RPC command on the sidechain.\n";
+        messageBox.setText(error);
+        messageBox.exec();
+        return;
+    }
+
+    SidechainWTPrimeDetails detailsDialog;
+    detailsDialog.SetTransaction(mtx);
+
+    detailsDialog.exec();
 }
 
 bool SidechainPage::validateDepositAmount()

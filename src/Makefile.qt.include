@@ -114,6 +114,7 @@ QT_FORMS_UI = \
   qt/forms/sidechaintabledialog.ui \
   qt/forms/sidechainminerdialog.ui \
   qt/forms/sidechainpage.ui \
+  qt/forms/sidechainwtprimedetails.ui \
   qt/forms/signverifymessagedialog.ui \
   qt/forms/transactiondescdialog.ui
 
@@ -160,6 +161,7 @@ QT_MOC_CPP = \
   qt/moc_sidechainminerdialog.cpp \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainwithdrawaltablemodel.cpp \
+  qt/moc_sidechainwtprimedetails.cpp \
   qt/moc_signverifymessagedialog.cpp \
   qt/moc_splashscreen.cpp \
   qt/moc_trafficgraphwidget.cpp \
@@ -241,6 +243,7 @@ DRIVENET_QT_H = \
   qt/sidechainminerdialog.h \
   qt/sidechainpage.h \
   qt/sidechainwithdrawaltablemodel.h \
+  qt/sidechainwtprimedetails.h \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
   qt/trafficgraphwidget.h \
@@ -415,6 +418,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/sidechainminerdialog.cpp \
   qt/sidechainpage.cpp \
   qt/sidechainwithdrawaltablemodel.cpp \
+  qt/sidechainwtprimedetails.cpp \
   qt/signverifymessagedialog.cpp \
   qt/transactiondesc.cpp \
   qt/transactiondescdialog.cpp \
