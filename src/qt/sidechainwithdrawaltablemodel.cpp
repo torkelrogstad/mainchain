@@ -40,10 +40,6 @@ Q_DECLARE_METATYPE(SidechainWithdrawalTableObject)
 SidechainWithdrawalTableModel::SidechainWithdrawalTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
-    // This timer will be fired repeatedly to update the model
-    pollTimer = new QTimer(this);
-    connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateModel()));
-    pollTimer->start(MODEL_UPDATE_DELAY);
 }
 
 int SidechainWithdrawalTableModel::rowCount(const QModelIndex & /*parent*/) const
@@ -164,11 +160,13 @@ void SidechainWithdrawalTableModel::updateModel()
     endInsertRows();
 }
 
+void SidechainWithdrawalTableModel::numBlocksChanged()
+{
+    updateModel();
+}
+
 void SidechainWithdrawalTableModel::AddDemoData()
 {
-    // Stop updating the model with real data
-    pollTimer->stop();
-
     // Clear old data
     beginResetModel();
     model.clear();
@@ -267,7 +265,4 @@ void SidechainWithdrawalTableModel::ClearDemoData()
     beginResetModel();
     model.clear();
     endResetModel();
-
-    // Start updating the model with real data again
-    pollTimer->start();
 }

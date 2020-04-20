@@ -15,12 +15,12 @@
 #include <string>
 
 class CBlock;
-class WalletModel;
 
 class SidechainDepositConfirmationDialog;
-class SidechainEscrowTableModel;
 class SidechainWithdrawalTableModel;
 class SidechainMinerDialog;
+class WalletModel;
+class ClientModel;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
@@ -45,11 +45,17 @@ public:
     explicit SidechainPage(QWidget *parent = 0);
     ~SidechainPage();
 
+    void setClientModel(ClientModel *model);
+
     void setWalletModel(WalletModel *model);
+
+    void setWithdrawalModel(SidechainWithdrawalTableModel *model);
 
     QString GetSidechainIconPath(uint8_t nSidechain) const;
 
 public Q_SLOTS:
+    // TODO make slots that don't need to be public private
+
     void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance,
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
@@ -64,26 +70,29 @@ public Q_SLOTS:
 
     void on_listWidgetSidechains_doubleClicked(const QModelIndex& index);
 
+    void on_tableViewWT_doubleClicked(const QModelIndex& index);
+
     void on_pushButtonManageSidechains_clicked();
+
+    void on_pushButtonWTDoubleClickHelp_clicked();
 
     void CheckForSidechainUpdates();
 
     void gotoWTPage();
 
+    void numBlocksChanged();
+
 private:
     Ui::SidechainPage *ui;
 
+    ClientModel *clientModel;
     WalletModel *walletModel;
 
-    QTimer *pollTimer;
-
     SidechainDepositConfirmationDialog *depositConfirmationDialog = nullptr;
-    SidechainEscrowTableModel *escrowModel = nullptr;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
     SidechainMinerDialog *minerDialog = nullptr;
 
     void SetupSidechainList();
-    void SetupTables();
 
     bool validateDepositAmount();
     bool validateFeeAmount();
