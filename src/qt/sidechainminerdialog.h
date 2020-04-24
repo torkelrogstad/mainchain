@@ -10,6 +10,7 @@
 #include <QDialog>
 
 class SidechainActivationTableModel;
+class SidechainEscrowTableModel;
 class WTPrimeVoteTableModel;
 class WalletModel;
 
@@ -35,6 +36,8 @@ public Q_SLOTS:
     void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance,
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
+
+    void on_pushButtonEscrowStatus_clicked();
 
     void on_pushButtonVoteSidechain_clicked();
 
@@ -81,10 +84,13 @@ private:
 
     WalletModel *walletModel;
 
-    SidechainActivationTableModel *activationModel;
-    WTPrimeVoteTableModel *wtPrimeVoteModel;
+    SidechainActivationTableModel *activationModel = nullptr;
+    SidechainEscrowTableModel *escrowModel = nullptr;
+    WTPrimeVoteTableModel *wtPrimeVoteModel = nullptr;
 
     QTimer *pollTimer;
+
+    void SetupTables();
 };
 
 #endif // SIDECHAINMINERDIALOG_H

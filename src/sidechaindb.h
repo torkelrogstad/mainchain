@@ -111,6 +111,8 @@ public:
     /** Return the CTIP (critical transaction index pair) for all sidechains */
     std::map<uint8_t, SidechainCTIP> GetCTIP() const;
 
+    bool GetCachedWTPrime(const uint256& hashWTPrime, CMutableTransaction& mtx) const;
+
     /** Return vector of cached custom sidechain WT^ votes */
     std::vector<SidechainCustomVote> GetCustomVoteCache() const;
 

@@ -6,6 +6,7 @@
 
 #include <qt/drivenetgui.h>
 #include <qt/walletview.h>
+#include <qt/sidechainwithdrawaltablemodel.h>
 
 #include <cassert>
 #include <cstdio>
@@ -39,9 +40,14 @@ void WalletFrame::setClientModel(ClientModel *_clientModel)
     this->clientModel = _clientModel;
 }
 
+void WalletFrame::setWithdrawalModel(SidechainWithdrawalTableModel *model)
+{
+    this->withdrawalModel = model;
+}
+
 bool WalletFrame::addWallet(const QString& name, WalletModel *walletModel)
 {
-    if (!gui || !clientModel || !walletModel || mapWalletViews.count(name) > 0)
+    if (!gui || !clientModel || !walletModel || !withdrawalModel || mapWalletViews.count(name) > 0)
         return false;
 
     WalletView *walletView = new WalletView(platformStyle, this);
@@ -49,6 +55,7 @@ bool WalletFrame::addWallet(const QString& name, WalletModel *walletModel)
     walletView->setClientModel(clientModel);
     walletView->setWalletModel(walletModel);
     walletView->showOutOfSyncWarning(bOutOfSync);
+    walletView->setWithdrawalModel(withdrawalModel);
 
      /* TODO we should goto the currently selected page once dynamically adding wallets is supported */
     walletView->gotoOverviewPage();

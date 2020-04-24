@@ -39,6 +39,7 @@ public:
 
     void setClientModel(ClientModel *clientModel);
     void setWalletModel(WalletModel *walletModel);
+    void setWithdrawalModel(SidechainWithdrawalTableModel *model);
     void showOutOfSyncWarning(bool fShow);
 
 public Q_SLOTS:

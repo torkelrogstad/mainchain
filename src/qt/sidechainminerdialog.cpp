@@ -14,6 +14,7 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/sidechainactivationtablemodel.h>
+#include <qt/sidechainescrowtablemodel.h>
 #include <qt/wtprimevotetablemodel.h>
 #include <qt/walletmodel.h>
 
@@ -26,10 +27,11 @@
 #include <util.h>
 #include <validation.h>
 
-static const unsigned int INDEX_VOTE_SIDECHAIN = 0;
-static const unsigned int INDEX_PROPOSE_SIDECHAIN = 1;
-static const unsigned int INDEX_VOTE_WTPRIME = 2;
-static const unsigned int INDEX_BMM_SETTINGS = 3;
+static const unsigned int INDEX_ESCROW = 0;
+static const unsigned int INDEX_VOTE_SIDECHAIN = 1;
+static const unsigned int INDEX_PROPOSE_SIDECHAIN = 2;
+static const unsigned int INDEX_VOTE_WTPRIME = 3;
+static const unsigned int INDEX_BMM_SETTINGS = 4;
 
 enum DefaultWTPrimeVote {
     WTPRIME_UPVOTE = 0,
@@ -91,6 +93,8 @@ SidechainMinerDialog::SidechainMinerDialog(QWidget *parent) :
 
     // Update the page
     Update();
+
+    SetupTables();
 }
 
 SidechainMinerDialog::~SidechainMinerDialog()
@@ -116,6 +120,11 @@ void SidechainMinerDialog::setBalance(const CAmount& balance, const CAmount& unc
     const CAmount& pending = immatureBalance + unconfirmedBalance;
     //ui->available->setText(BitcoinUnits::formatWithUnit(unit, balance, false, BitcoinUnits::separatorAlways));
     //ui->pending->setText(BitcoinUnits::formatWithUnit(unit, pending, false, BitcoinUnits::separatorAlways));
+}
+
+void SidechainMinerDialog::on_pushButtonEscrowStatus_clicked()
+{
+    ui->stackedWidget->setCurrentIndex(INDEX_ESCROW);
 }
 
 void SidechainMinerDialog::on_pushButtonVoteSidechain_clicked()
@@ -479,4 +488,39 @@ void SidechainMinerDialog::Update()
 
     // Add a tip to the default vote label on how to reset them
     ui->labelClearVotes->setHidden(!fCustomVote);
+}
+
+void SidechainMinerDialog::SetupTables()
+{
+    if (escrowModel)
+        delete escrowModel;
+
+    // Initialize table models
+    escrowModel = new SidechainEscrowTableModel(this);
+
+    // Add models to table views
+    ui->tableViewEscrow->setModel(escrowModel);
+
+    // Resize cells (in a backwards compatible way)
+#if QT_VERSION < 0x050000
+    ui->tableViewEscrow->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+#else
+    ui->tableViewEscrow->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#endif
+
+    // Don't stretch last cell of horizontal header
+    ui->tableViewEscrow->horizontalHeader()->setStretchLastSection(false);
+
+    // Hide vertical header
+    ui->tableViewEscrow->verticalHeader()->setVisible(false);
+
+    // Left align the horizontal header text
+    ui->tableViewEscrow->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+
+    // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
+    ui->tableViewEscrow->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewEscrow->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+
+    // Disable word wrap
+    ui->tableViewEscrow->setWordWrap(false);
 }

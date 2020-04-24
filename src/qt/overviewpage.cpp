@@ -221,11 +221,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     // TODO add withdrawal model to walletmodel
     // Setup the WT^ list
     withdrawalModel = new SidechainWithdrawalTableModel(this);
-    ui->listViewWT->setModel(withdrawalModel);
-    ui->listViewWT->setItemDelegate(wtdelegate);
-    ui->listViewWT->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
-    ui->listViewWT->setMinimumHeight(1 * (DECORATION_SIZE + 2));
-    ui->listViewWT->setAttribute(Qt::WA_MacShowFocusRect, false);
+
 
 
     // Start with the "more" frame invisible
@@ -357,6 +353,19 @@ void OverviewPage::setWalletModel(WalletModel *model)
 
     // update the display unit, to not use the default ("BTC")
     updateDisplayUnit();
+}
+
+void OverviewPage::setWithdrawalModel(SidechainWithdrawalTableModel *model)
+{
+    this->withdrawalModel = model;
+
+    if (model) {
+        ui->listViewWT->setModel(withdrawalModel);
+        ui->listViewWT->setItemDelegate(wtdelegate);
+        ui->listViewWT->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
+        ui->listViewWT->setMinimumHeight(1 * (DECORATION_SIZE + 2));
+        ui->listViewWT->setAttribute(Qt::WA_MacShowFocusRect, false);
+    }
 }
 
 void OverviewPage::updateDisplayUnit()

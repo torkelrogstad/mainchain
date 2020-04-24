@@ -45,9 +45,10 @@ public:
 public Q_SLOTS:
     void updateModel();
 
+    void numBlocksChanged();
+
 private:
     QList<QVariant> model;
-    QTimer *pollTimer;
 };
 
 #endif // SIDECHAINWITHDRAWALTABLEMODEL_H
