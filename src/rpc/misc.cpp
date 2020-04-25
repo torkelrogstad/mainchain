@@ -20,6 +20,7 @@
 #include <sidechain.h>
 #include <sidechaindb.h>
 #include <timedata.h>
+#include <txdb.h>
 #include <util.h>
 #include <utilmoneystr.h>
 #include <utilstrencodings.h>
@@ -1743,6 +1744,67 @@ UniValue gettotalscdbhash(const JSONRPCRequest& request)
     return ret;
 }
 
+UniValue getscdbdataforblock(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "getscdbdataforblock\n"
+            "Get SCDB data from leveldb for the specified block hash\n"
+            "\nResult:\n"
+            "\"nsidechains\" : (numeric) Number of active sidechains\n"
+            "\nArray of WT^ status\n"
+            "{\n"
+            "  \"nsidechain\"  : (numeric) Sidechain number of WT^\n"
+            "  \"nblocksleft\" : (numeric) Blocks remaining to validate WT^\n"
+            "  \"nworkscore\"  : (numeric) Number of ACK(s) WT^ has received\n"
+            "  \"hashwtprime\" : (string) hash of WT^\n"
+            "}\n"
+            "\n"
+            "\nExample:\n"
+            + HelpExampleCli("getscdbdataforblock", "hashblock")
+            );
+
+
+    uint256 hashBlock = uint256S(request.params[0].get_str());
+
+    LOCK(cs_main);
+
+    BlockMap::iterator it = mapBlockIndex.find(hashBlock);
+    if (it == mapBlockIndex.end()) {
+        std::string strError = "Block hash not found";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    CBlockIndex* pblockindex = it->second;
+    if (pblockindex == NULL) {
+        std::string strError = "Block index null";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    SidechainBlockData data;
+    if (!psidechaintree->GetBlockData(hashBlock, data))
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't find data for block.");
+
+    UniValue ret(UniValue::VARR);
+    UniValue obj(UniValue::VOBJ);
+    obj.push_back(Pair("nsidechains", data.vWTPrimeStatus.size()));
+    ret.push_back(obj);
+    for (auto& x : data.vWTPrimeStatus) {
+        for (auto& y : x) {
+            UniValue obj(UniValue::VOBJ);
+            obj.push_back(Pair("nsidechain", y.nSidechain));
+            obj.push_back(Pair("nblocksleft", y.nBlocksLeft));
+            obj.push_back(Pair("nworkscore", y.nWorkScore));
+            obj.push_back(Pair("hashwtprime", y.hashWTPrime.ToString()));
+            ret.push_back(obj);
+        }
+    }
+
+    return ret;
+}
+
 UniValue echo(const JSONRPCRequest& request)
 {
     if (request.fHelp)
@@ -1808,6 +1870,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listspentwtprimes",             &listspentwtprimes,            {}},
     { "DriveChain",  "getscdbhash",                   &getscdbhash,                  {}},
     { "DriveChain",  "gettotalscdbhash",              &gettotalscdbhash,             {}},
+    { "DriveChain",  "getscdbdataforblock",           &getscdbdataforblock,          {"blockhash"}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)
