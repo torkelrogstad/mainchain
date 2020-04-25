@@ -18,6 +18,15 @@ SidechainDB::SidechainDB()
     Reset();
 }
 
+bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockData& data)
+{
+    hashBlockLastSeen = hashBlock;
+    vWTPrimeStatus = data.vWTPrimeStatus;
+
+    // TODO verify SCDB hash matches MT hash commit for block
+    return true;
+}
+
 void SidechainDB::AddRemovedBMM(const uint256& hashRemoved)
 {
     vRemovedBMM.push_back(hashRemoved);
@@ -609,6 +618,11 @@ std::vector<SidechainWTPrimeState> SidechainDB::GetState(uint8_t nSidechain) con
     return vWTPrimeStatus[nSidechain];
 }
 
+std::vector<std::vector<SidechainWTPrimeState>> SidechainDB::GetState() const
+{
+    return vWTPrimeStatus;
+}
+
 std::vector<uint256> SidechainDB::GetUncommittedWTPrimeCache(uint8_t nSidechain) const
 {
     std::vector<uint256> vHash;
@@ -1088,7 +1102,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
     // If there's a MT hash commit in this block, it must be different than
     // the current SCDB hash (WT^ blocks remaining should have at least
-    // be updated if nothing else)
+    // been updated if nothing else)
     if (!hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
         if (fDebug)
             LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
@@ -1347,7 +1361,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     // Update hashBLockLastSeen
     if (!fJustCheck)
         hashBlockLastSeen = hashBlock;
-
 
     return true;
 }

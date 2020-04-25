@@ -23,6 +23,7 @@ class uint256;
 
 struct Sidechain;
 struct SidechainActivationStatus;
+struct SidechainBlockData;
 struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
@@ -43,6 +44,8 @@ class SidechainDB
 {
 public:
     SidechainDB();
+
+    bool ApplyLDBData(const uint256& hashBlockLastSeen, const SidechainBlockData& data);
 
     /** Add txid of removed BMM transaction */
     void AddRemovedBMM(const uint256& hashRemoved);
@@ -161,6 +164,8 @@ public:
 
     /** Get status of nSidechain's WT^(s) (public for unit tests) */
     std::vector<SidechainWTPrimeState> GetState(uint8_t nSidechain) const;
+
+    std::vector<std::vector<SidechainWTPrimeState>> GetState() const;
 
     /** Return cached but uncommitted WT^ transaction's hash(s) for nSidechain */
     std::vector<uint256> GetUncommittedWTPrimeCache(uint8_t nSidechain) const;
