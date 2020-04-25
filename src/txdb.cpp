@@ -9,6 +9,7 @@
 #include <hash.h>
 #include <random.h>
 #include <pow.h>
+#include <sidechain.h>
 #include <uint256.h>
 #include <util.h>
 #include <ui_interface.h>
@@ -525,6 +526,100 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
     return true;
 }
 
+CSidechainTreeDB::CSidechainTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
+    : CDBWrapper(GetDataDir() / "blocks" / "sidechain", nCacheSize, fMemory, fWipe) { }
+
+bool CSidechainTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo& fileinfo)
+{
+    return Read(std::make_pair(DB_BLOCK_FILES, nFile), fileinfo);
+}
+
+bool CSidechainTreeDB::WriteReindexing(bool fReindex)
+{
+    if (fReindex)
+        return Write(DB_REINDEX_FLAG, '1');
+    else
+        return Erase(DB_REINDEX_FLAG);
+}
+
+bool CSidechainTreeDB::ReadReindexing(bool& fReindex)
+{
+    fReindex = Exists(DB_REINDEX_FLAG);
+    return true;
+}
+
+bool CSidechainTreeDB::ReadLastBlockFile(int& nFile)
+{
+    return Read(DB_LAST_BLOCK, nFile);
+}
+
+bool CSidechainTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo *> > &fileInfo, int nLastFile, const std::vector<const CBlockIndex *> &blockinfo)
+{
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
+        batch.Write(std::make_pair(DB_BLOCK_FILES, it->first), *it->second);
+    }
+    batch.Write(DB_LAST_BLOCK, nLastFile);
+    for (std::vector<const CBlockIndex*>::const_iterator it=blockinfo.begin(); it != blockinfo.end(); it++) {
+        batch.Write(std::make_pair(DB_BLOCK_INDEX, (*it)->GetBlockHash()), CDiskBlockIndex(*it));
+    }
+    return WriteBatch(batch, true);
+}
+
+bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list)
+{
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<uint256, const SidechainObj *> >::const_iterator it=list.begin(); it!=list.end(); it++) {
+        const uint256 &objid = it->first;
+        const SidechainObj *obj = it->second;
+        std::pair<char, uint256> key = std::make_pair(obj->sidechainop, objid);
+
+        if (obj->sidechainop == DB_SIDECHAIN_BLOCK_OP) {
+            const SidechainBlockData *ptr = (const SidechainBlockData *) obj;
+            batch.Write(key, *ptr);
+        }
+    }
+
+    return WriteBatch(batch);
+}
+
+bool CSidechainTreeDB::WriteSidechainBlockData(const std::pair<uint256, const SidechainBlockData>& data)
+{
+    CDBBatch batch(*this);
+    std::pair<char, uint256> key = std::make_pair(data.second.sidechainop, data.first);
+    batch.Write(key, data.second);
+
+    return WriteBatch(batch);
+}
+
+bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue)
+{
+    return Write(std::make_pair(DB_FLAG, name), fValue ? '1' : '0');
+}
+
+bool CSidechainTreeDB::ReadFlag(const std::string& name, bool &fValue)
+{
+    char ch;
+    if (!Read(std::make_pair(DB_FLAG, name), ch))
+        return false;
+    fValue = ch == '1';
+    return true;
+}
+
+bool CSidechainTreeDB::GetBlockData(const uint256& hashBlock, SidechainBlockData& data) const
+{
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_BLOCK_OP, hashBlock), data))
+        return true;
+
+    return false;
+}
+
+bool CSidechainTreeDB::HaveBlockData(const uint256& hashBlock) const
+{
+    SidechainBlockData data;
+    return GetBlockData(hashBlock, data);
+}
+
 namespace {
 
 //! Legacy class to deserialize pre-pertxout database entries without reindex.
@@ -647,3 +742,5 @@ bool CCoinsViewDB::Upgrade() {
     LogPrintf("[%s].\n", ShutdownRequested() ? "CANCELLED" : "DONE");
     return !ShutdownRequested();
 }
+
+

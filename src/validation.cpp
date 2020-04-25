@@ -285,6 +285,7 @@ CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& loc
 std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 std::unique_ptr<CCoinsViewCache> pcoinsTip;
 std::unique_ptr<CBlockTreeDB> pblocktree;
+std::unique_ptr<CSidechainTreeDB> psidechaintree;
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,

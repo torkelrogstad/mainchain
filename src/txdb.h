@@ -163,4 +163,24 @@ public:
     bool LoadBlockIndexGuts(const Consensus::Params& consensusParams, std::function<CBlockIndex*(const uint256&)> insertBlockIndex);
 };
 
+/** Access to the sidechain database (blocks/sidechain/) */
+class CSidechainTreeDB : public CDBWrapper
+{
+public:
+    CSidechainTreeDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+    bool WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo);
+    bool ReadBlockFileInfo(int nFile, CBlockFileInfo &fileinfo);
+    bool ReadLastBlockFile(int &nFile);
+    bool WriteReindexing(bool fReindex);
+    bool ReadReindexing(bool &fReindex);
+    bool WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list);
+    bool WriteSidechainBlockData(const std::pair<uint256, const SidechainBlockData>& data);
+    bool WriteFlag(const std::string &name, bool fValue);
+    bool ReadFlag(const std::string &name, bool &fValue);
+
+    bool GetBlockData(const uint256& /* hashBlock */, SidechainBlockData& data) const;
+    bool HaveBlockData(const uint256& hashBlock) const;
+};
+
+
 #endif // BITCOIN_TXDB_H

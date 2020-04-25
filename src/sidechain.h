@@ -35,6 +35,8 @@ static const int SIDECHAIN_VERSION_CURRENT = 0;
 //! The max supported sidechain version
 static const int SIDECHAIN_VERSION_MAX = 0;
 
+static const char DB_SIDECHAIN_BLOCK_OP = 'S';
+
 struct SidechainProposal {
     int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
     std::string title;
@@ -223,5 +225,52 @@ struct SidechainCTIP {
         READWRITE(amount);
     }
 };
+
+/**
+ * Base object for sidechain related database entries
+ */
+struct SidechainObj {
+    char sidechainop;
+
+    SidechainObj(void) { }
+    virtual ~SidechainObj(void) { }
+
+    uint256 GetHash(void) const;
+    CScript GetScript(void) const;
+    virtual std::string ToString(void) const;
+};
+
+/**
+ * SCDB data for a block - database object
+ */
+struct SidechainBlockData: public SidechainObj {
+    std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
+    std::vector<SidechainSpentWTPrime> vSpentWTPrime;
+    uint256 hashMT;
+
+    SidechainBlockData(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_BLOCK_OP; }
+    virtual ~SidechainBlockData(void) { }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(sidechainop);
+        READWRITE(vWTPrimeStatus);
+        READWRITE(vSpentWTPrime);
+        READWRITE(hashMT);
+    }
+
+    std::string ToString(void) const;
+
+    uint256 GetID() const {
+        return GetHash();
+    }
+};
+
+/**
+ * Create sidechain object
+ */
+SidechainObj *SidechainObjCtr(const CScript &);
 
 #endif // BITCOIN_SIDECHAIN_H
