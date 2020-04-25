@@ -499,12 +499,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nNonce         = diskindex.nNonce;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
-                pindexNew->fCoinbase      = diskindex.fCoinbase;
-
-                if (pindexNew->fCoinbase) {
-                    pindexNew->coinbase = diskindex.coinbase;
-                    nCoinbaseCached++;
-                }
 
                 // Copy Litecoin, skip PoW check when reading our own data for
                 // performance reasons. This can be re-enabled but each block on

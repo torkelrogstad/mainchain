@@ -1630,7 +1630,7 @@ bool AppInitMain()
     if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
     {
         // TODO suggest reindex if fails
-        uiInterface.InitMessage(_("Synchronizing sidechain database & coinbase cache..."));
+        uiInterface.InitMessage(_("Synchronizing sidechain database..."));
         if (!ResyncSCDB(chainActive.Tip())) {
             LogPrintf("%s: Error: Failed to initialize SCDB\n", __func__);
             return InitError("Failed to initialize SCDB. See log for details.\n");
