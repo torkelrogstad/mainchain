@@ -5945,6 +5945,10 @@ bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect)
 {
     uiInterface.InitMessage(_("Resyncing sidechain database..."));
 
+    // We don't sync the genesis block
+    if (pindex->GetBlockHash() == Params().GetConsensus().hashGenesisBlock)
+        return true;
+
     SidechainBlockData data;
     if (!psidechaintree->GetBlockData(pindex->GetBlockHash(), data)) {
         LogPrintf("%s: Failed to resync SCDB, cannot find block data in LDB!\n", __func__);
