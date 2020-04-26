@@ -159,7 +159,7 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int
     SidechainWTPrimeState wt;
     wt.nSidechain = nSidechain;
 
-    int nAge = GetNumBlocksSinceLastSidechainVerificationPeriod(nHeight);
+    int nAge = 1;
     wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nAge;
     wt.nWorkScore = 1;
     wt.hashWTPrime = hashWTPrime;
@@ -1019,7 +1019,7 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
 {
     // Make a copy of SCDB to test update
     SidechainDB scdbCopy = (*this);
-    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync)) {
+    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, false /* fDebug */, fResync)) {
         return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync);
     } else {
         return false;
@@ -1066,11 +1066,18 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    // If the WT^ verification period ended, clear old data
-    if (nHeight > 0 && (nHeight % SIDECHAIN_VERIFICATION_PERIOD) == 0) {
-        if (!fJustCheck) {
-            LogPrintf("%s: Reset WT^ state at height: %u.\n", __func__, nHeight);
-            ResetWTPrimeState();
+    // Remove expired WT^(s)
+    for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
+        for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
+            if (vWTPrimeStatus[x][y].nBlocksLeft == 0) {
+                if (fDebug)
+                    LogPrintf("SCDB %s: Erasing expired WT^: %s\n",
+                            __func__,
+                            vWTPrimeStatus[x][y].hashWTPrime.ToString());
+
+                // Erase expired WT^
+                vWTPrimeStatus[x].erase(vWTPrimeStatus[x].begin() + y);
+            }
         }
     }
 
@@ -1543,13 +1550,12 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
                 continue;
             }
 
-            int nAge = GetNumBlocksSinceLastSidechainVerificationPeriod(nHeight);
-            if (s.nBlocksLeft != (SIDECHAIN_VERIFICATION_PERIOD - nAge)) {
+            if (s.nBlocksLeft != SIDECHAIN_VERIFICATION_PERIOD - 1) {
                 if (fDebug)
                     LogPrintf("SCDB %s: Rejected new WT^: %s. Invalid initial nBlocksLeft (not %u): %u\n",
                             __func__,
                             s.hashWTPrime.ToString(),
-                            SIDECHAIN_VERIFICATION_PERIOD - nAge,
+                            SIDECHAIN_VERIFICATION_PERIOD,
                             s.nBlocksLeft);
                 continue;
             }
@@ -1790,24 +1796,6 @@ void SidechainDB::UpdateCTIP(const uint256& hashBlock)
                     __func__);
         }
     }
-}
-
-int GetLastSidechainVerificationPeriod(int nHeight)
-{
-    for (;;) {
-        if (nHeight < 0)
-            return -1;
-        if (nHeight == 0 || nHeight % SIDECHAIN_VERIFICATION_PERIOD == 0)
-            break;
-        nHeight--;
-    }
-    return nHeight;
-}
-
-int GetNumBlocksSinceLastSidechainVerificationPeriod(int nHeight)
-{
-    int nPeriodStart = GetLastSidechainVerificationPeriod(nHeight);
-    return nHeight - nPeriodStart;
 }
 
 bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores)

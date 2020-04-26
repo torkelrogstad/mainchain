@@ -310,12 +310,6 @@ private:
     void UpdateCTIP(const uint256& hashBlock);
 };
 
-/** Return height at which the current WT^ verification period began */
-int GetLastSidechainVerificationPeriod(int nHeight);
-
-/** Return the number of blocks that have been mined in this period so far */
-int GetNumBlocksSinceLastSidechainVerificationPeriod(int nHeight);
-
 /** Read an SCDB update script and return new scores by reference if valid */
 bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores);
 

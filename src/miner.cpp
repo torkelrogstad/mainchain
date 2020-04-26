@@ -273,8 +273,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     wtPrime.hashWTPrime = it->second;
                     wtPrime.nWorkScore = 1;
 
-                    int nAge = GetNumBlocksSinceLastSidechainVerificationPeriod(nHeight);
-                    wtPrime.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nAge;
+                    wtPrime.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
 
                     vNewWTPrime.push_back(wtPrime);
 
