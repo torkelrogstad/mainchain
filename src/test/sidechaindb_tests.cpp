@@ -190,16 +190,16 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wtprime)
     int nHeight = 0;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         wtTest.nWorkScore = i;
-        wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nHeight;
-        scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wtTest}, nHeight);
+        wtTest.nBlocksLeft--;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wtTest}, nHeight));
         nHeight++;
     }
 
-    // WT^ 0 should pass with valid workscore (100/100)
+    // WT^ 0 should pass with valid workscore
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest));
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_MultipleVerificationPeriods)
+BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
 {
     // Test multiple verification periods, approve multiple WT^s on the
     // same sidechain
@@ -220,12 +220,18 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleVerificationPeriods)
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         std::vector<SidechainWTPrimeState> vWT;
         wt1.nWorkScore = i;
-        wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nHeight;
-        vWT.push_back(wt1);
-        scdbTest.UpdateSCDBIndex(vWT, nHeight);
+        wt1.nBlocksLeft--;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight));
         nHeight++;
     }
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest1));
+
+    // Keep updating until the first WT^ expires
+    while (wt1.nBlocksLeft != 0) {
+        wt1.nBlocksLeft--;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight));
+        nHeight++;
+    }
 
     // Create dummy coinbase tx
     CMutableTransaction mtx;
@@ -237,8 +243,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleVerificationPeriods)
 
     uint256 hashBlock = GetRandHash();
 
-    // Update scdbTest (will clear out old data from first period)
-    scdbTest.Update(SIDECHAIN_VERIFICATION_PERIOD, hashBlock, scdbTest.GetHashBlockLastSeen(), mtx.vout);
+    // Update scdbTest (will clear out expired WT^)
+    scdbTest.Update(nHeight, hashBlock, scdbTest.GetHashBlockLastSeen(), mtx.vout);
 
     // WT^ hash for second period
     uint256 hashWTTest2 = GetRandHash();
@@ -247,11 +253,11 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleVerificationPeriods)
     std::vector<SidechainWTPrimeState> vWT;
     SidechainWTPrimeState wt2;
     wt2.hashWTPrime = hashWTTest2;
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt2.nSidechain = 0;
     wt2.nWorkScore = 1;
     vWT.push_back(wt2);
-    scdbTest.UpdateSCDBIndex(vWT, 0);
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT, 0));
     BOOST_CHECK(!scdbTest.CheckWorkScore(0, hashWTTest2));
 
     // Verify that scdbTest has updated to correct WT^
@@ -285,7 +291,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
 
     SidechainWTPrimeState wt;
     wt.hashWTPrime = GetRandHash();
-    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt.nWorkScore = 1;
     wt.nSidechain = 0;
 
@@ -320,7 +326,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     // Add initial WT^s to scdbTest
     SidechainWTPrimeState wtTest;
     wtTest.hashWTPrime = GetRandHash();
-    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wtTest.nSidechain = 0;
     wtTest.nWorkScore = 1;
 
@@ -359,7 +365,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     // Add initial WT^s to scdbTest
     SidechainWTPrimeState wtTest;
     wtTest.hashWTPrime = GetRandHash();
-    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wtTest.nSidechain = 0;
     wtTest.nWorkScore = 1;
 
@@ -592,12 +598,12 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     int nHeight = 0;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         wt.nWorkScore = i;
-        wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nHeight;
-        scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wt}, nHeight);
+        wt.nBlocksLeft--;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wt}, nHeight));
         nHeight++;
     }
 
-    // WT^ 0 should pass with valid workscore (100/100)
+    // WT^ 0 should pass with valid workscore
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashBlind));
 
     // Spend the WT^
@@ -673,7 +679,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     int nHeight = 0;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         wt.nWorkScore = i;
-        wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nHeight;
+        wt.nBlocksLeft--;
         scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wt}, nHeight);
         nHeight++;
     }
@@ -855,13 +861,13 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     // Add initial WT^s to scdbTest
     SidechainWTPrimeState wt1;
     wt1.hashWTPrime = GetRandHash();
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt1.nSidechain = 0; // For first sidechain
     wt1.nWorkScore = 1;
 
     SidechainWTPrimeState wt2;
     wt2.hashWTPrime = GetRandHash();
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt2.nSidechain = 1; // For second sidechain
     wt2.nWorkScore = 1;
 
@@ -967,19 +973,19 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     // Add initial WT^s to scdbTest
     SidechainWTPrimeState wt1;
     wt1.hashWTPrime = GetRandHash();
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt1.nSidechain = 0; // For first sidechain
     wt1.nWorkScore = 1;
 
     SidechainWTPrimeState wt2;
     wt2.hashWTPrime = GetRandHash();
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt2.nSidechain = 1; // For second sidechain
     wt2.nWorkScore = 1;
 
     SidechainWTPrimeState wt3;
     wt3.hashWTPrime = GetRandHash();
-    wt3.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt3.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt3.nSidechain = 2; // For third sidechain
     wt3.nWorkScore = 1;
 
@@ -1100,19 +1106,19 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     // Add initial WT^s to scdbTest
     SidechainWTPrimeState wt1a;
     wt1a.hashWTPrime = GetRandHash();
-    wt1a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt1a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt1a.nSidechain = 0; // For first sidechain
     wt1a.nWorkScore = 1;
 
     SidechainWTPrimeState wt2a;
     wt2a.hashWTPrime = GetRandHash();
-    wt2a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt2a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt2a.nSidechain = 1; // For second sidechain
     wt2a.nWorkScore = 1;
 
     SidechainWTPrimeState wt3a;
     wt3a.hashWTPrime = GetRandHash();
-    wt3a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt3a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt3a.nSidechain = 2; // For third sidechain
     wt3a.nWorkScore = 1;
 
@@ -1192,19 +1198,19 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     // Now add more WT^(s) to the existing sidechains
     SidechainWTPrimeState wt1b;
     wt1b.hashWTPrime = GetRandHash();
-    wt1b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 3;
+    wt1b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt1b.nSidechain = 0; // For first sidechain
     wt1b.nWorkScore = 1;
 
     SidechainWTPrimeState wt2b;
     wt2b.hashWTPrime = GetRandHash();
-    wt2b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 3;
+    wt2b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt2b.nSidechain = 1; // For second sidechain
     wt2b.nWorkScore = 1;
 
     SidechainWTPrimeState wt3b;
     wt3b.hashWTPrime = GetRandHash();
-    wt3b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 3;
+    wt3b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt3b.nSidechain = 2; // For third sidechain
     wt3b.nWorkScore = 1;
 
@@ -1318,7 +1324,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
         // Create WT^
         SidechainWTPrimeState wt;
         wt.hashWTPrime = GetRandHash();
-        wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+        wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
         wt.nSidechain = s.nSidechain;
         wt.nWorkScore = 1;
 
