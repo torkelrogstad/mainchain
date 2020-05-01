@@ -139,7 +139,7 @@ public:
     uint256 GetSCDBHash() const;
 
     /** Return what the SCDB hash would be if the updates are applied */
-    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime = {}) const;
+    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fRemoveExpired = false) const;
 
     /** Get the sidechain that relates to nSidechain if it exists */
     bool GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const;
@@ -202,6 +202,8 @@ public:
     /** Check if a sidechain with nSidechain exists in the DB */
     bool IsSidechainNumberValid(uint8_t nSidechain) const;
 
+    void RemoveExpiredWTPrimes();
+
     /** Remove sidechain-to-be-activated hash from cache, because the user
      * changed their mind */
     void RemoveSidechainHashToActivate(const uint256& u);
@@ -228,7 +230,7 @@ public:
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
 
     /** Update / add multiple SCDB WT^(s) to SCDB */
-    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {});
+    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fSkipDec = false, bool fRemoveExpired = false);
 
     /** Read the SCDB hash in a new block and try to synchronize our SCDB by
      * testing possible work score updates until the SCDB hash of our SCDB

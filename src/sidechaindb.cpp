@@ -159,8 +159,7 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int
     SidechainWTPrimeState wt;
     wt.nSidechain = nSidechain;
 
-    int nAge = 1;
-    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nAge;
+    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt.nWorkScore = 1;
     wt.hashWTPrime = hashWTPrime;
 
@@ -172,7 +171,9 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int
     std::map<uint8_t, uint256> mapNewWTPrime;
     mapNewWTPrime[wt.nSidechain] = hashWTPrime;
 
-    bool fUpdated = UpdateSCDBIndex(vWT, nHeight, true /* fDebug */, mapNewWTPrime);
+    // TODO
+    // Remove fSkipDEC
+    bool fUpdated = UpdateSCDBIndex(vWT, nHeight, true /* fDebug */, mapNewWTPrime, true /* fSkipDEC */);
 
     if (!fUpdated && fDebug)
         LogPrintf("SCDB %s: Failed to update SCDBIndex.\n", __func__);
@@ -539,10 +540,14 @@ uint256 SidechainDB::GetSCDBHash() const
     return ComputeMerkleRoot(vLeaf);
 }
 
-uint256 SidechainDB::GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime) const
+uint256 SidechainDB::GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime, bool fRemoveExpired) const
 {
     SidechainDB scdbCopy = (*this);
-    scdbCopy.UpdateSCDBIndex(vNewScores, nHeight, false /* fDebug */, mapNewWTPrime);
+    if (!scdbCopy.UpdateSCDBIndex(vNewScores, nHeight, false /* fDebug */, mapNewWTPrime, false, fRemoveExpired))
+    {
+        LogPrintf("%s: SCDB failed to get updated hash at height: %i\n", __func__, nHeight);
+        return uint256();
+    }
     return (scdbCopy.GetSCDBHash());
 }
 
@@ -658,7 +663,7 @@ std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(const cha
         if (vote == SCDB_UPVOTE)
             latest.nWorkScore++;
         else
-        if (vote == SCDB_DOWNVOTE)
+        if (vote == SCDB_DOWNVOTE && latest.nWorkScore > 0)
             latest.nWorkScore--;
 
         vNew.push_back(latest);
@@ -764,6 +769,25 @@ bool SidechainDB::IsSidechainNumberValid(uint8_t nSidechain) const
     }
 
     return false;
+}
+
+void SidechainDB::RemoveExpiredWTPrimes()
+{
+    for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
+        vWTPrimeStatus[x].erase(std::remove_if(
+                    vWTPrimeStatus[x].begin(), vWTPrimeStatus[x].end(),
+                    [](const SidechainWTPrimeState& state)
+                    {
+                        if (state.nBlocksLeft == 0) {
+                            LogPrintf("SCDB %s: Erasing expired WT^: %s\n",
+                                    __func__, state.ToString());
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }),
+                    vWTPrimeStatus[x].end());
+    }
 }
 
 void SidechainDB::RemoveSidechainHashToActivate(const uint256& u)
@@ -1015,6 +1039,8 @@ std::string SidechainDB::ToString() const
     return str;
 }
 
+// TODO remove bool fResync
+
 bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug, bool fResync)
 {
     // Make a copy of SCDB to test update
@@ -1054,8 +1080,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    // Note that when fResync is set, hashBlockLastSeen will be verified by
-    // ResyncSCDB() before and after re-syncing.
     if (!fResync && !hashBlockLastSeen.IsNull() && hashPrevBlock != hashBlockLastSeen) {
         if (fDebug)
             LogPrintf("SCDB %s: Failed: previous block hash: %s does not match hashBlockLastSeen: %s at height: %u\n",
@@ -1067,19 +1091,8 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     }
 
     // Remove expired WT^(s)
-    for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
-        for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
-            if (vWTPrimeStatus[x][y].nBlocksLeft == 0) {
-                if (fDebug)
-                    LogPrintf("SCDB %s: Erasing expired WT^: %s\n",
-                            __func__,
-                            vWTPrimeStatus[x][y].hashWTPrime.ToString());
-
-                // Erase expired WT^
-                vWTPrimeStatus[x].erase(vWTPrimeStatus[x].begin() + y);
-            }
-        }
-    }
+    if (!fJustCheck)
+        RemoveExpiredWTPrimes();
 
     // Scan for updated SCDB MT hash commit
     std::vector<CScript> vMTHashScript;
@@ -1089,7 +1102,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             vMTHashScript.push_back(scriptPubKey);
     }
 
-    // Verift that there is only one MT hash commit if any
+    // Verify that there is only one MT hash commit if any
     if (vMTHashScript.size() > 1) {
         if (fDebug) {
             LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
@@ -1456,7 +1469,7 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
     return true;
 }
 
-bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug, const std::map<uint8_t, uint256>& mapNewWTPrime)
+bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug, const std::map<uint8_t, uint256>& mapNewWTPrime, bool fSkipDec, bool fRemoveExpired)
 {
     if (vWTPrimeStatus.empty()) {
         if (fDebug)
@@ -1478,15 +1491,25 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
 
     // Decrement nBlocksLeft of existing WT^(s) -- don't mess with new WT^(s)
     // x = nsidechain y = WT^
-    for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
-        std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.find(x);
-        uint256 hashNewWTPrime;
-        if (it != mapNewWTPrime.end())
-            hashNewWTPrime = it->second;
+    if (!fSkipDec)
+    {
+        // Remove expired WT^(s) if fRemoveExpired is set (used by the miner)
+        if (fRemoveExpired)
+            RemoveExpiredWTPrimes();
 
-        for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
-            if (vWTPrimeStatus[x][y].hashWTPrime != hashNewWTPrime)
-                vWTPrimeStatus[x][y].nBlocksLeft--;
+        for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
+            std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.find(x);
+            uint256 hashNewWTPrime;
+            if (it != mapNewWTPrime.end())
+                hashNewWTPrime = it->second;
+
+            for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
+                if (vWTPrimeStatus[x][y].hashWTPrime != hashNewWTPrime) {
+                    if (vWTPrimeStatus[x][y].nBlocksLeft > 0) {
+                        vWTPrimeStatus[x][y].nBlocksLeft--;
+                    }
+                }
+            }
         }
     }
 
@@ -1631,7 +1654,8 @@ bool SidechainDB::ApplyDefaultUpdate()
     // Decrement nBlocksLeft, nothing else changes
     for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
         for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
-            vWTPrimeStatus[x][y].nBlocksLeft--;
+            if (vWTPrimeStatus[x][y].nBlocksLeft > 0)
+                vWTPrimeStatus[x][y].nBlocksLeft--;
         }
     }
 
@@ -1852,9 +1876,15 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
                 return false;
 
             SidechainWTPrimeState newScore = vOldScores[x][y];
-            newScore.nBlocksLeft--;
 
-            c == SC_OP_UPVOTE ? newScore.nWorkScore++ : newScore.nWorkScore--;
+            if (newScore.nBlocksLeft > 0)
+                newScore.nBlocksLeft--;
+
+            if (c == SC_OP_UPVOTE)
+                newScore.nWorkScore++;
+            else
+            if (newScore.nWorkScore > 0)
+                newScore.nWorkScore--;
 
             vNewScores.push_back(newScore);
         }
