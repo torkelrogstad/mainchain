@@ -150,7 +150,7 @@ void SidechainWithdrawalTableModel::updateModel()
             object.sidechain = QString::fromStdString(s.GetSidechainName());
             object.hashWTPrime = QString::fromStdString(wt.hashWTPrime.ToString());
             object.nAcks = wt.nWorkScore;
-            object.nAge = abs(wt.nBlocksLeft - SIDECHAIN_VERIFICATION_PERIOD) + 1; // Note +1 because zero based
+            object.nAge = abs(wt.nBlocksLeft - SIDECHAIN_VERIFICATION_PERIOD);
             object.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
             object.fApproved = scdb.CheckWorkScore(wt.nSidechain, wt.hashWTPrime);
 
