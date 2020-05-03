@@ -1879,10 +1879,10 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
     if (vOldScores.empty())
         return false;
 
-    CScript byteSection = CScript(script.begin() + 5, script.end());
+    CScript bytes = CScript(script.begin() + 5, script.end());
 
     size_t x = 0; // vOldScores outer vector (sidechains)
-    for (CScript::const_iterator it = script.begin(); it < script.end(); it++) {
+    for (CScript::const_iterator it = bytes.begin(); it < bytes.end(); it++) {
         const unsigned char c = *it;
         if (c == SC_OP_UPVOTE || c == SC_OP_DOWNVOTE) {
             // Figure out which WT^ is being upvoted
@@ -1891,7 +1891,7 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
 
             // Read which WT^ we are voting on from the script and set
             size_t y = 0; // vOldScores inner vector (WT^(s) per sidechain)
-            if (script.end() - it > 2) {
+            if (bytes.end() - it > 2) {
                 CScript::const_iterator itWT = it + 1;
                 const unsigned char cNext = *itWT;
                 if (cNext != SC_OP_DELIM) {
@@ -1925,9 +1925,6 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
                 return false;
 
             SidechainWTPrimeState newScore = vOldScores[x][y];
-
-            if (newScore.nBlocksLeft > 0)
-                newScore.nBlocksLeft--;
 
             if (c == SC_OP_UPVOTE)
                 newScore.nWorkScore++;
