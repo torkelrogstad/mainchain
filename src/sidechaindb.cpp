@@ -1469,6 +1469,7 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
     return true;
 }
 
+// TODO remove unused nHeight
 bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug, const std::map<uint8_t, uint256>& mapNewWTPrime, bool fSkipDec, bool fRemoveExpired)
 {
     if (vWTPrimeStatus.empty()) {
@@ -1513,11 +1514,16 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
         }
     }
 
+    // Keep track of which (if any) WT^ was upvoted for each sidechain. Later
+    // we will downvote all of the other WT^(s) for a sidechain if any WT^ for
+    // that sidechain was upvoted. Upvoting 1 WT^ also means downvoting all of
+    // the rest. The vector is the size of vWTPrimeState - the number of active
+    // sidechains.
+    std::vector<uint256> vWTPrimeUpvoted;
+    vWTPrimeUpvoted.resize(vWTPrimeStatus.size());
+
     // Apply new work scores / add new WT^(s)
     for (const SidechainWTPrimeState& s : vNewScores) {
-        // This boolean will be used to track whether or not we find an
-        // exiting WT^ in SCDB. False means it is an unknown / new WT^.
-        bool fFound = false;
 
         // TODO
         // Refactor this and any other sidechain related code that access
@@ -1535,34 +1541,55 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
             return false;
         }
 
-        for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
-            const SidechainWTPrimeState state = vWTPrimeStatus[x][y];
+        // Track whether we already have a score for the WT^ specified. If not
+        // then cache the new WT^ if it is valid.
+        bool fFound = false;
 
-            if (state.hashWTPrime == s.hashWTPrime) {
-                // We have received an update for an existing WT^ in SCDB
-                fFound = true;
-                // Make sure the score is incremented / decremented in a valid
-                // way. The score can only change by 1 point per block.
-                if ((state.nWorkScore == s.nWorkScore) ||
-                        (s.nWorkScore == (state.nWorkScore + 1)) ||
-                        (s.nWorkScore == (state.nWorkScore - 1)))
-                {
-                    // TODO We shouldn't add any new scores until we have first
-                    // verified all of the updates. Don't apply the updates as
-                    // we loop.
+        // If a new WT^ was added for this sidechain, that is the WT^ being
+        // upvoted and no other scores matter (or should exist)
+        std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.find(x);
 
-                    // Too noisy but can be re-enabled for debugging
-                    //if (fDebug)
-                    //    LogPrintf("SCDB %s: WT^ work  score updated: %s %u->%u\n",
-                    //            __func__,
-                    //            state.hashWTPrime.ToString(),
-                    //            vWTPrimeStatus[x][y].nWorkScore,
-                    //            s.nWorkScore);
-                    vWTPrimeStatus[x][y].nWorkScore = s.nWorkScore;
+        // If no new WT^ for this sidechain was found, apply new scores
+        if (it == mapNewWTPrime.end()) {
+            for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
+                const SidechainWTPrimeState state = vWTPrimeStatus[x][y];
+
+                if (state.hashWTPrime == s.hashWTPrime) {
+                    // We have received an update for an existing WT^ in SCDB
+                    fFound = true;
+                    // Make sure the score increment / decrement is valid.
+                    // The score can only change by 1 point per block.
+                    if ((state.nWorkScore == s.nWorkScore) ||
+                            (s.nWorkScore == (state.nWorkScore + 1)) ||
+                            (s.nWorkScore == (state.nWorkScore - 1)))
+                    {
+                        // TODO We shouldn't add any new scores until we have
+                        // first verified all of the updates. Don't apply the
+                        // updates as we loop.
+
+                        if (s.nWorkScore == state.nWorkScore + 1) {
+                            if (!vWTPrimeUpvoted[x].IsNull()) {
+                                if (fDebug)
+                                    LogPrintf("SCDB %s: Error: multiple WT^ upvotes for one sidechain!\n", __func__);
+                                return false;
+                            }
+                            vWTPrimeUpvoted[x] = state.hashWTPrime;
+                        }
+
+                        // Too noisy but can be re-enabled for debugging
+                        //if (fDebug)
+                        //    LogPrintf("SCDB %s: WT^ work  score updated: %s %u->%u\n",
+                        //            __func__,
+                        //            state.hashWTPrime.ToString(),
+                        //            vWTPrimeStatus[x][y].nWorkScore,
+                        //            s.nWorkScore);
+                        vWTPrimeStatus[x][y].nWorkScore = s.nWorkScore;
+                    }
                 }
             }
         }
 
+        // If the WT^ wasn't found, check if it is a valid new WT^ and cache it
         if (!fFound) {
             if (s.nWorkScore != 1) {
                 if (fDebug)
@@ -1593,12 +1620,34 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
                 continue;
             }
 
+            // Make sure that if a new WT^ is being added, no upvotes for the
+            // same WT^ were set
+            if (!vWTPrimeUpvoted[x].IsNull()) {
+                if (fDebug)
+                    LogPrintf("SCDB %s: Error: Adding new WT^ when upvotes are also added for the same sidechain!\n", __func__);
+                return false;
+            }
+            vWTPrimeUpvoted[x] = s.hashWTPrime;
+
             vWTPrimeStatus[x].push_back(s);
 
             if (fDebug)
                 LogPrintf("SCDB %s: Cached new WT^: %s\n",
                         __func__,
                         s.hashWTPrime.ToString());
+        }
+    }
+
+    // For sidechains that had a WT^ upvoted, downvote all of the other WT^(s)
+    for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
+        if (vWTPrimeUpvoted[x].IsNull())
+            continue;
+
+        for (size_t y = 0; y < vWTPrimeStatus[x].size(); y++) {
+            if (vWTPrimeStatus[x][y].hashWTPrime != vWTPrimeUpvoted[x]) {
+                if (vWTPrimeStatus[x][y].nWorkScore > 0)
+                    vWTPrimeStatus[x][y].nWorkScore--;
+            }
         }
     }
 

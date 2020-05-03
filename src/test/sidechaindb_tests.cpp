@@ -185,12 +185,11 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wtprime)
 
     SidechainWTPrimeState wtTest;
     wtTest.hashWTPrime = hashWTTest;
-    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wtTest.nSidechain = 0;
     int nHeight = 0;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         wtTest.nWorkScore = i;
-        wtTest.nBlocksLeft--;
         BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wtTest}, nHeight));
         nHeight++;
     }
@@ -214,23 +213,24 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     // Verify first transaction, check work score
     SidechainWTPrimeState wt1;
     wt1.hashWTPrime = hashWTTest1;
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt1.nSidechain = 0;
     int nHeight = 0;
+    int nBlocksLeft = wt1.nBlocksLeft + 1;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         std::vector<SidechainWTPrimeState> vWT;
         wt1.nWorkScore = i;
-        wt1.nBlocksLeft--;
         BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight));
         nHeight++;
+        nBlocksLeft--;
     }
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest1));
 
     // Keep updating until the first WT^ expires
-    while (wt1.nBlocksLeft != 0) {
-        wt1.nBlocksLeft--;
+    while (nBlocksLeft != 0) {
         BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight));
         nHeight++;
+        nBlocksLeft--;
     }
 
     // Create dummy coinbase tx
@@ -269,7 +269,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         std::vector<SidechainWTPrimeState> vWT;
         wt2.nWorkScore = i;
-        wt2.nBlocksLeft--;
         vWT.push_back(wt2);
         scdbTest.UpdateSCDBIndex(vWT, nHeight);
         nHeight++;
@@ -304,7 +303,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     // Update the scdbTest copy to get a new MT hash
     vWT.clear();
     wt.nWorkScore++;
-    wt.nBlocksLeft--;
     vWT.push_back(wt);
     scdbTestCopy.UpdateSCDBIndex(vWT, 0);
 
@@ -339,7 +337,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    wtTest.nBlocksLeft--;
     wtTest.nWorkScore++;
 
     vWT.clear();
@@ -379,7 +376,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
 
     // Update the scdbTest copy to get a new MT hash
     wtTest.nWorkScore++;
-    wtTest.nBlocksLeft--;
 
     vWT.clear();
     vWT.push_back(wtTest);
@@ -593,12 +589,11 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     uint256 hashBlind;
     BOOST_CHECK(CTransaction(wmtx).GetBWTHash(hashBlind));
     wt.hashWTPrime = hashBlind;
-    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt.nSidechain = 0;
     int nHeight = 0;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         wt.nWorkScore = i;
-        wt.nBlocksLeft--;
         BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wt}, nHeight));
         nHeight++;
     }
@@ -674,12 +669,11 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     uint256 hashBlind;
     BOOST_CHECK(CTransaction(wmtx).GetBWTHash(hashBlind));
     wt.hashWTPrime = hashBlind;
-    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD;
+    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
     wt.nSidechain = 0;
     int nHeight = 0;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         wt.nWorkScore = i;
-        wt.nBlocksLeft--;
         scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wt}, nHeight);
         nHeight++;
     }
@@ -883,9 +877,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    wt1.nBlocksLeft--;
     // No change to WT^ 1 means it will have a default abstain vote
-    wt2.nBlocksLeft--;
     wt2.nWorkScore--;
 
     vWT.clear();
@@ -1003,14 +995,10 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    wt1.nBlocksLeft--;
     // No change to WT^ 1 means it will have a default abstain vote
 
-    wt2.nBlocksLeft--;
     wt2.nWorkScore--;
-
     wt3.nWorkScore++;
-    wt3.nBlocksLeft--;
 
     vWT.clear();
     vWT.push_back(wt1);
@@ -1136,18 +1124,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    wt1a.nBlocksLeft--;
-    // No change to WT^ 1 means it will have a default abstain vote
-
-    wt2a.nBlocksLeft--;
-    wt2a.nWorkScore--;
-
     wt3a.nWorkScore++;
-    wt3a.nBlocksLeft--;
 
     vWT.clear();
-    vWT.push_back(wt1a);
-    vWT.push_back(wt2a);
     vWT.push_back(wt3a);
 
     BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT, 1));
@@ -1155,11 +1134,17 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 
-    // Create custom vote for WT^ 2
+    // Create custom vote for WT^ 1
     SidechainCustomVote vote;
-    vote.nSidechain = 1;
-    vote.hashWTPrime = wt2a.hashWTPrime;
+    vote.nSidechain = 0;
+    vote.hashWTPrime = wt1a.hashWTPrime;
     vote.vote = SCDB_DOWNVOTE;
+
+    // Create custom vote for WT^ 2
+    SidechainCustomVote vote1;
+    vote1.nSidechain = 1;
+    vote1.hashWTPrime = wt2a.hashWTPrime;
+    vote1.vote = SCDB_DOWNVOTE;
 
     // Create custom vote for WT^ 3
     SidechainCustomVote vote2;
@@ -1179,7 +1164,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote2}, Params().GetConsensus());
 
     BOOST_CHECK(script.IsSCDBUpdate());
 
@@ -1191,7 +1176,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     }
     BOOST_CHECK(vOld.size() == 3);
     BOOST_CHECK(ParseSCDBUpdateScript(script, vOld, vNew));
-    BOOST_CHECK(vNew.size() == 2);
+    BOOST_CHECK(vNew.size() == 1);
 
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash(), vNew));
 
@@ -1227,16 +1212,9 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy2 = scdbTest;
 
-    // No change to WT^ 1 means it will have a default abstain vote
-
-    wt2a.nBlocksLeft--;
-    wt2a.nWorkScore--;
-
     wt3b.nWorkScore++;
-    wt3b.nBlocksLeft--;
 
     vWT.clear();
-    vWT.push_back(wt2a);
     vWT.push_back(wt3b);
 
     BOOST_CHECK(scdbTestCopy2.UpdateSCDBIndex(vWT, 4));
@@ -1246,14 +1224,19 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
 
     // Create custom votes for WT^s
     SidechainCustomVote vote3;
-    vote3.nSidechain = 1;
-    vote3.hashWTPrime = wt2a.hashWTPrime;
+    vote3.nSidechain = 0;
+    vote3.hashWTPrime = wt1a.hashWTPrime;
     vote3.vote = SCDB_DOWNVOTE;
 
     SidechainCustomVote vote4;
-    vote4.nSidechain = 2;
-    vote4.hashWTPrime = wt3b.hashWTPrime;
-    vote4.vote = SCDB_UPVOTE;
+    vote4.nSidechain = 1;
+    vote4.hashWTPrime = wt2a.hashWTPrime;
+    vote4.vote = SCDB_DOWNVOTE;
+
+    SidechainCustomVote vote5;
+    vote5.nSidechain = 2;
+    vote5.hashWTPrime = wt3b.hashWTPrime;
+    vote5.vote = SCDB_UPVOTE;
 
     // Generate an update script
     CBlock block2;
@@ -1267,7 +1250,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script2;
-    GenerateSCDBUpdateScript(block2, script2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block2, script2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4, vote5}, Params().GetConsensus());
 
     BOOST_CHECK(script2.IsSCDBUpdate());
 
@@ -1279,7 +1262,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     }
     BOOST_CHECK(vOld.size() == 3);
     BOOST_CHECK(ParseSCDBUpdateScript(script2, vOld, vNew));
-    BOOST_CHECK(vNew.size() == 2);
+    BOOST_CHECK(vNew.size() == 3);
 
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(4, scdbTestCopy2.GetSCDBHash(), vNew));
 }
@@ -1353,7 +1336,6 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
         BOOST_CHECK(vOldScores.size() == 1);
 
         SidechainWTPrimeState wt = vOldScores.front();
-        wt.nBlocksLeft--;
 
         // Create custom vote for WT^
         SidechainCustomVote vote;
