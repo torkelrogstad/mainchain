@@ -1045,7 +1045,7 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
 {
     // Make a copy of SCDB to test update
     SidechainDB scdbCopy = (*this);
-    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, false /* fDebug */, fResync)) {
+    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, true /* fDebug */, fResync)) {
         return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync);
     } else {
         return false;
