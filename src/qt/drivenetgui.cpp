@@ -857,6 +857,8 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
     qint64 secs = blockDate.secsTo(currentDate);
     QString timeBehindText = GUIUtil::formatNiceTimeOffset(secs);
 
+    prevBlockTime = QDateTime(blockDate);
+
     tooltip = tr("Processed %n block(s) of transaction history.", "", count);
 
     // Set icon state: spinning if catching up, tick otherwise
@@ -875,7 +877,6 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
 
         labelProgressReason->setVisible(false);
         labelProgressPercentage->setVisible(false);
-        prevBlockTime = QDateTime(blockDate);
     }
     else
     {
@@ -893,7 +894,6 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
             spinnerFrame = (spinnerFrame + 1) % SPINNER_FRAMES;
         }
         prevBlocks = count;
-        prevBlockTime = QDateTime(blockDate);
 
 #ifdef ENABLE_WALLET
         if(walletFrame)
