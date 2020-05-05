@@ -1621,7 +1621,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
             }
 
             // Make sure that if a new WT^ is being added, no upvotes for the
-            // same WT^ were set
+            // same sidechain were set
             if (!vWTPrimeUpvoted[x].IsNull()) {
                 if (fDebug)
                     LogPrintf("SCDB %s: Error: Adding new WT^ when upvotes are also added for the same sidechain!\n", __func__);
@@ -1873,11 +1873,15 @@ void SidechainDB::UpdateCTIP(const uint256& hashBlock)
 
 bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores)
 {
-    if (!script.IsSCDBUpdate())
+    if (!script.IsSCDBUpdate()) {
+        LogPrintf("SCDB %s: Error: script not SCDB update bytes!\n", __func__);
         return false;
+    }
 
-    if (vOldScores.empty())
+    if (vOldScores.empty()) {
+        LogPrintf("SCDB %s: Error: no old scores!\n", __func__);
         return false;
+    }
 
     CScript bytes = CScript(script.begin() + 5, script.end());
 
@@ -1886,8 +1890,10 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
         const unsigned char c = *it;
         if (c == SC_OP_UPVOTE || c == SC_OP_DOWNVOTE) {
             // Figure out which WT^ is being upvoted
-            if (vOldScores.size() <= x)
+            if (vOldScores.size() <= x) {
+                LogPrintf("SCDB %s: Error: Sidechain missing from old scores!\n", __func__);
                 return false;
+            }
 
             // Read which WT^ we are voting on from the script and set
             size_t y = 0; // vOldScores inner vector (WT^(s) per sidechain)
@@ -1895,19 +1901,23 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
                 CScript::const_iterator itWT = it + 1;
                 const unsigned char cNext = *itWT;
                 if (cNext != SC_OP_DELIM) {
-                    if ((*itWT) == 0x01)
+                    if (cNext == 0x01)
                     {
-                        if (!(script.end() - itWT >= 1))
+                        if (!(script.end() - itWT >= 1)) {
+                            LogPrintf("SCDB %s: Error: Invalid WT^ index A\n", __func__);
                             return false;
+                        }
 
                         const CScript::const_iterator it1 = itWT + 1;
                         y = CScriptNum(std::vector<unsigned char>{*it1}, false).getint();
                     }
                     else
-                    if ((*itWT) == 0x02)
+                    if (cNext == 0x02)
                     {
-                        if (!(script.end() - itWT >= 2))
+                        if (!(script.end() - itWT >= 2)) {
+                            LogPrintf("SCDB %s: Error: Invalid WT^ index B\n", __func__);
                             return false;
+                        }
 
                         const CScript::const_iterator it1 = itWT + 1;
                         const CScript::const_iterator it2 = itWT + 2;
@@ -1921,8 +1931,10 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
                 }
             }
 
-            if (vOldScores[x].size() <= y)
+            if (vOldScores[x].size() <= y) {
+                LogPrintf("SCDB %s: Error: WT^ missing from old scores!\n", __func__);
                 return false;
+            }
 
             SidechainWTPrimeState newScore = vOldScores[x][y];
 
