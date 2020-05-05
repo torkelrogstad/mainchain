@@ -574,7 +574,7 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
         }
     }
 
-    return WriteBatch(batch);
+    return WriteBatch(batch, true);
 }
 
 bool CSidechainTreeDB::WriteSidechainBlockData(const std::pair<uint256, const SidechainBlockData>& data)
@@ -583,7 +583,7 @@ bool CSidechainTreeDB::WriteSidechainBlockData(const std::pair<uint256, const Si
     std::pair<char, uint256> key = std::make_pair(data.second.sidechainop, data.first);
     batch.Write(key, data.second);
 
-    return WriteBatch(batch);
+    return WriteBatch(batch, true);
 }
 
 bool CSidechainTreeDB::WriteFlag(const std::string& name, bool fValue)
