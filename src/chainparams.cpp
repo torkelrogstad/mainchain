@@ -98,7 +98,7 @@ public:
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000002aaaab1");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0xf97b5917714f2d8d29871b2589586fb3c241217c6749591b7e4fc827cdd802d1");
+        consensus.defaultAssumeValid = uint256S("0xcb7865db10789cd03d8c0b03a560f77861fd1b2f0b884816ed5a83388b172920");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -106,17 +106,17 @@ public:
          * a large 32-bit integer with any alignment.
          */
         pchMessageStart[0] = 0xcc;
-        pchMessageStart[1] = 0xfd;
+        pchMessageStart[1] = 0xb1;
         pchMessageStart[2] = 0xfd;
-        pchMessageStart[3] = 0xfe;
+        pchMessageStart[3] = 0xfc;
         nDefaultPort = 8551;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1584944605, 32355931, 0x1d5fffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1588656039, 24722457, 0x1d5fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        // PoW: 00000053bc36a603cc6056d3b7cc9994ba3dc1f4b13667458660afd4b749497c
-        assert(consensus.hashGenesisBlock == uint256S("0xf97b5917714f2d8d29871b2589586fb3c241217c6749591b7e4fc827cdd802d1"));
+        // PoW: 0000005eba25295ed5d28225e5e469bd444aa88bed73487b393073850f71f3d0
+        assert(consensus.hashGenesisBlock == uint256S("0xcb7865db10789cd03d8c0b03a560f77861fd1b2f0b884816ed5a83388b172920"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
         // Note that of those which support the service bits prefix, most only support a subset of
@@ -147,7 +147,7 @@ public:
 
         checkpointData = {
             {
-                { 0, uint256S("0xf97b5917714f2d8d29871b2589586fb3c241217c6749591b7e4fc827cdd802d1")},
+                { 0, uint256S("0xcb7865db10789cd03d8c0b03a560f77861fd1b2f0b884816ed5a83388b172920")},
             }
         };
 
