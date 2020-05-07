@@ -56,7 +56,8 @@ SidechainPage::SidechainPage(QWidget *parent) :
 
     // Initialize miner popup window. We want users to be able to keep this
     // window open while using the rest of the software.
-    minerDialog = new SidechainMinerDialog(this);
+    minerDialog = new SidechainMinerDialog();
+    minerDialog->setParent(this, Qt::Window);
 }
 
 SidechainPage::~SidechainPage()
