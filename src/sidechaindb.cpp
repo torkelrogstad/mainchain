@@ -1895,7 +1895,7 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
                 return false;
             }
 
-            // Read which WT^ we are voting on from the script and set
+            // Read which WT^ we are voting on from the bytes and set
             size_t y = 0; // vOldScores inner vector (WT^(s) per sidechain)
             if (bytes.end() - it > 2) {
                 CScript::const_iterator itWT = it + 1;
@@ -1903,7 +1903,7 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
                 if (cNext != SC_OP_DELIM) {
                     if (cNext == 0x01)
                     {
-                        if (!(script.end() - itWT >= 1)) {
+                        if (!(bytes.end() - itWT >= 1)) {
                             LogPrintf("SCDB %s: Error: Invalid WT^ index A\n", __func__);
                             return false;
                         }
@@ -1914,7 +1914,7 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
                     else
                     if (cNext == 0x02)
                     {
-                        if (!(script.end() - itWT >= 2)) {
+                        if (!(bytes.end() - itWT >= 2)) {
                             LogPrintf("SCDB %s: Error: Invalid WT^ index B\n", __func__);
                             return false;
                         }
