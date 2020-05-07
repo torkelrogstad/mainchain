@@ -396,7 +396,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     std::vector<SidechainWTPrimeState> vParsed;
                     if (!ParseSCDBUpdateScript(script, vState, vParsed)) {
                         LogPrintf("%s: Miner failed to parse its own update bytes at height %u.\n", __func__, nHeight);
-                        // TODO handle error - generate default votes instead?
+                        throw std::runtime_error(strprintf("%s: Miner failed to parse its own update bytes at height %u.\n",
+                                    __func__, nHeight));
                     }
                     // Add new WT^(s) to the list
                     for (const SidechainWTPrimeState& wt : vNewWTPrime)
@@ -405,7 +406,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     // Finally, check if we can update with update bytes
                     if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vParsed, mapNewWTPrime)) {
                         LogPrintf("%s: Miner failed to update with bytes at height %u.\n", __func__, nHeight);
-                        // TODO handle error - generate default votes instead?
+                        throw std::runtime_error(strprintf("%s: Miner failed update with its own update bytes at height %u.\n",
+                                    __func__, nHeight));
                     }
                 }
             }
