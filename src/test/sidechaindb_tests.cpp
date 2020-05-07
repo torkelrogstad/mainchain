@@ -227,8 +227,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest1));
 
     // Keep updating until the first WT^ expires
-    while (nBlocksLeft != 0) {
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight));
+    while (nBlocksLeft >= 0) {
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight, false, std::map<uint8_t, uint256>(), false, true));
         nHeight++;
         nBlocksLeft--;
     }
@@ -240,11 +240,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     mtx.vout.resize(1);
     mtx.vin[0].scriptSig = CScript() << 486604799;
     mtx.vout.push_back(CTxOut(50 * CENT, CScript() << OP_RETURN));
-
-    uint256 hashBlock = GetRandHash();
-
-    // Update scdbTest (will clear out expired WT^)
-    scdbTest.Update(nHeight, hashBlock, scdbTest.GetHashBlockLastSeen(), mtx.vout);
 
     // WT^ hash for second period
     uint256 hashWTTest2 = GetRandHash();
