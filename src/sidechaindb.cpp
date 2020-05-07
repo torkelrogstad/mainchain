@@ -779,8 +779,8 @@ void SidechainDB::RemoveExpiredWTPrimes()
                     [](const SidechainWTPrimeState& state)
                     {
                         if (state.nBlocksLeft == 0) {
-                            LogPrintf("SCDB %s: Erasing expired WT^: %s\n",
-                                    __func__, state.ToString());
+                            LogPrintf("SCDB RemoveExpiredWTPrimes: Erasing expired WT^: %s\n",
+                                    state.ToString());
                             return true;
                         } else {
                             return false;
@@ -1045,7 +1045,7 @@ bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& h
 {
     // Make a copy of SCDB to test update
     SidechainDB scdbCopy = (*this);
-    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, true /* fDebug */, fResync)) {
+    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync)) {
         return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync);
     } else {
         return false;
@@ -1089,10 +1089,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                     nHeight);
         return false;
     }
-
-    // Remove expired WT^(s)
-    if (!fJustCheck)
-        RemoveExpiredWTPrimes();
 
     // Scan for updated SCDB MT hash commit
     std::vector<CScript> vMTHashScript;
@@ -1146,7 +1142,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
     // Scan for sidechain proposal commitments
     std::vector<SidechainProposal> vProposal;
-    if (!fResync) {
+    if (!fResync && !fJustCheck) {
         for (const CTxOut& out : vout) {
             const CScript& scriptPubKey = out.scriptPubKey;
 
@@ -1668,27 +1664,27 @@ bool SidechainDB::UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, 
 
     // Try testing out most likely updates
     std::vector<SidechainWTPrimeState> vUpvote = GetLatestStateWithVote(SCDB_UPVOTE, mapNewWTPrime);
-    if (GetSCDBHashIfUpdate(vUpvote, nHeight, mapNewWTPrime) == hashMerkleRoot) {
-        UpdateSCDBIndex(vUpvote, nHeight, true /* fDebug */, mapNewWTPrime);
+    if (GetSCDBHashIfUpdate(vUpvote, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
+        UpdateSCDBIndex(vUpvote, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
         return (GetSCDBHash() == hashMerkleRoot);
     }
 
     std::vector<SidechainWTPrimeState> vAbstain = GetLatestStateWithVote(SCDB_ABSTAIN, mapNewWTPrime);
-    if (GetSCDBHashIfUpdate(vAbstain, nHeight, mapNewWTPrime) == hashMerkleRoot) {
-        UpdateSCDBIndex(vAbstain, nHeight, true /* fDebug */, mapNewWTPrime);
+    if (GetSCDBHashIfUpdate(vAbstain, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
+        UpdateSCDBIndex(vAbstain, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
         return (GetSCDBHash() == hashMerkleRoot);
     }
 
     std::vector<SidechainWTPrimeState> vDownvote = GetLatestStateWithVote(SCDB_DOWNVOTE, mapNewWTPrime);
-    if (GetSCDBHashIfUpdate(vDownvote, nHeight, mapNewWTPrime) == hashMerkleRoot) {
-        UpdateSCDBIndex(vDownvote, nHeight, true /* fDebug */, mapNewWTPrime);
+    if (GetSCDBHashIfUpdate(vDownvote, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
+        UpdateSCDBIndex(vDownvote, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
         return (GetSCDBHash() == hashMerkleRoot);
     }
 
     // Try using new scores (optionally passed in) from update bytes
     if (vScores.size()) {
-        if (GetSCDBHashIfUpdate(vScores, nHeight, mapNewWTPrime) == hashMerkleRoot) {
-            UpdateSCDBIndex(vScores, nHeight, true /* fDebug */, mapNewWTPrime);
+        if (GetSCDBHashIfUpdate(vScores, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
+            UpdateSCDBIndex(vScores, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
             return (GetSCDBHash() == hashMerkleRoot);
         }
     }
