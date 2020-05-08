@@ -1704,6 +1704,9 @@ bool SidechainDB::ApplyDefaultUpdate()
         }
     }
 
+    // Remove expired WT^(s)
+    RemoveExpiredWTPrimes();
+
     return true;
 }
 
