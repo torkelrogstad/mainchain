@@ -1315,6 +1315,14 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
     }
 
+    if (!fJustCheck && hashMerkleRoot.IsNull()) {
+        if (fDebug)
+            LogPrintf("SCDB %s: hashMerkleRoot is null - applying default update!\n",
+                    __func__);
+
+        ApplyDefaultUpdate();
+    }
+
     // Remove any WT^(s) that were spent in this block. This can happen when a
     // new block is connected, re-connected, or during SCDB resync.
     std::vector<SidechainSpentWTPrime> vSpent;
@@ -1691,10 +1699,10 @@ bool SidechainDB::UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, 
     return false;
 }
 
-bool SidechainDB::ApplyDefaultUpdate()
+void SidechainDB::ApplyDefaultUpdate()
 {
     if (!HasState())
-        return true;
+        return;
 
     // Decrement nBlocksLeft, nothing else changes
     for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
@@ -1706,8 +1714,6 @@ bool SidechainDB::ApplyDefaultUpdate()
 
     // Remove expired WT^(s)
     RemoveExpiredWTPrimes();
-
-    return true;
 }
 
 void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)

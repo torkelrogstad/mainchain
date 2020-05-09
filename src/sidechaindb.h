@@ -241,7 +241,7 @@ private:
     /**
      * Submit default vote for all sidechain WT^(s). Used when a new block does
      * not contain a valid update. */
-    bool ApplyDefaultUpdate();
+    void ApplyDefaultUpdate();
 
     /** Apply the changes in a block to SCDB */
     bool ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false, bool fResync = false);
