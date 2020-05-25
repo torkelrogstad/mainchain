@@ -5511,6 +5511,7 @@ bool LoadWTPrimeCache(bool fReindex)
 
     std::vector<CTransactionRef> vWTPrime;
     std::vector<SidechainSpentWTPrime> vSpent;
+    std::vector<SidechainFailedWTPrime> vFailed;
     try {
         int nVersionRequired, nVersionThatWrote;
         filein >> nVersionRequired;
@@ -5535,6 +5536,14 @@ bool LoadWTPrimeCache(bool fReindex)
                 filein >> spent;
                 vSpent.push_back(spent);
             }
+
+            int nFailed = 0;
+            filein >> nFailed;
+            for (int i = 0; i < nFailed; i++) {
+                SidechainFailedWTPrime failed;
+                filein >> failed;
+                vFailed.push_back(failed);
+            }
         }
     }
     catch (const std::exception& e) {
@@ -5549,8 +5558,10 @@ bool LoadWTPrimeCache(bool fReindex)
             return false;
     }
 
-    if (!fReindex)
+    if (!fReindex) {
         scdb.AddSpentWTPrimes(vSpent);
+        scdb.AddFailedWTPrimes(vFailed);
+    }
 
     return true;
 }
@@ -5559,9 +5570,11 @@ void DumpWTPrimeCache()
 {
     std::vector<CMutableTransaction> vWTPrime = scdb.GetWTPrimeCache();
     std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
+    std::vector<SidechainFailedWTPrime> vFailed = scdb.GetFailedWTPrimeCache();
 
     int nWTPrime = vWTPrime.size();
     int nSpent = vSpent.size();
+    int nFailed = vFailed.size();
 
     // Write the WT^ raw tx cache & spent WT^ cache
     fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
@@ -5573,16 +5586,20 @@ void DumpWTPrimeCache()
     try {
         fileout << 290000; // version required to read: 0.29.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
-        fileout << nWTPrime; // Number of WT^(s) in file
 
+        fileout << nWTPrime; // Number of WT^(s) in file
         for (const CMutableTransaction& tx : vWTPrime) {
             fileout << MakeTransactionRef(tx);
         }
 
         fileout << nSpent; // Number of spent WT^(s) in file
-
         for (const SidechainSpentWTPrime& s : vSpent) {
             fileout << s;
+        }
+
+        fileout << nFailed; // Number of failed WT^(s) in file
+        for (const SidechainFailedWTPrime& f : vFailed) {
+            fileout << f;
         }
     }
     catch (const std::exception& e) {

@@ -249,6 +249,14 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
         const uint256& hashWTPrime = vHash.back();
 
+        // Make sure that the WT^ hasn't previously been spent or failed.
+        // We don't want to re-include WT^(s) that have previously failed or
+        // already were approved.
+        if (scdb.HaveFailedWTPrime(hashWTPrime, s.nSidechain))
+            continue;
+        if (scdb.HaveSpentWTPrime(hashWTPrime, s.nSidechain))
+            continue;
+
         // For now, if there are fresh (uncommited, unknown to SCDB) WT^(s)
         // we will commit the most recent in the block we are generating.
         GenerateWTPrimeHashCommitment(*pblock, hashWTPrime, s.nSidechain, chainparams.GetConsensus());

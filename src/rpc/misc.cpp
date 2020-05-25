@@ -1681,6 +1681,64 @@ UniValue listcachedwtprimetransactions(const JSONRPCRequest& request)
     return ret;
 }
 
+UniValue havespentwtprime(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 2)
+        throw std::runtime_error(
+            "havespentwtprime\n"
+            "Return whether this WT^ was spent\n"
+            "\nResult: true | false \n"
+            "\nExample:\n"
+            + HelpExampleCli("havespentwtprime", "hashwtprime, nsidechain")
+            );
+
+    std::string strHash = request.params[0].get_str();
+    if (strHash.size() != 64)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash length");
+
+    uint256 hashWTPrime = uint256S(strHash);
+    if (hashWTPrime.IsNull())
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash");
+
+    int nSidechain = request.params[1].get_int();
+
+    if (!IsSidechainNumberValid(nSidechain))
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
+
+    bool fSpent = scdb.HaveSpentWTPrime(hashWTPrime, nSidechain);
+
+    return fSpent;
+}
+
+UniValue havefailedwtprime(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 2)
+        throw std::runtime_error(
+            "havefailedwtprime\n"
+            "Return whether this WT^ failed\n"
+            "\nResult: true | false \n"
+            "\nExample:\n"
+            + HelpExampleCli("havefailedwtprime", "hashwtprime, nsidechain")
+            );
+
+    std::string strHash = request.params[0].get_str();
+    if (strHash.size() != 64)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash length");
+
+    uint256 hashWTPrime = uint256S(strHash);
+    if (hashWTPrime.IsNull())
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash");
+
+    int nSidechain = request.params[1].get_int();
+
+    if (!IsSidechainNumberValid(nSidechain))
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
+
+    bool fFailed = scdb.HaveFailedWTPrime(hashWTPrime, nSidechain);
+
+    return fFailed;
+}
+
 UniValue listspentwtprimes(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
@@ -1709,6 +1767,39 @@ UniValue listspentwtprimes(const JSONRPCRequest& request)
         obj.push_back(Pair("nsidechain", s.nSidechain));
         obj.push_back(Pair("hashwtprime", s.hashWTPrime.ToString()));
         obj.push_back(Pair("hashblock", s.hashBlock.ToString()));
+
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
+
+UniValue listfailedwtprimes(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listfailedwtprimes\n"
+            "List WT^(s) which have failed\n"
+            "\nResult: (array)\n"
+            "{\n"
+            "  \"nsidechain\" : (numeric) Sidechain number of WT^\n"
+            "  \"hashwtprime\" : (string) hash of WT^\n"
+            "}\n"
+            "\n"
+            "\nExample:\n"
+            + HelpExampleCli("listfailedwtprimes", "")
+            );
+
+    std::vector<SidechainFailedWTPrime> vFailed = scdb.GetFailedWTPrimeCache();
+    if (vFailed.empty())
+        throw JSONRPCError(RPC_TYPE_ERROR, "No failed WT^(s) in cache!");
+
+    UniValue ret(UniValue::VARR);
+    for (const SidechainFailedWTPrime& f : vFailed) {
+        UniValue obj(UniValue::VOBJ);
+
+        obj.push_back(Pair("nsidechain", f.nSidechain));
+        obj.push_back(Pair("hashwtprime", f.hashWTPrime.ToString()));
 
         ret.push_back(obj);
     }
@@ -1865,9 +1956,12 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listwtprimevotes",              &listwtprimevotes,             {}},
     { "DriveChain",  "getaveragefee",                 &getaveragefee,                {"numblocks", "startheight"}},
     { "DriveChain",  "getworkscore",                  &getworkscore,                 {"nsidechain", "hashwtprime"}},
+    { "DriveChain",  "havespentwtprime",              &havespentwtprime,             {"hashwtprime", "nsidechain"}},
+    { "DriveChain",  "havefailedwtprime",             &havefailedwtprime,            {"hashwtprime", "nsidechain"}},
     { "DriveChain",  "listcachedwtprimetransactions", &listcachedwtprimetransactions,{"nsidechain"}},
     { "DriveChain",  "listwtprimestatus",             &listwtprimestatus,            {"nsidechain"}},
     { "DriveChain",  "listspentwtprimes",             &listspentwtprimes,            {}},
+    { "DriveChain",  "listfailedwtprimes",            &listfailedwtprimes,           {}},
     { "DriveChain",  "getscdbhash",                   &getscdbhash,                  {}},
     { "DriveChain",  "gettotalscdbhash",              &gettotalscdbhash,             {}},
     { "DriveChain",  "getscdbdataforblock",           &getscdbdataforblock,          {"blockhash"}},

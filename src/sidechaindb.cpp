@@ -154,6 +154,18 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int
         return false;
     }
 
+    if (HaveSpentWTPrime(hashWTPrime, nSidechain)) {
+        LogPrintf("%s: Rejecting WT^: %s - WT^ has been spent already!\n",
+                __func__, hashWTPrime.ToString());
+        return false;
+    }
+
+    if (HaveFailedWTPrime(hashWTPrime, nSidechain)) {
+        LogPrintf("%s: Rejecting WT^: %s - WT^ has failed already!\n",
+                __func__, hashWTPrime.ToString());
+        return false;
+    }
+
     std::vector<SidechainWTPrimeState> vWT;
 
     SidechainWTPrimeState wt;
@@ -193,6 +205,14 @@ void SidechainDB::AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSp
             mapSpentWTPrime[spent.hashBlock] = std::vector<SidechainSpentWTPrime>{ spent };
         }
     }
+}
+
+void SidechainDB::AddFailedWTPrimes(const std::vector<SidechainFailedWTPrime>& vFailed)
+{
+    std::map<uint256, SidechainFailedWTPrime>::iterator it;
+
+    for (const SidechainFailedWTPrime& failed : vFailed)
+        mapFailedWTPrime[failed.hashWTPrime] = failed;
 }
 
 void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSidechainIn)
@@ -279,10 +299,18 @@ void SidechainDB::CacheSidechainHashToActivate(const uint256& u)
 
 bool SidechainDB::CacheWTPrime(const CTransaction& tx)
 {
-    if (vActiveSidechain.empty())
+    if (vActiveSidechain.empty()) {
+        LogPrintf("%s: Rejecting WT^: %s - No active sidechains!\n",
+                __func__, tx.GetHash().ToString());
         return false;
-    if (HaveWTPrimeCached(tx.GetHash()))
+    }
+
+    if (HaveWTPrimeCached(tx.GetHash())) {
+        LogPrintf("%s: Rejecting WT^: %s - Already cached!\n",
+                __func__, tx.GetHash().ToString());
         return false;
+    }
+
 
     vWTPrimeCache.push_back(tx);
 
@@ -686,6 +714,15 @@ std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimeCache() const
     return vSpent;
 }
 
+std::vector<SidechainFailedWTPrime> SidechainDB::GetFailedWTPrimeCache() const
+{
+    std::vector<SidechainFailedWTPrime> vFailed;
+    for (auto const& it : mapFailedWTPrime) {
+        vFailed.push_back(it.second);
+    }
+    return vFailed;
+}
+
 bool SidechainDB::HasState() const
 {
     // Make sure that SCDB is actually initialized
@@ -727,6 +764,30 @@ bool SidechainDB::HaveDepositCached(const SidechainDeposit &deposit) const
         if (d == deposit)
             return true;
     }
+    return false;
+}
+
+bool SidechainDB::HaveSpentWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const
+{
+    // TODO change / update container mapSpentWTPrimes so that we can look up
+    // WT^(s) by WT^ hash instead of looping.
+    for (auto const& it : mapSpentWTPrime) {
+        for (const SidechainSpentWTPrime& s : it.second) {
+            if (s.hashWTPrime == hashWTPrime && s.nSidechain == nSidechain)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool SidechainDB::HaveFailedWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const
+{
+    std::map<uint256, SidechainFailedWTPrime>::const_iterator it;
+    it = mapFailedWTPrime.find(hashWTPrime);
+    if (it != mapFailedWTPrime.end() && it->second.nSidechain == nSidechain)
+        return true;
+
     return false;
 }
 
@@ -776,11 +837,26 @@ void SidechainDB::RemoveExpiredWTPrimes()
     for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {
         vWTPrimeStatus[x].erase(std::remove_if(
                     vWTPrimeStatus[x].begin(), vWTPrimeStatus[x].end(),
-                    [](const SidechainWTPrimeState& state)
+                    [this](const SidechainWTPrimeState& state)
                     {
                         if (state.nBlocksLeft == 0) {
                             LogPrintf("SCDB RemoveExpiredWTPrimes: Erasing expired WT^: %s\n",
                                     state.ToString());
+
+                            // Add to mapFailedWTPrimes
+                            SidechainFailedWTPrime failed;
+                            failed.nSidechain = state.nSidechain;
+                            failed.hashWTPrime = state.hashWTPrime;
+                            AddFailedWTPrimes(std::vector<SidechainFailedWTPrime>{ failed });
+
+                            // Remove the cached transaction for the spent WT^
+                            for (size_t i = 0; i < vWTPrimeCache.size(); i++) {
+                                if (vWTPrimeCache[i].GetHash() == state.hashWTPrime) {
+                                    vWTPrimeCache[i] = vWTPrimeCache.back();
+                                    vWTPrimeCache.pop_back();
+                                }
+                            }
+
                             return true;
                         } else {
                             return false;

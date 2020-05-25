@@ -30,6 +30,7 @@ struct SidechainDeposit;
 struct SidechainProposal;
 struct SidechainWTPrimeState;
 struct SidechainSpentWTPrime;
+struct SidechainFailedWTPrime;
 
 // TODO custom operator[] or getter functions for private data members which
 // will check the index and throw an error instead of going out of bounds
@@ -64,6 +65,9 @@ public:
 
     /** Add spent WT^(s) to SCDB */
     void AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSpent);
+
+    /** Add failed WT^(s) to SCDB */
+    void AddFailedWTPrimes(const std::vector<SidechainFailedWTPrime>& vFailed);
 
     /** Add active sidechains to the in-memory cache */
     void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
@@ -183,6 +187,9 @@ public:
     /** Return cached spent WT^(s) as a vector for dumping to disk */
     std::vector<SidechainSpentWTPrime> GetSpentWTPrimeCache() const;
 
+    /** Return cached failed WT^(s) as a vector for dumping to disk */
+    std::vector<SidechainFailedWTPrime> GetFailedWTPrimeCache() const;
+
     /** Is there anything being tracked by the SCDB? */
     bool HasState() const;
 
@@ -192,6 +199,12 @@ public:
 
     /** Return true if the deposit is cached */
     bool HaveDepositCached(const SidechainDeposit& deposit) const;
+
+    /** Return true if the WT^ has been spent */
+    bool HaveSpentWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const;
+
+    /** Return true if the WT^ failed */
+    bool HaveFailedWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const;
 
     /** Return true if the full WT^ CTransaction is cached */
     bool HaveWTPrimeCached(const uint256& hashWTPrime) const;
@@ -290,8 +303,11 @@ private:
      * y = state of WT^(s) for nSidechain */
     std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
 
-    /** Map of spent WT^(s) key: block hash value: State of WT^(s) when spent */
+    /** Map of spent WT^(s) key: block hash value: Spent WT^(s) from block */
     std::map<uint256, std::vector<SidechainSpentWTPrime>> mapSpentWTPrime;
+
+    /** Map of failed WT^(s) key: WT^ hash value: Spent WT^ data **/
+    std::map<uint256, SidechainFailedWTPrime> mapFailedWTPrime;
 
     /** List of BMM request txid that the miner removed from the mempool.
      * TODO: Change to a map and erase elements once they are abandoned.
