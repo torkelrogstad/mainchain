@@ -206,16 +206,15 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (fDrivechainEnabled) {
         for (const Sidechain& s : vActiveSidechain) {
             CMutableTransaction wtx;
-            bool fCreated = CreateWTPrimePayout(s.nSidechain, wtx);
+            CAmount nFee = 0;
+            bool fCreated = CreateWTPrimePayout(s.nSidechain, wtx, nFee);
             if (fCreated && wtx.vout.size() && wtx.vin.size()) {
                 LogPrintf("%s: Created WT^ payout for sidechain: %u with: %u outputs!\ntxid: %s.\n",
                         __func__, s.nSidechain, wtx.vout.size(), wtx.GetHash().ToString());
                 vWTPrime.push_back(wtx);
                 setSidechainsWithWTPrime.insert(s.nSidechain);
 
-                // Update WT^ fees. The last output of the WT^ is the sidechain
-                // half of the fees - the mainchain half is the same amount
-                nWTPrimeFees += wtx.vout.back().nValue;
+                nWTPrimeFees += nFee;
             }
         }
     }
@@ -634,7 +633,7 @@ int BlockAssembler::UpdatePackagesForAdded(const CTxMemPool::setEntries& already
     return nDescendantsUpdated;
 }
 
-bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx)
+bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx, CAmount& nFees)
 {
     // TODO log all false returns
 
@@ -684,16 +683,26 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     if (!mtx.vout.size())
         return false;
 
+    // The last output copied from the blind WT^ is the sidechain half of the
+    // WT^ fees. The amount paid to the mainchain miners is the same.
+    nFees = mtx.vout.back().nValue;
+
     // Calculate the amount to be withdrawn by WT^
-    CAmount amtBWT = CAmount(0);
+    CAmount amountWithdrawn = CAmount(0);
     for (const CTxOut& out : mtx.vout) {
         const CScript scriptPubKey = out.scriptPubKey;
         if (HexStr(scriptPubKey) != sidechain.sidechainHex) {
-            amtBWT += out.nValue;
+            amountWithdrawn += out.nValue;
         }
     }
+    // Add the mainchain half of the WT^ fees. The mainchain half of the fees
+    // are equal to the sidechain half. The last output of the blind WT^ is the
+    // sidechain fee script output. Add the mainchain half to amountWithdrawn
+    // so that it will not be spent for change and can be collected by the
+    // miner as a transaction fee.
+    amountWithdrawn += mtx.vout.back().nValue;
 
-    // Format sidechain change return script
+    // Get sidechain change return script
     CScript sidechainScript;
     if (!scdb.GetSidechainScript(nSidechain, sidechainScript))
         return false;
@@ -716,7 +725,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     mtx.vout.back().nValue += returnAmount;
 
     // Subtract payout amount from sidechain change return
-    mtx.vout.back().nValue -= amtBWT;
+    mtx.vout.back().nValue -= amountWithdrawn;
 
     if (mtx.vout.back().nValue < 0)
         return false;
@@ -739,7 +748,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
 
     // Sign WT^ SCUTXO input
     const CTransaction& txToSign = mtx;
-    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amtBWT);
+    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amountWithdrawn);
     SignatureData sigdata;
     bool sigCreated = ProduceSignature(creator, sidechainScript, sigdata);
     if (!sigCreated)
