@@ -647,7 +647,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     if (!scdb.GetSidechain(nSidechain, sidechain))
         return false;
 
-    // Select the highest scoring B-WT^ for sidechain during verification period
+    // Select the highest scoring B-WT^ for sidechain
     uint256 hashBest = uint256();
     uint16_t scoreBest = 0;
     std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
