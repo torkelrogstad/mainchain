@@ -201,6 +201,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     std::set<uint8_t> setSidechainsWithWTPrime;
     // Keep track of the created WT^(s) to be added to the block later
     std::vector<CMutableTransaction> vWTPrime;
+    // Keep track of the mainchain half of WT^ fees
+    CAmount nWTPrimeFees = 0;
     if (fDrivechainEnabled) {
         for (const Sidechain& s : vActiveSidechain) {
             CMutableTransaction wtx;
@@ -210,6 +212,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                         __func__, s.nSidechain, wtx.vout.size(), wtx.GetHash().ToString());
                 vWTPrime.push_back(wtx);
                 setSidechainsWithWTPrime.insert(s.nSidechain);
+
+                // Update WT^ fees. The last output of the WT^ is the sidechain
+                // half of the fees - the mainchain half is the same amount
+                nWTPrimeFees += wtx.vout.back().nValue;
             }
         }
     }
@@ -232,7 +238,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // Coinbase subsidy + fees
-    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    coinbaseTx.vout[0].nValue = nWTPrimeFees + nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
 
     // Add coinbase to block
@@ -469,6 +475,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
     }
 
+    // TODO reserve room when selecting txns so that there's always space for
+    // the WT^(s)
     // Add WT^(s) that we created earlier to the block
     for (const CMutableTransaction& mtx : vWTPrime) {
         pblock->vtx.push_back(MakeTransactionRef(std::move(mtx)));
