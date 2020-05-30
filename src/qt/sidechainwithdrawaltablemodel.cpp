@@ -79,11 +79,17 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
         }
         // Max age
         if (col == 2) {
+            // TODO just use SIDECHAIN_VERIFICATION_PERIOD and remove nMaxAge
+            // from the model objects
             return object.nMaxAge;
         }
         // Acks
         if (col == 3) {
-            return object.nAcks;
+            QString qAcks;
+            qAcks += QString::number(object.nAcks);
+            qAcks += " / ";
+            qAcks += SIDECHAIN_MIN_WORKSCORE;
+            return qAcks;
         }
         // Approved
         if (col == 4) {
