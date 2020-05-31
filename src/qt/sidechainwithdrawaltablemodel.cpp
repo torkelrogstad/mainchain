@@ -88,7 +88,7 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
             QString qAcks;
             qAcks += QString::number(object.nAcks);
             qAcks += " / ";
-            qAcks += SIDECHAIN_MIN_WORKSCORE;
+            qAcks += QString::number(SIDECHAIN_MIN_WORKSCORE);
             return qAcks;
         }
         // Approved
