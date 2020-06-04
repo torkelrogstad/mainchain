@@ -201,7 +201,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     std::set<uint8_t> setSidechainsWithWTPrime;
     // Keep track of the created WT^(s) to be added to the block later
     std::vector<CMutableTransaction> vWTPrime;
-    // Keep track of the mainchain half of WT^ fees
+    // Keep track of mainchain fees
     CAmount nWTPrimeFees = 0;
     if (fDrivechainEnabled) {
         for (const Sidechain& s : vActiveSidechain) {
@@ -683,9 +683,11 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     if (!mtx.vout.size())
         return false;
 
-    // The last output copied from the blind WT^ is the sidechain half of the
-    // WT^ fees. The amount paid to the mainchain miners is the same.
-    nFees = mtx.vout.back().nValue;
+    // Get the mainchain fee amount from the dummy mainchain fee output and
+    // remove the dummy output. The first output of the WT^ is a dummy output
+    // with the amount of mainchain fees from the WT(s).
+    nFees = mtx.vout.front().nValue;
+    mtx.vout.erase(mtx.vout.begin());
 
     // Calculate the amount to be withdrawn by WT^
     CAmount amountWithdrawn = CAmount(0);
@@ -695,12 +697,9 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
             amountWithdrawn += out.nValue;
         }
     }
-    // Add the mainchain half of the WT^ fees. The mainchain half of the fees
-    // are equal to the sidechain half. The last output of the blind WT^ is the
-    // sidechain fee script output. Add the mainchain half to amountWithdrawn
-    // so that it will not be spent for change and can be collected by the
-    // miner as a transaction fee.
-    amountWithdrawn += mtx.vout.back().nValue;
+
+    // Add mainchain fees from WT(s)
+    amountWithdrawn += nFees;
 
     // Get sidechain change return script
     CScript sidechainScript;

@@ -958,7 +958,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
         return false;
     }
 
-    // Find the required single output returning to the sidechain script
+    // Find the required change output returning to the sidechain script
     bool fReturnFound = false;
     uint32_t n = 0;
     uint8_t nSidechainScript;
