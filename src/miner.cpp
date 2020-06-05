@@ -683,11 +683,14 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     if (!mtx.vout.size())
         return false;
 
-    // Get the mainchain fee amount from the dummy mainchain fee output and
-    // remove the dummy output. The first output of the WT^ is a dummy output
-    // with the amount of mainchain fees from the WT(s).
-    nFees = mtx.vout.front().nValue;
-    mtx.vout.erase(mtx.vout.begin());
+    // Get the mainchain fee amount from the first WT^ output which encodes the
+    // sum of WT fees.
+    CAmount amountRead = 0;
+    if (!DecodeWTFees(mtx.vout.front().scriptPubKey, amountRead)) {
+        LogPrintf("%s: Failed to decode WT fees!\n", __func__);
+        return false;
+    }
+    nFees = amountRead;
 
     // Calculate the amount to be withdrawn by WT^
     CAmount amountWithdrawn = CAmount(0);
