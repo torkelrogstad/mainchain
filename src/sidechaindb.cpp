@@ -1064,11 +1064,10 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     // Get the total value out of the blind WT^
     CAmount amountBlind = tx.GetBlindValueOut();
 
-    // Check the fee amount
     CAmount amountInput = ctip.amount;
     CAmount amountOutput = tx.GetValueOut();
 
-    // Check output amount + wt fees
+    // Check output amount
     if (amountBlind != amountOutput - amountChange) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. Invalid output amount!\n",

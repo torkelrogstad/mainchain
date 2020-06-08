@@ -8,6 +8,7 @@
 #include "miner.h"
 #include "random.h"
 #include "script/script.h"
+#include "script/standard.h"
 #include "script/sigcache.h"
 #include "sidechain.h"
 #include "sidechaindb.h"
@@ -18,6 +19,15 @@
 #include "test/test_drivenet.h"
 
 #include <boost/test/unit_test.hpp>
+
+CScript EncodeWTFees(const CAmount& amount)
+{
+    CScript script;
+    script << OP_RETURN;
+    script << CScriptNum::serialize(amount);
+
+    return script;
+}
 
 BOOST_FIXTURE_TEST_SUITE(sidechaindb_tests, TestingSetup)
 
@@ -518,6 +528,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits_multi_sidechain)
 {
+    // TODO
     // Create many deposits and make sure that single valid CTIP results
     // for multiple sidechains.
     SidechainDB scdbTest;
@@ -577,7 +588,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     CMutableTransaction wmtx;
     wmtx.nVersion = 2;
     wmtx.vin.push_back(CTxIn(ctip.out.hash, ctip.out.n));
-    wmtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
+    wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWTFees(1 * CENT)));
+    wmtx.vout.push_back(CTxOut(25 * CENT, GetScriptForDestination(pubkey.GetID())));
+    wmtx.vout.push_back(CTxOut(24 * CENT, sidechainScript));
 
     // Give it sufficient work score
     SidechainWTPrimeState wt;
@@ -603,7 +616,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     SidechainCTIP ctipFinal;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctipFinal));
     BOOST_CHECK(ctipFinal.out.hash == wmtx.GetHash());
-    BOOST_CHECK(ctipFinal.out.n == 0);
+    BOOST_CHECK(ctipFinal.out.n == 2);
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
@@ -657,7 +670,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     CMutableTransaction wmtx;
     wmtx.nVersion = 2;
     wmtx.vin.push_back(CTxIn(ctip.out.hash, ctip.out.n));
-    wmtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
+    wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWTFees(1 * CENT)));
+    wmtx.vout.push_back(CTxOut(25 * CENT, GetScriptForDestination(pubkey.GetID())));
+    wmtx.vout.push_back(CTxOut(24 * CENT, sidechainScript));
 
     // Give it sufficient work score
     SidechainWTPrimeState wt;
@@ -683,7 +698,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     SidechainCTIP ctipFinal;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctipFinal));
     BOOST_CHECK(ctipFinal.out.hash == wmtx.GetHash());
-    BOOST_CHECK(ctipFinal.out.n == 0);
+    BOOST_CHECK(ctipFinal.out.n == 2);
 
     // Create another deposit
     CMutableTransaction mtx2;
