@@ -101,6 +101,23 @@ bool CTransaction::GetBWTHash(uint256& hashRet) const
     return true;
 }
 
+CAmount CTransaction::GetBlindValueOut() const
+{
+    CMutableTransaction mtx(*this);
+    if (!mtx.vin.size() || !mtx.vout.size())
+        return false;
+
+    // Remove the CTIP scriptSig (set to OP_0 as the sidechain must orignally)
+    mtx.vin.clear();
+    mtx.vin.resize(1);
+    mtx.vin[0].scriptSig = CScript() << OP_0;
+
+    // Remove the sidechain change return
+    mtx.vout.pop_back();
+
+    return CTransaction(mtx).GetValueOut();
+}
+
 /* For backward compatibility, the hash is initialized to 0. TODO: remove the need for this default constructor entirely. */
 CTransaction::CTransaction() : vin(), vout(), criticalData(), nVersion(CTransaction::CURRENT_VERSION), nLockTime(0), hash() {}
 CTransaction::CTransaction(const CMutableTransaction &tx) : vin(tx.vin), vout(tx.vout), criticalData(tx.criticalData), nVersion(tx.nVersion), nLockTime(tx.nLockTime), hash(ComputeHash()) {}
