@@ -13,6 +13,7 @@
 #include <util.h> // For LogPrintf TODO move LogPrintf
 #include <utilstrencodings.h>
 
+
 SidechainDB::SidechainDB()
 {
     Reset();
@@ -962,6 +963,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     bool fReturnFound = false;
     uint32_t n = 0;
     uint8_t nSidechainScript;
+    CAmount amountChange = 0;
     for (size_t i = 0; i < tx.vout.size(); i++) {
         const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
         if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechainScript)) {
@@ -977,9 +979,13 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
                 return false;
             }
 
-            // Copy output index of deposit burn and move on
+            // Copy output index of sidechain change return deposit
             n = i;
             fReturnFound = true;
+
+            // Copy amount of sidechain change
+            amountChange = tx.vout[i].nValue;
+
             continue;
         }
     }
@@ -1015,6 +1021,75 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
                 nSidechain);
         }
         return false;
+    }
+
+    // Get CTIP
+    SidechainCTIP ctip;
+    if (!GetCTIP(nSidechain, ctip)) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. CTIP not found!\n",
+                __func__,
+                hashBlind.ToString(),
+                nSidechain);
+        }
+
+       return false;
+    }
+
+    // Check that WT^ input matches CTIP
+    if (ctip.out != tx.vin[0].prevout) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. CTIP does not match!\n",
+                __func__,
+                hashBlind.ToString(),
+                nSidechain);
+        }
+
+       return false;
+    }
+
+    // Decode sum of wt fees
+    CAmount amountFees = 0;
+    if (!DecodeWTFees(tx.vout.front().scriptPubKey, amountFees)) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. failed to decode WT fees!\n",
+                __func__,
+                hashBlind.ToString(),
+                nSidechain);
+        }
+
+       return false;
+    }
+
+    // Get the total value out of the blind WT^
+    CAmount amountBlind = tx.GetBlindValueOut();
+
+    // Check the fee amount
+    CAmount amountInput = ctip.amount;
+    CAmount amountOutput = tx.GetValueOut();
+
+    // Check output amount + wt fees
+    if (amountBlind != amountOutput - amountChange) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. Invalid output amount!\n",
+                __func__,
+                hashBlind.ToString(),
+                nSidechain);
+        }
+
+       return false;
+    }
+
+    // Check change amount
+    if (amountChange != amountInput - (amountBlind + amountFees)) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. Invalid change amount!\n",
+                __func__,
+                hashBlind.ToString(),
+                nSidechain);
+        }
+
+       return false;
     }
 
     if (fJustCheck)
