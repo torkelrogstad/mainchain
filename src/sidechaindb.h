@@ -10,6 +10,7 @@
 #include <queue>
 #include <vector>
 
+#include <amount.h>
 #include <uint256.h>
 
 class CCriticalData;
@@ -327,6 +328,9 @@ private:
     /** Update CTIP to match the deposit cache - called after sorting / undo */
     void UpdateCTIP(const uint256& hashBlock);
 };
+
+/** Read encoded sum of WT fees from WT^ output script */
+bool DecodeWTFees(const CScript& script, CAmount& amount);
 
 /** Read an SCDB update script and return new scores by reference if valid */
 bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores);

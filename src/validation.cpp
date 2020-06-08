@@ -5982,32 +5982,6 @@ bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect)
     return true;
 }
 
-bool DecodeWTFees(const CScript& script, CAmount& amount)
-{
-    // EncodeWTFee & DecodeWTFee are currently limited to 4 byte integers.
-    // This allows a maximum of 21.48 BTC as encoded by CScriptNum::Serialize.
-    // CScriptNum takes an argument to override the size limit so this can be
-    // changed if needed.
-
-    if (script.size() < 3 || script[0] != OP_RETURN)
-        return false;
-
-    CScript::const_iterator it = script.begin() + 1;
-    std::vector<unsigned char> vch;
-    opcodetype opcode;
-
-    if (!script.GetOp(it, opcode, vch))
-        return false;
-
-    if (vch.size() > 4)
-        return false;
-
-    CScriptNum num(vch, false);
-    amount = CAmount(num.getint());
-
-    return true;
-}
-
 class CMainCleanup
 {
 public:

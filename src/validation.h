@@ -588,6 +588,4 @@ void DumpSCDBCache();
  * when a block is disconnected. */
 bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect = false);
 
-bool DecodeWTFees(const CScript& script, CAmount& amount);
-
 #endif // BITCOIN_VALIDATION_H
