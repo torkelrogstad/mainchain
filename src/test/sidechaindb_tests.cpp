@@ -22,9 +22,12 @@
 
 CScript EncodeWTFees(const CAmount& amount)
 {
+    CDataStream s(SER_NETWORK, PROTOCOL_VERSION);
+    s << amount;
+
     CScript script;
     script << OP_RETURN;
-    script << CScriptNum::serialize(amount);
+    script << std::vector<unsigned char>(s.begin(), s.end());
 
     return script;
 }
