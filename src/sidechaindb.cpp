@@ -2029,7 +2029,7 @@ void SidechainDB::UpdateCTIP(const uint256& hashBlock)
 bool DecodeWTFees(const CScript& script, CAmount& amount)
 {
     if (script[0] != OP_RETURN || script.size() != 10) {
-        LogPrintf("%s: Error: Invalid script size!\n", __func__);
+        LogPrintf("%s: Error: Invalid script!\n", __func__);
         return false;
     }
 
