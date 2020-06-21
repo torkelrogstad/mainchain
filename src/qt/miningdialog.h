@@ -20,10 +20,12 @@ public:
     ~MiningDialog();
 
 public Q_SLOTS:
-
+    void on_pushButtonAbandonBMM_clicked();
 
 private:
     Ui::MiningDialog *ui;
+
+    void AbandonFailedBMM();
 };
 
 #endif // MININGDIALOG_H
