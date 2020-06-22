@@ -57,6 +57,9 @@ static const bool fMiningReqiresPeer = false;
 
 uint64_t nLastBlockTx = 0;
 uint64_t nLastBlockWeight = 0;
+uint256 hashTarget = uint256();
+uint256 hashBest = uint256();
+uint32_t nMiningNonce = 0;
 
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
@@ -987,6 +990,9 @@ bool static ScanHash(const CBlockHeader *pblock, uint32_t& nNonce, uint256 *phas
     while (true) {
         nNonce++;
 
+        if (nNonce > nMiningNonce)
+            nMiningNonce = nNonce;
+
         // Write the last 4 bytes of the block header (the nonce) to a copy of
         // the double-SHA256 state, and compute the result.
         SHAndwich256(hasher).Write((unsigned char*)&nNonce, 4).Finalize((unsigned char*)phash);
@@ -1098,21 +1104,29 @@ void static BitcoinMiner(const CChainParams& chainparams)
             // Search
             //
             int64_t nStart = GetTime();
-            arith_uint256 hashTarget = arith_uint256().SetCompact(pblock->nBits);
+            arith_uint256 hashArithTarget = arith_uint256().SetCompact(pblock->nBits);
+            hashTarget = ArithToUint256(hashArithTarget);
+            hashBest = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+            nMiningNonce = 0;
             uint256 hash;
             uint32_t nNonce = 0;
             while (true) {
                 // Check if something found
                 if (ScanHash(pblock, nNonce, &hash))
                 {
-                    if (UintToArith256(hash) <= hashTarget)
+                    if (UintToArith256(hash) <= UintToArith256(hashBest))
+                    {
+                        hashBest = hash;
+                    }
+
+                    if (UintToArith256(hash) <= hashArithTarget)
                     {
                         // Found a solution
                         pblock->nNonce = nNonce;
                         assert(hash == pblock->GetPoWHash());
 
                         LogPrintf("BitcoinMiner:\n");
-                        LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
+                        LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashArithTarget.GetHex());
                         ProcessBlockFound(pblock, chainparams);
                         coinbaseScript->KeepScript();
 
@@ -1151,7 +1165,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
                 if (chainparams.GetConsensus().fPowAllowMinDifficultyBlocks)
                 {
                     // Changing pblock->nTime can change work required on testnet:
-                    hashTarget.SetCompact(pblock->nBits);
+                    hashArithTarget.SetCompact(pblock->nBits);
                 }
             }
         }

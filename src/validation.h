@@ -167,6 +167,9 @@ typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
 extern BlockMap& mapBlockIndex;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockWeight;
+extern uint256 hashTarget;
+extern uint256 hashBest;
+extern uint32_t nMiningNonce;
 extern const std::string strMessageMagic;
 extern CWaitableCriticalSection csBestBlock;
 extern CConditionVariable cvBlockChange;
@@ -587,5 +590,7 @@ void DumpSCDBCache();
 /** Resync SCDB WT^ status & verify hashBlockLastSeen. Used during init and
  * when a block is disconnected. */
 bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect = false);
+
+double GetNetworkHashPerSecond(int nLookup, int nHeight);
 
 #endif // BITCOIN_VALIDATION_H

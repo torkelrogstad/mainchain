@@ -7,6 +7,10 @@
 
 #include <QDialog>
 
+QT_BEGIN_NAMESPACE
+class QTimer;
+QT_END_NAMESPACE
+
 namespace Ui {
 class MiningDialog;
 }
@@ -22,11 +26,22 @@ public:
 public Q_SLOTS:
     void on_pushButtonAbandonBMM_clicked();
 
+    void on_pushButtonStartMining_clicked();
+
+    void on_pushButtonStopMining_clicked();
+
+private Q_SLOTS:
+    void Update();
+
+    void UpdateMiningOutput();
+
 private:
     Ui::MiningDialog *ui;
 
     void AbandonFailedBMM();
+
+    QTimer* pollTimer;
+    QTimer* miningOutputTimer;
 };
 
 #endif // MININGDIALOG_H
-
