@@ -1046,8 +1046,6 @@ void static BitcoinMiner(const CChainParams& chainparams)
     std::shared_ptr<CReserveScript> coinbaseScript;
     vpwallets[0]->GetScriptForMining(coinbaseScript);
 
-    bool fAddedBMM = false;
-
     bool fBreakForBMM = gArgs.GetBoolArg("-minerbreakforbmm", false);
 
     try {
@@ -1056,6 +1054,8 @@ void static BitcoinMiner(const CChainParams& chainparams)
         // In the latter case, already the pointer is NULL.
         if (!coinbaseScript || coinbaseScript->reserveScript.empty())
             throw std::runtime_error("No coinbase script available (mining requires a wallet)");
+
+        bool fAddedBMM = false;
 
         while (true) {
             if (fMiningReqiresPeer) {
@@ -1082,11 +1082,11 @@ void static BitcoinMiner(const CChainParams& chainparams)
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrev = chainActive.Tip();
 
+            fAddedBMM = false;
+
             int nMinerSleep = gArgs.GetArg("-minersleep", 0);
             if (nMinerSleep)
                 MilliSleep(nMinerSleep);
-
-            fAddedBMM = false;
 
             std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true /* mine segwit */, fAddedBMM));
             if (!pblocktemplate.get())
