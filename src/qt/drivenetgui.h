@@ -29,6 +29,7 @@ class SendCoinsRecipient;
 class SidechainTableDialog;
 class SidechainPage;
 class SidechainWithdrawalTableModel;
+class MiningDialog;
 class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
@@ -116,6 +117,7 @@ private:
     QAction *openAction;
     QAction *showHelpMessageAction;
     QAction *showSidechainTableDialogAction;
+    QAction *showMiningDialogAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -128,6 +130,8 @@ private:
 #ifdef ENABLE_WALLET
     /** Sidechain table dialog (for testing) */
     SidechainTableDialog *sidechainTableDialog;
+    /** Mining dialog */
+    MiningDialog *miningDialog;
 #endif
 
     /** Keep track of previous number of blocks, to detect progress */
@@ -223,6 +227,9 @@ private Q_SLOTS:
 
     /** Show sidechain table dialog */
     void showSidechainTableDialog();
+
+    /** Show mining dialog */
+    void showMiningDialog();
 #endif // ENABLE_WALLET
     /** Show configuration dialog */
     void optionsClicked();

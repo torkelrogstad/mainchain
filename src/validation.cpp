@@ -285,6 +285,7 @@ CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& loc
 std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 std::unique_ptr<CCoinsViewCache> pcoinsTip;
 std::unique_ptr<CBlockTreeDB> pblocktree;
+std::unique_ptr<CSidechainTreeDB> psidechaintree;
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -1825,7 +1826,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         return DISCONNECT_FAILED;
     }
 
-    if (!ResyncSCDB(pindex, true /* fDisconnect */)) {
+    if (!ResyncSCDB(pindex->pprev, true /* fDisconnect */)) {
         error("%s: Failed to re-sync SCDB for disconnected block: %s!", __func__, block.GetHash().ToString());
         return DISCONNECT_FAILED;
     }
@@ -2326,6 +2327,16 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
     if (!WriteTxIndexDataForBlock(block, state, pindex))
         return false;
+
+    SidechainBlockData data;
+    data.vWTPrimeStatus = scdb.GetState();
+
+    if (!psidechaintree->HaveBlockData(block.GetHash()) &&
+            !psidechaintree->WriteSidechainBlockData(
+                std::make_pair(block.GetHash(), data)))
+    {
+        return state.Error("Failed to write sidechain block data!");
+    }
 
     assert(pindex->phashBlock);
     // add this block to the view's block chain
@@ -3169,16 +3180,6 @@ bool CChainState::ReceivedBlockTransactions(const CBlock &block, CValidationStat
     pindexNew->nStatus |= BLOCK_HAVE_DATA;
     if (IsWitnessEnabled(pindexNew->pprev, consensusParams)) {
         pindexNew->nStatus |= BLOCK_OPT_WITNESS;
-    }
-
-    // Update coinbase cache
-    if (IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus())) {
-        pindexNew->fCoinbase = true;
-        pindexNew->coinbase = block.vtx[0];
-        nCoinbaseCached++;
-
-        if (nCoinbaseCached >= COINBASE_CACHE_TARGET + COINBASE_CACHE_PRUNE_INTERVAL)
-            PruneCoinbaseCache();
     }
 
     pindexNew->RaiseValidity(BLOCK_VALID_TRANSACTIONS);
@@ -5510,6 +5511,7 @@ bool LoadWTPrimeCache(bool fReindex)
 
     std::vector<CTransactionRef> vWTPrime;
     std::vector<SidechainSpentWTPrime> vSpent;
+    std::vector<SidechainFailedWTPrime> vFailed;
     try {
         int nVersionRequired, nVersionThatWrote;
         filein >> nVersionRequired;
@@ -5534,6 +5536,14 @@ bool LoadWTPrimeCache(bool fReindex)
                 filein >> spent;
                 vSpent.push_back(spent);
             }
+
+            int nFailed = 0;
+            filein >> nFailed;
+            for (int i = 0; i < nFailed; i++) {
+                SidechainFailedWTPrime failed;
+                filein >> failed;
+                vFailed.push_back(failed);
+            }
         }
     }
     catch (const std::exception& e) {
@@ -5548,8 +5558,10 @@ bool LoadWTPrimeCache(bool fReindex)
             return false;
     }
 
-    if (!fReindex)
+    if (!fReindex) {
         scdb.AddSpentWTPrimes(vSpent);
+        scdb.AddFailedWTPrimes(vFailed);
+    }
 
     return true;
 }
@@ -5558,9 +5570,11 @@ void DumpWTPrimeCache()
 {
     std::vector<CMutableTransaction> vWTPrime = scdb.GetWTPrimeCache();
     std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
+    std::vector<SidechainFailedWTPrime> vFailed = scdb.GetFailedWTPrimeCache();
 
     int nWTPrime = vWTPrime.size();
     int nSpent = vSpent.size();
+    int nFailed = vFailed.size();
 
     // Write the WT^ raw tx cache & spent WT^ cache
     fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
@@ -5572,16 +5586,20 @@ void DumpWTPrimeCache()
     try {
         fileout << 290000; // version required to read: 0.29.00 or later
         fileout << CLIENT_VERSION; // version that wrote the file
-        fileout << nWTPrime; // Number of WT^(s) in file
 
+        fileout << nWTPrime; // Number of WT^(s) in file
         for (const CMutableTransaction& tx : vWTPrime) {
             fileout << MakeTransactionRef(tx);
         }
 
         fileout << nSpent; // Number of spent WT^(s) in file
-
         for (const SidechainSpentWTPrime& s : vSpent) {
             fileout << s;
+        }
+
+        fileout << nFailed; // Number of failed WT^(s) in file
+        for (const SidechainFailedWTPrime& f : vFailed) {
+            fileout << f;
         }
     }
     catch (const std::exception& e) {
@@ -5848,27 +5866,6 @@ void DumpSidechainActivationHashCache()
     }
 }
 
-void PruneCoinbaseCache()
-{
-    if (nCoinbaseCached <= COINBASE_CACHE_TARGET)
-        return;
-
-    int nHeight = chainActive.Height() + 1;
-    int nPruneBegin = nHeight - nCoinbaseCached;
-    int nPruneEnd = nPruneBegin + (nCoinbaseCached - COINBASE_CACHE_TARGET);
-    if (nPruneBegin < 0)
-        return;
-
-    for (int i = nPruneBegin; i <= nPruneEnd; i++) {
-        // Block index no longer caches coinbase
-        if (chainActive[i]->fCoinbase)
-            chainActive[i]->fCoinbase = false;
-
-        setDirtyBlockIndex.insert(chainActive[i]);
-        nCoinbaseCached--;
-    }
-}
-
 //! Guess how far we are in the verification process at the given block index
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex *pindex) {
     if (pindex == nullptr)
@@ -5969,76 +5966,58 @@ bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect)
     if (pindex->GetBlockHash() == Params().GetConsensus().hashGenesisBlock)
         return true;
 
-    int nHeight = -1;
-    // Note that chainActive has a custom [] operator override
-    if (chainActive[pindex->nHeight] != pindex) {
-        LogPrintf("%s: Failed to resync SCDB, invalid pindex\n", __func__);
+    SidechainBlockData data;
+    if (!psidechaintree->GetBlockData(pindex->GetBlockHash(), data)) {
+        LogPrintf("%s: Failed to resync SCDB, cannot find block data in LDB!\n", __func__);
         return false;
     }
-    nHeight = fDisconnect ? pindex->nHeight - 1 : pindex->nHeight;
-
-    LogPrintf("%s chainActive nheight: %s\n", __func__, chainActive[nHeight]->GetBlockHash().ToString());
-
-    const int nTail = GetLastSidechainVerificationPeriod(nHeight);
-    if (nTail < 0) {
-        LogPrintf("%s: Failed to resync SCDB, invalid last period height\n", __func__);
-        return false;
-    }
-    if (nHeight < 0) {
-        LogPrintf("%s: Failed to resync SCDB, invalid end height\n", __func__);
-        return false;
-    }
-    LogPrintf("%s: Resync SCDB from height: %u to %u.\n", __func__, nTail, nHeight);
-
-    // Verify the last block we will pass in is the same as
-    // scdb.hashBlockLastSeen before re-syncing
-    const uint256 hashBlock = chainActive[nHeight]->GetBlockHash();
-    const uint256 hashBlockLastSeen = scdb.GetHashBlockLastSeen();
-    if (!hashBlockLastSeen.IsNull() && hashBlock != hashBlockLastSeen) {
-        LogPrintf("%s: Cannot re-sync SCDB, inconsistent pindex & SCDB hashBlockLastSeen!\n", __func__);
-        LogPrintf("%s: pindex: %s\n", __func__, hashBlock.ToString());
-        LogPrintf("%s: SCDB hashBlockLastSeen: %s\n", __func__, hashBlockLastSeen.ToString());
+    if (!scdb.ApplyLDBData(pindex->GetBlockHash(), data)) {
+        LogPrintf("%s: Failed to resync SCDB, failed to apply LDB data!\n", __func__);
         return false;
     }
 
-    // Update SCDB
-    for (int i = nTail; i <= nHeight; i++) {
-        // Skip genesis block
-        if (i == 0)
-            continue;
+    LogPrintf("%s: SCDB resync to block %s complete.\n",
+            __func__, pindex->GetBlockHash().ToString());
 
-        CBlockIndex* pindex = chainActive[i];
-        // Check that block index exists
-        if (!pindex) {
-            LogPrintf("%s: Failed to resync SCDB, cannot read null block index. Exiting.\n", __func__);
-            return false;
-        }
-
-        // Check that coinbase is cached
-        if (!pindex->fCoinbase || !pindex->coinbase) {
-            LogPrintf("%s: Failed to resync SCDB, Corrupt coinbase cache.\n", __func__);
-            return false;
-        }
-
-        // Update SCDB
-        std::string strError = "";
-        if (!scdb.Update(i, pindex->GetBlockHash(), pindex->GetPrevBlockHash(), pindex->coinbase->vout, false /* fJustCheck */, true /* fDebug */, true /* fResync */)) {
-            LogPrintf("%s: Error: Failed to resync SCDB - invalid update in block:\n%s\n", __func__, pindex->ToString());
-            return false;
-        }
-    }
-
-    // Verify the last block we passed in is the same as scdb.hashBlockLastSeen
-    // after re-syncing
-    if (chainActive[nHeight]->GetBlockHash() != scdb.GetHashBlockLastSeen()) {
-        LogPrintf("%s: Failed to re-sync SCDB, inconsistent chain tip & SCDB hashBlockLastSeen!\n", __func__);
-        LogPrintf("%s: Chain tip: %s\n", __func__, chainActive[nHeight]->GetBlockHash().ToString());
-        LogPrintf("%s: SCDB hashBlockLastSeen: %s\n", __func__, scdb.GetHashBlockLastSeen().ToString());
-        return false;
-    }
-
-    LogPrintf("%s: SCDB resync at height %u complete.\n", __func__, nHeight);
     return true;
+}
+
+double GetNetworkHashPerSecond(int nLookup, int nHeight)
+{
+    CBlockIndex *pb = chainActive.Tip();
+
+    if (nHeight >= 0 && nHeight < chainActive.Height())
+        pb = chainActive[nHeight];
+
+    if (pb == nullptr || !pb->nHeight)
+        return 0;
+
+    // If nLookup is -1, then use blocks since last difficulty change.
+    if (nLookup <= 0)
+        nLookup = pb->nHeight % Params().GetConsensus().DifficultyAdjustmentInterval() + 1;
+
+    // If nLookup is larger than chain, then set it to chain length.
+    if (nLookup > pb->nHeight)
+        nLookup = pb->nHeight;
+
+    CBlockIndex *pb0 = pb;
+    int64_t minTime = pb0->GetBlockTime();
+    int64_t maxTime = minTime;
+    for (int i = 0; i < nLookup; i++) {
+        pb0 = pb0->pprev;
+        int64_t time = pb0->GetBlockTime();
+        minTime = std::min(time, minTime);
+        maxTime = std::max(time, maxTime);
+    }
+
+    // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
+    if (minTime == maxTime)
+        return 0;
+
+    arith_uint256 workDiff = pb->nChainWork - pb0->nChainWork;
+    int64_t timeDiff = maxTime - minTime;
+
+    return workDiff.getdouble() / timeDiff;
 }
 
 class CMainCleanup

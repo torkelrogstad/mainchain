@@ -3750,7 +3750,7 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
 
     // Create transaction with critical data
     std::vector<CRecipient> vecSend;
-    CRecipient recipient = {CScript() << OP_TRUE, nAmount, true};
+    CRecipient recipient = {CScript() << OP_TRUE, nAmount, false};
     vecSend.push_back(recipient);
 
     CWalletTx wtx;

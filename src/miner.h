@@ -194,7 +194,7 @@ private:
 
     // SidechainDB
     /** Returns a WT^ payout transaction for nSidechain if there is one */
-    bool CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx);
+    bool CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx, CAmount& nFees);
 };
 
 /** Miner functions restored from Bitcoin 0.12 */

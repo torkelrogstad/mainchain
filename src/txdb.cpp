@@ -9,6 +9,7 @@
 #include <hash.h>
 #include <random.h>
 #include <pow.h>
+#include <sidechain.h>
 #include <uint256.h>
 #include <util.h>
 #include <ui_interface.h>
@@ -498,12 +499,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nNonce         = diskindex.nNonce;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
-                pindexNew->fCoinbase      = diskindex.fCoinbase;
-
-                if (pindexNew->fCoinbase) {
-                    pindexNew->coinbase = diskindex.coinbase;
-                    nCoinbaseCached++;
-                }
 
                 // Copy Litecoin, skip PoW check when reading our own data for
                 // performance reasons. This can be re-enabled but each block on
@@ -523,6 +518,49 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
     }
 
     return true;
+}
+
+CSidechainTreeDB::CSidechainTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
+    : CDBWrapper(GetDataDir() / "blocks" / "sidechain", nCacheSize, fMemory, fWipe) { }
+
+bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, const SidechainObj *> > &list)
+{
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<uint256, const SidechainObj *> >::const_iterator it=list.begin(); it!=list.end(); it++) {
+        const uint256 &objid = it->first;
+        const SidechainObj *obj = it->second;
+        std::pair<char, uint256> key = std::make_pair(obj->sidechainop, objid);
+
+        if (obj->sidechainop == DB_SIDECHAIN_BLOCK_OP) {
+            const SidechainBlockData *ptr = (const SidechainBlockData *) obj;
+            batch.Write(key, *ptr);
+        }
+    }
+
+    return WriteBatch(batch, true);
+}
+
+bool CSidechainTreeDB::WriteSidechainBlockData(const std::pair<uint256, const SidechainBlockData>& data)
+{
+    CDBBatch batch(*this);
+    std::pair<char, uint256> key = std::make_pair(data.second.sidechainop, data.first);
+    batch.Write(key, data.second);
+
+    return WriteBatch(batch, true);
+}
+
+bool CSidechainTreeDB::GetBlockData(const uint256& hashBlock, SidechainBlockData& data) const
+{
+    if (ReadSidechain(std::make_pair(DB_SIDECHAIN_BLOCK_OP, hashBlock), data))
+        return true;
+
+    return false;
+}
+
+bool CSidechainTreeDB::HaveBlockData(const uint256& hashBlock) const
+{
+    SidechainBlockData data;
+    return GetBlockData(hashBlock, data);
 }
 
 namespace {
@@ -647,3 +685,5 @@ bool CCoinsViewDB::Upgrade() {
     LogPrintf("[%s].\n", ShutdownRequested() ? "CANCELLED" : "DONE");
     return !ShutdownRequested();
 }
+
+

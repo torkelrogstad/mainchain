@@ -79,11 +79,17 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
         }
         // Max age
         if (col == 2) {
+            // TODO just use SIDECHAIN_VERIFICATION_PERIOD and remove nMaxAge
+            // from the model objects
             return object.nMaxAge;
         }
         // Acks
         if (col == 3) {
-            return object.nAcks;
+            QString qAcks;
+            qAcks += QString::number(object.nAcks);
+            qAcks += " / ";
+            qAcks += QString::number(SIDECHAIN_MIN_WORKSCORE);
+            return qAcks;
         }
         // Approved
         if (col == 4) {
@@ -150,7 +156,7 @@ void SidechainWithdrawalTableModel::updateModel()
             object.sidechain = QString::fromStdString(s.GetSidechainName());
             object.hashWTPrime = QString::fromStdString(wt.hashWTPrime.ToString());
             object.nAcks = wt.nWorkScore;
-            object.nAge = abs(wt.nBlocksLeft - SIDECHAIN_VERIFICATION_PERIOD) + 1; // Note +1 because zero based
+            object.nAge = abs(wt.nBlocksLeft - SIDECHAIN_VERIFICATION_PERIOD);
             object.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
             object.fApproved = scdb.CheckWorkScore(wt.nSidechain, wt.hashWTPrime);
 

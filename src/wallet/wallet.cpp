@@ -3190,7 +3190,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     // Dummy sign the transaction to calculate fee
     std::set<CInputCoin> setCoinsTemp = setCoins;
     // TODO also dummy sign the sidechain UTXO input
-    if (!DummySignTx(mtx, setCoins)) {
+    if (!DummySignTx(mtx, setCoinsTemp)) {
         strFail = "Dummy signing transaction for required fee calculation failed!";
         return false;
     }

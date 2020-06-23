@@ -226,7 +226,6 @@ void TransactionView::setModel(WalletModel *_model)
 
         transactionView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         transactionView->setModel(transactionProxyModel);
-        transactionView->setAlternatingRowColors(true);
         transactionView->setSelectionBehavior(QAbstractItemView::SelectRows);
         transactionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         transactionView->setSortingEnabled(true);
@@ -367,8 +366,7 @@ void TransactionView::refreshReplayClicked()
     if (selection.size() != 1) {
         messageBox.setWindowTitle("Please select transaction(s)!");
         QString str = QString("<p>You must select a transaction to check the replay status of!</p>" \
-                              "<p><b>Please highlight one, and no more than one transaction.</b></p>" \
-                              "This will be improved in the next release.");
+                              "<p><b>Please highlight one, and no more than one transaction.</b></p>");
         messageBox.setText(str);
         messageBox.setIcon(QMessageBox::Information);
         messageBox.setStandardButtons(QMessageBox::Ok);

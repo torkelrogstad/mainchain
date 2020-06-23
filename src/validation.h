@@ -42,6 +42,7 @@ class CTxMemPool;
 class CValidationState;
 class SidechainDB;
 class SidechainWTPrimeState;
+class CSidechainTreeDB;
 struct ChainTxData;
 
 struct PrecomputedTransactionData;
@@ -166,6 +167,9 @@ typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
 extern BlockMap& mapBlockIndex;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockWeight;
+extern uint256 hashTarget;
+extern uint256 hashBest;
+extern uint32_t nMiningNonce;
 extern const std::string strMessageMagic;
 extern CWaitableCriticalSection csBestBlock;
 extern CConditionVariable cvBlockChange;
@@ -490,6 +494,8 @@ extern std::unique_ptr<CCoinsViewCache> pcoinsTip;
 /** Global variable that points to the active block tree (protected by cs_main) */
 extern std::unique_ptr<CBlockTreeDB> pblocktree;
 
+extern std::unique_ptr<CSidechainTreeDB> psidechaintree;
+
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().
  * While checking, GetBestBlock() refers to the parent block. (protected by cs_main)
@@ -569,9 +575,6 @@ void DumpSidechainActivationHashCache();
 /** Tracks validation status of sidechain WT^(s) */
 extern SidechainDB scdb;
 
-/** Remove extra coinbase(s) from chainActive */
-void PruneCoinbaseCache();
-
 /** Create txout proof */
 bool GetTxOutProof(const uint256& txid, const uint256& hashBlock, std::string& strProof);
 
@@ -587,5 +590,7 @@ void DumpSCDBCache();
 /** Resync SCDB WT^ status & verify hashBlockLastSeen. Used during init and
  * when a block is disconnected. */
 bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect = false);
+
+double GetNetworkHashPerSecond(int nLookup, int nHeight);
 
 #endif // BITCOIN_VALIDATION_H

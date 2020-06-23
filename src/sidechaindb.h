@@ -10,6 +10,7 @@
 #include <queue>
 #include <vector>
 
+#include <amount.h>
 #include <uint256.h>
 
 class CCriticalData;
@@ -23,12 +24,14 @@ class uint256;
 
 struct Sidechain;
 struct SidechainActivationStatus;
+struct SidechainBlockData;
 struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
 struct SidechainProposal;
 struct SidechainWTPrimeState;
 struct SidechainSpentWTPrime;
+struct SidechainFailedWTPrime;
 
 // TODO custom operator[] or getter functions for private data members which
 // will check the index and throw an error instead of going out of bounds
@@ -43,6 +46,8 @@ class SidechainDB
 {
 public:
     SidechainDB();
+
+    bool ApplyLDBData(const uint256& hashBlockLastSeen, const SidechainBlockData& data);
 
     /** Add txid of removed BMM transaction */
     void AddRemovedBMM(const uint256& hashRemoved);
@@ -61,6 +66,9 @@ public:
 
     /** Add spent WT^(s) to SCDB */
     void AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSpent);
+
+    /** Add failed WT^(s) to SCDB */
+    void AddFailedWTPrimes(const std::vector<SidechainFailedWTPrime>& vFailed);
 
     /** Add active sidechains to the in-memory cache */
     void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
@@ -136,7 +144,7 @@ public:
     uint256 GetSCDBHash() const;
 
     /** Return what the SCDB hash would be if the updates are applied */
-    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime = {}) const;
+    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fRemoveExpired = false) const;
 
     /** Get the sidechain that relates to nSidechain if it exists */
     bool GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const;
@@ -162,6 +170,8 @@ public:
     /** Get status of nSidechain's WT^(s) (public for unit tests) */
     std::vector<SidechainWTPrimeState> GetState(uint8_t nSidechain) const;
 
+    std::vector<std::vector<SidechainWTPrimeState>> GetState() const;
+
     /** Return cached but uncommitted WT^ transaction's hash(s) for nSidechain */
     std::vector<uint256> GetUncommittedWTPrimeCache(uint8_t nSidechain) const;
 
@@ -178,6 +188,9 @@ public:
     /** Return cached spent WT^(s) as a vector for dumping to disk */
     std::vector<SidechainSpentWTPrime> GetSpentWTPrimeCache() const;
 
+    /** Return cached failed WT^(s) as a vector for dumping to disk */
+    std::vector<SidechainFailedWTPrime> GetFailedWTPrimeCache() const;
+
     /** Is there anything being tracked by the SCDB? */
     bool HasState() const;
 
@@ -188,6 +201,12 @@ public:
     /** Return true if the deposit is cached */
     bool HaveDepositCached(const SidechainDeposit& deposit) const;
 
+    /** Return true if the WT^ has been spent */
+    bool HaveSpentWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const;
+
+    /** Return true if the WT^ failed */
+    bool HaveFailedWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const;
+
     /** Return true if the full WT^ CTransaction is cached */
     bool HaveWTPrimeCached(const uint256& hashWTPrime) const;
 
@@ -196,6 +215,8 @@ public:
 
     /** Check if a sidechain with nSidechain exists in the DB */
     bool IsSidechainNumberValid(uint8_t nSidechain) const;
+
+    void RemoveExpiredWTPrimes();
 
     /** Remove sidechain-to-be-activated hash from cache, because the user
      * changed their mind */
@@ -223,7 +244,7 @@ public:
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
 
     /** Update / add multiple SCDB WT^(s) to SCDB */
-    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {});
+    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fSkipDec = false, bool fRemoveExpired = false);
 
     /** Read the SCDB hash in a new block and try to synchronize our SCDB by
      * testing possible work score updates until the SCDB hash of our SCDB
@@ -234,7 +255,7 @@ private:
     /**
      * Submit default vote for all sidechain WT^(s). Used when a new block does
      * not contain a valid update. */
-    bool ApplyDefaultUpdate();
+    void ApplyDefaultUpdate();
 
     /** Apply the changes in a block to SCDB */
     bool ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false, bool fResync = false);
@@ -283,8 +304,11 @@ private:
      * y = state of WT^(s) for nSidechain */
     std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
 
-    /** Map of spent WT^(s) key: block hash value: State of WT^(s) when spent */
+    /** Map of spent WT^(s) key: block hash value: Spent WT^(s) from block */
     std::map<uint256, std::vector<SidechainSpentWTPrime>> mapSpentWTPrime;
+
+    /** Map of failed WT^(s) key: WT^ hash value: Spent WT^ data **/
+    std::map<uint256, SidechainFailedWTPrime> mapFailedWTPrime;
 
     /** List of BMM request txid that the miner removed from the mempool.
      * TODO: Change to a map and erase elements once they are abandoned.
@@ -305,11 +329,8 @@ private:
     void UpdateCTIP(const uint256& hashBlock);
 };
 
-/** Return height at which the current WT^ verification period began */
-int GetLastSidechainVerificationPeriod(int nHeight);
-
-/** Return the number of blocks that have been mined in this period so far */
-int GetNumBlocksSinceLastSidechainVerificationPeriod(int nHeight);
+/** Read encoded sum of WT fees from WT^ output script */
+bool DecodeWTFees(const CScript& script, CAmount& amount);
 
 /** Read an SCDB update script and return new scores by reference if valid */
 bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores);

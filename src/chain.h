@@ -16,23 +16,6 @@
 
 #include <vector>
 
-//! Number of coinbase(s) chainActive has cached
-extern int nCoinbaseCached;
-
-/** Target size limit of coinbase cache */
-static const int COINBASE_CACHE_TARGET = SIDECHAIN_VERIFICATION_PERIOD;
-
-/**
- * How many blocks to wait between pruning cache
- * Note: right now the purpose of this is simply to be nicer to the disk, at
- * the cost of a trivial amount of useless memory usage. However, psztorc's
- * WT^ Zones idea could make use of this value if it were changed to:
- * COINBASE_CACHE_TARGET = SIDECHAIN_VERIFICATION_PERIOD / 2. That way a WT^
- * from  half way through the last period, will be remembered by the coinbase
- * cache / SCDB. Or multiply by two to remember everything from the last period.
- */
-static const int COINBASE_CACHE_PRUNE_INTERVAL = 50;
-
 /**
  * Maximum amount of time that a block timestamp is allowed to exceed the
  * current network-adjusted time before the block will be accepted.
@@ -238,12 +221,6 @@ public:
     //! (memory only) Maximum nTime in the chain up to and including this block.
     unsigned int nTimeMax;
 
-    //! Should a coinbase be cached for this block?
-    bool fCoinbase;
-
-    //! Cached coinbase for this block
-    CTransactionRef coinbase;
-
     void SetNull()
     {
         phashBlock = nullptr;
@@ -265,9 +242,6 @@ public:
         nTime          = 0;
         nBits          = 0;
         nNonce         = 0;
-
-        fCoinbase = false;
-        coinbase = NULL;
     }
 
     CBlockIndex()
@@ -447,18 +421,6 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
-
-        // Coinbase cache
-        READWRITE(fCoinbase);
-        if (fCoinbase)
-            READWRITE(coinbase);
-        else
-        if (coinbase && !ser_action.ForRead()) {
-            // TODO improve
-            // Reduce size on disk by replacing coinbase with blank tx
-            CTransactionRef tx = MakeTransactionRef(CTransaction());
-            READWRITE(tx);
-        }
     }
 
     uint256 GetBlockHash() const

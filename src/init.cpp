@@ -266,6 +266,7 @@ void Shutdown()
         pcoinscatcher.reset();
         pcoinsdbview.reset();
         pblocktree.reset();
+        psidechaintree.reset();
     }
 #ifdef ENABLE_WALLET
     StopWallets();
@@ -695,7 +696,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
     // scan for better chains in the block chain database, that are not yet connected in the active best chain
     CValidationState state;
     if (!ActivateBestChain(state, chainparams)) {
-        LogPrintf("Failed to connect best block");
+        LogPrintf("Failed to connect best block\n");
         StartShutdown();
     }
 
@@ -1432,6 +1433,10 @@ bool AppInitMain()
     int64_t nBlockTreeDBCache = nTotalCache / 8;
     nBlockTreeDBCache = std::min(nBlockTreeDBCache, (gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX) ? nMaxBlockDBAndTxIndexCache : nMaxBlockDBCache) << 20);
     nTotalCache -= nBlockTreeDBCache;
+    int64_t nSidechainTreeDBCache = nTotalCache / 8;
+    if (nSidechainTreeDBCache > (1 << 21) && !gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX))
+        nSidechainTreeDBCache = (1 << 21);
+    nTotalCache -= nSidechainTreeDBCache;
     int64_t nCoinDBCache = std::min(nTotalCache / 2, (nTotalCache / 4) + (1 << 23)); // use 25%-50% of the remainder for disk cache
     nCoinDBCache = std::min(nCoinDBCache, nMaxCoinsDBCache << 20); // cap total coins db cache
     nTotalCache -= nCoinDBCache;
@@ -1458,9 +1463,12 @@ bool AppInitMain()
                 pcoinscatcher.reset();
                 pblocktree.reset();
                 pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReset));
+                psidechaintree.reset();
+                psidechaintree.reset(new CSidechainTreeDB(nSidechainTreeDBCache, false, fReset));
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);
+
                     //If we're reindexing in prune mode, wipe away unusable block files and all undo data files
                     if (fPruneMode)
                         CleanupBlockRevFiles();
@@ -1620,7 +1628,7 @@ bool AppInitMain()
     if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
     {
         // TODO suggest reindex if fails
-        uiInterface.InitMessage(_("Synchronizing sidechain database & coinbase cache..."));
+        uiInterface.InitMessage(_("Synchronizing sidechain database..."));
         if (!ResyncSCDB(chainActive.Tip())) {
             LogPrintf("%s: Error: Failed to initialize SCDB\n", __func__);
             return InitError("Failed to initialize SCDB. See log for details.\n");

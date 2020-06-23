@@ -57,6 +57,9 @@ static const bool fMiningReqiresPeer = false;
 
 uint64_t nLastBlockTx = 0;
 uint64_t nLastBlockWeight = 0;
+uint256 hashTarget = uint256();
+uint256 hashBest = uint256();
+uint32_t nMiningNonce = 0;
 
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
@@ -201,15 +204,20 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     std::set<uint8_t> setSidechainsWithWTPrime;
     // Keep track of the created WT^(s) to be added to the block later
     std::vector<CMutableTransaction> vWTPrime;
-    if (fDrivechainEnabled && nHeight % SIDECHAIN_VERIFICATION_PERIOD != 0) {
+    // Keep track of mainchain fees
+    CAmount nWTPrimeFees = 0;
+    if (fDrivechainEnabled) {
         for (const Sidechain& s : vActiveSidechain) {
             CMutableTransaction wtx;
-            bool fCreated = CreateWTPrimePayout(s.nSidechain, wtx);
+            CAmount nFee = 0;
+            bool fCreated = CreateWTPrimePayout(s.nSidechain, wtx, nFee);
             if (fCreated && wtx.vout.size() && wtx.vin.size()) {
                 LogPrintf("%s: Created WT^ payout for sidechain: %u with: %u outputs!\ntxid: %s.\n",
                         __func__, s.nSidechain, wtx.vout.size(), wtx.GetHash().ToString());
                 vWTPrime.push_back(wtx);
                 setSidechainsWithWTPrime.insert(s.nSidechain);
+
+                nWTPrimeFees += nFee;
             }
         }
     }
@@ -232,7 +240,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // Coinbase subsidy + fees
-    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    coinbaseTx.vout[0].nValue = nWTPrimeFees + nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
 
     // Add coinbase to block
@@ -249,6 +257,14 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
         const uint256& hashWTPrime = vHash.back();
 
+        // Make sure that the WT^ hasn't previously been spent or failed.
+        // We don't want to re-include WT^(s) that have previously failed or
+        // already were approved.
+        if (scdb.HaveFailedWTPrime(hashWTPrime, s.nSidechain))
+            continue;
+        if (scdb.HaveSpentWTPrime(hashWTPrime, s.nSidechain))
+            continue;
+
         // For now, if there are fresh (uncommited, unknown to SCDB) WT^(s)
         // we will commit the most recent in the block we are generating.
         GenerateWTPrimeHashCommitment(*pblock, hashWTPrime, s.nSidechain, chainparams.GetConsensus());
@@ -260,110 +276,108 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Handle WT^ updates & generate SCDB MT hash
     if (fDrivechainEnabled) {
         if (scdb.HasState() || mapNewWTPrime.size()) {
-            bool fPeriodEnded = (nHeight % SIDECHAIN_VERIFICATION_PERIOD == 0);
             uint256 hashSCDB;
             std::vector<SidechainWTPrimeState> vNewWTPrime;
             std::vector<SidechainCustomVote> vCustomVote;
-            if (!fPeriodEnded) {
-                // Add new WT^(s)
-                std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.begin();
-                while (it != mapNewWTPrime.end()) {
-                    SidechainWTPrimeState wtPrime;
-                    wtPrime.nSidechain = it->first;
-                    wtPrime.hashWTPrime = it->second;
-                    wtPrime.nWorkScore = 1;
+            // Add new WT^(s)
+            std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.begin();
+            while (it != mapNewWTPrime.end()) {
+                SidechainWTPrimeState wtPrime;
+                wtPrime.nSidechain = it->first;
+                wtPrime.hashWTPrime = it->second;
+                wtPrime.nWorkScore = 1;
 
-                    int nAge = GetNumBlocksSinceLastSidechainVerificationPeriod(nHeight);
-                    wtPrime.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - nAge;
+                wtPrime.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
 
-                    vNewWTPrime.push_back(wtPrime);
+                vNewWTPrime.push_back(wtPrime);
 
-                    LogPrintf("%s: Miner added new WT^: %s at height %u.\n", __func__, wtPrime.hashWTPrime.ToString(), nHeight);
+                LogPrintf("%s: Miner added new WT^: %s at height %u.\n", __func__, wtPrime.hashWTPrime.ToString(), nHeight);
 
-                    it++;
-                }
+                it++;
+            }
 
-                // Note that custom votes have priority, and if custom votes are
-                // set we ignore the default votes.
+            // Note that custom votes have priority, and if custom votes are
+            // set we ignore the default votes.
+            //
+            // TODO if custom votes are set disable the defaultwtprimevote
+            // combobox on the GUI and add a label with a note
+
+            // Apply user's custom votes
+            //
+            // Check if the user has set any custom WT^ votes. They can set
+            // custom upvotes, downvotes or abstain by specifying the WT^
+            // hash as a command line param and via GUI.
+            //
+            // This vector has all of the users vote settings. Some of
+            // them could be old / for WT^(s) that don't exist yet. We will
+            // add votes that can actually be applied to vCustomVote.
+            std::vector<SidechainCustomVote> vUserVote = scdb.GetCustomVoteCache();
+
+            // This will store the new votes we are making - based on either
+            // default or custom votes
+            std::vector<SidechainWTPrimeState> vWTPrimeVote;
+
+            // If there are custom votes apply them, otherwise check if a
+            // default is set
+            if (vUserVote.size()) {
+                // TODO changing containers could reduce repeat looping
                 //
-                // TODO if custom votes are set disable the defaultwtprimevote
-                // combobox on the GUI and add a label with a note
+                // Apply users custom votes, and save the custom votes for later
+                // when we generate update bytes
+                for (const Sidechain& s : vActiveSidechain) {
+                    std::vector<SidechainWTPrimeState> vState = scdb.GetState(s.nSidechain);
+                    for (const SidechainWTPrimeState& wt : vState) {
+                        // Check if this WT^ has a custom vote setting
+                        for (const SidechainCustomVote& vote : vUserVote) {
+                            if (wt.hashWTPrime == vote.hashWTPrime &&
+                                    wt.nSidechain == vote.nSidechain)
+                            {
+                                // Add custom vote to final vector
+                                vCustomVote.push_back(vote);
 
-                // Apply user's custom votes
-                //
-                // Check if the user has set any custom WT^ votes. They can set
-                // custom upvotes, downvotes or abstain by specifying the WT^
-                // hash as a command line param and via GUI.
-                //
-                // This vector has all of the users vote settings. Some of
-                // them could be old / for WT^(s) that don't exist yet. We will
-                // add votes that can actually be applied to vCustomVote.
-                std::vector<SidechainCustomVote> vUserVote = scdb.GetCustomVoteCache();
+                                // Add to vWTPrimeVote
+                                SidechainWTPrimeState wtState = wt;
 
-                // This will store the new votes we are making - based on either
-                // default or custom votes
-                std::vector<SidechainWTPrimeState> vWTPrimeVote;
-
-                // If there are custom votes apply them, otherwise check if a
-                // default is set
-                if (vUserVote.size()) {
-                    // TODO changing containers could reduce repeat looping
-                    //
-                    // Apply users custom votes, and save the custom votes for later
-                    // when we generate update bytes
-                    for (const Sidechain& s : vActiveSidechain) {
-                        std::vector<SidechainWTPrimeState> vState = scdb.GetState(s.nSidechain);
-                        for (const SidechainWTPrimeState& wt : vState) {
-                            // Check if this WT^ has a custom vote setting
-                            for (const SidechainCustomVote& vote : vUserVote) {
-                                if (wt.hashWTPrime == vote.hashWTPrime &&
-                                        wt.nSidechain == vote.nSidechain)
-                                {
-                                    // Add custom vote to final vector
-                                    vCustomVote.push_back(vote);
-
-                                    // Add to vWTPrimeVote
-                                    SidechainWTPrimeState wtState = wt;
-
-                                    if (vote.vote == SCDB_UPVOTE) {
-                                        wtState.nWorkScore++;
-                                    }
-                                    else
-                                    if (vote.vote == SCDB_DOWNVOTE) {
-                                        wtState.nWorkScore--;
-                                    }
-
-                                    vWTPrimeVote.push_back(wtState);
+                                if (vote.vote == SCDB_UPVOTE) {
+                                    wtState.nWorkScore++;
                                 }
+                                else
+                                if (vote.vote == SCDB_DOWNVOTE) {
+                                    if (wtState.nWorkScore > 0)
+                                        wtState.nWorkScore--;
+                                }
+
+                                vWTPrimeVote.push_back(wtState);
                             }
                         }
                     }
-                } else {
-                    // Check if the user has set a default WT^ vote
-                    std::string strDefaultVote = "";
-                    strDefaultVote = gArgs.GetArg("-defaultwtprimevote", "");
+                }
+            } else {
+                // Check if the user has set a default WT^ vote
+                std::string strDefaultVote = "";
+                strDefaultVote = gArgs.GetArg("-defaultwtprimevote", "");
 
-                    char vote = SCDB_ABSTAIN;
+                char vote = SCDB_ABSTAIN;
 
-                    if (strDefaultVote == "upvote") {
-                        vote = SCDB_UPVOTE;
-                    }
-                    else
-                    if (strDefaultVote == "downvote") {
-                        vote = SCDB_DOWNVOTE;
-                    }
-
-                    // Get new scores with default votes applied
-                    vWTPrimeVote = scdb.GetLatestStateWithVote(vote, mapNewWTPrime);
+                if (strDefaultVote == "upvote") {
+                    vote = SCDB_UPVOTE;
+                }
+                else
+                if (strDefaultVote == "downvote") {
+                    vote = SCDB_DOWNVOTE;
                 }
 
-                // Add new WT^(s) to the list
-                for (const SidechainWTPrimeState& wt : vNewWTPrime)
-                    vWTPrimeVote.push_back(wt);
-
-                hashSCDB = scdb.GetSCDBHashIfUpdate(vWTPrimeVote, nHeight, mapNewWTPrime);
+                // Get new scores with default votes applied
+                vWTPrimeVote = scdb.GetLatestStateWithVote(vote, mapNewWTPrime);
             }
-            if ((!fPeriodEnded && !hashSCDB.IsNull()) || fPeriodEnded) {
+
+            // Add new WT^(s) to the list
+            for (const SidechainWTPrimeState& wt : vNewWTPrime)
+                vWTPrimeVote.push_back(wt);
+
+            hashSCDB = scdb.GetSCDBHashIfUpdate(vWTPrimeVote, nHeight, mapNewWTPrime, true /* fRemoveExpired */);
+
+            if (!hashSCDB.IsNull()) {
                 // Generate SCDB merkle root hash commitment
                 GenerateSCDBHashMerkleRootCommitment(*pblock, hashSCDB, chainparams.GetConsensus());
 
@@ -398,7 +412,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     std::vector<SidechainWTPrimeState> vParsed;
                     if (!ParseSCDBUpdateScript(script, vState, vParsed)) {
                         LogPrintf("%s: Miner failed to parse its own update bytes at height %u.\n", __func__, nHeight);
-                        // TODO handle error - generate default votes instead?
+                        throw std::runtime_error(strprintf("%s: Miner failed to parse its own update bytes at height %u.\n",
+                                    __func__, nHeight));
                     }
                     // Add new WT^(s) to the list
                     for (const SidechainWTPrimeState& wt : vNewWTPrime)
@@ -407,7 +422,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     // Finally, check if we can update with update bytes
                     if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vParsed, mapNewWTPrime)) {
                         LogPrintf("%s: Miner failed to update with bytes at height %u.\n", __func__, nHeight);
-                        // TODO handle error - generate default votes instead?
+                        throw std::runtime_error(strprintf("%s: Miner failed update with its own update bytes at height %u.\n",
+                                    __func__, nHeight));
                     }
                 }
             }
@@ -461,6 +477,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
     }
 
+    // TODO reserve room when selecting txns so that there's always space for
+    // the WT^(s)
     // Add WT^(s) that we created earlier to the block
     for (const CMutableTransaction& mtx : vWTPrime) {
         pblock->vtx.push_back(MakeTransactionRef(std::move(mtx)));
@@ -618,7 +636,7 @@ int BlockAssembler::UpdatePackagesForAdded(const CTxMemPool::setEntries& already
     return nDescendantsUpdated;
 }
 
-bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx)
+bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx, CAmount& nFees)
 {
     // TODO log all false returns
 
@@ -639,7 +657,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     if (!scdb.GetSidechain(nSidechain, sidechain))
         return false;
 
-    // Select the highest scoring B-WT^ for sidechain during verification period
+    // Select the highest scoring B-WT^ for sidechain
     uint256 hashBest = uint256();
     uint16_t scoreBest = 0;
     std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
@@ -668,16 +686,28 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     if (!mtx.vout.size())
         return false;
 
+    // Get the mainchain fee amount from the first WT^ output which encodes the
+    // sum of WT fees.
+    CAmount amountRead = 0;
+    if (!DecodeWTFees(mtx.vout.front().scriptPubKey, amountRead)) {
+        LogPrintf("%s: Failed to decode WT fees!\n", __func__);
+        return false;
+    }
+    nFees = amountRead;
+
     // Calculate the amount to be withdrawn by WT^
-    CAmount amtBWT = CAmount(0);
+    CAmount amountWithdrawn = CAmount(0);
     for (const CTxOut& out : mtx.vout) {
         const CScript scriptPubKey = out.scriptPubKey;
         if (HexStr(scriptPubKey) != sidechain.sidechainHex) {
-            amtBWT += out.nValue;
+            amountWithdrawn += out.nValue;
         }
     }
 
-    // Format sidechain change return script
+    // Add mainchain fees from WT(s)
+    amountWithdrawn += nFees;
+
+    // Get sidechain change return script
     CScript sidechainScript;
     if (!scdb.GetSidechainScript(nSidechain, sidechainScript))
         return false;
@@ -700,7 +730,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     mtx.vout.back().nValue += returnAmount;
 
     // Subtract payout amount from sidechain change return
-    mtx.vout.back().nValue -= amtBWT;
+    mtx.vout.back().nValue -= amountWithdrawn;
 
     if (mtx.vout.back().nValue < 0)
         return false;
@@ -723,7 +753,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
 
     // Sign WT^ SCUTXO input
     const CTransaction& txToSign = mtx;
-    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amtBWT);
+    TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amountWithdrawn);
     SignatureData sigdata;
     bool sigCreated = ProduceSignature(creator, sidechainScript, sigdata);
     if (!sigCreated)
@@ -960,6 +990,9 @@ bool static ScanHash(const CBlockHeader *pblock, uint32_t& nNonce, uint256 *phas
     while (true) {
         nNonce++;
 
+        if (nNonce > nMiningNonce)
+            nMiningNonce = nNonce;
+
         // Write the last 4 bytes of the block header (the nonce) to a copy of
         // the double-SHA256 state, and compute the result.
         SHAndwich256(hasher).Write((unsigned char*)&nNonce, 4).Finalize((unsigned char*)phash);
@@ -1013,8 +1046,6 @@ void static BitcoinMiner(const CChainParams& chainparams)
     std::shared_ptr<CReserveScript> coinbaseScript;
     vpwallets[0]->GetScriptForMining(coinbaseScript);
 
-    bool fAddedBMM = false;
-
     bool fBreakForBMM = gArgs.GetBoolArg("-minerbreakforbmm", false);
 
     try {
@@ -1023,6 +1054,8 @@ void static BitcoinMiner(const CChainParams& chainparams)
         // In the latter case, already the pointer is NULL.
         if (!coinbaseScript || coinbaseScript->reserveScript.empty())
             throw std::runtime_error("No coinbase script available (mining requires a wallet)");
+
+        bool fAddedBMM = false;
 
         while (true) {
             if (fMiningReqiresPeer) {
@@ -1049,11 +1082,11 @@ void static BitcoinMiner(const CChainParams& chainparams)
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrev = chainActive.Tip();
 
+            fAddedBMM = false;
+
             int nMinerSleep = gArgs.GetArg("-minersleep", 0);
             if (nMinerSleep)
                 MilliSleep(nMinerSleep);
-
-            fAddedBMM = false;
 
             std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true /* mine segwit */, fAddedBMM));
             if (!pblocktemplate.get())
@@ -1071,21 +1104,29 @@ void static BitcoinMiner(const CChainParams& chainparams)
             // Search
             //
             int64_t nStart = GetTime();
-            arith_uint256 hashTarget = arith_uint256().SetCompact(pblock->nBits);
+            arith_uint256 hashArithTarget = arith_uint256().SetCompact(pblock->nBits);
+            hashTarget = ArithToUint256(hashArithTarget);
+            hashBest = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+            nMiningNonce = 0;
             uint256 hash;
             uint32_t nNonce = 0;
             while (true) {
                 // Check if something found
                 if (ScanHash(pblock, nNonce, &hash))
                 {
-                    if (UintToArith256(hash) <= hashTarget)
+                    if (UintToArith256(hash) <= UintToArith256(hashBest))
+                    {
+                        hashBest = hash;
+                    }
+
+                    if (UintToArith256(hash) <= hashArithTarget)
                     {
                         // Found a solution
                         pblock->nNonce = nNonce;
                         assert(hash == pblock->GetPoWHash());
 
                         LogPrintf("BitcoinMiner:\n");
-                        LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashTarget.GetHex());
+                        LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashArithTarget.GetHex());
                         ProcessBlockFound(pblock, chainparams);
                         coinbaseScript->KeepScript();
 
@@ -1124,7 +1165,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
                 if (chainparams.GetConsensus().fPowAllowMinDifficultyBlocks)
                 {
                     // Changing pblock->nTime can change work required on testnet:
-                    hashTarget.SetCompact(pblock->nBits);
+                    hashArithTarget.SetCompact(pblock->nBits);
                 }
             }
         }
