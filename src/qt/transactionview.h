@@ -50,8 +50,8 @@ public:
     };
 
     enum ColumnWidths {
-        REPLAY_STATUS_COLUMN_WIDTH = 30,
-        STATUS_COLUMN_WIDTH = 30,
+        REPLAY_STATUS_COLUMN_WIDTH = 64,
+        STATUS_COLUMN_WIDTH = 64,
         WATCHONLY_COLUMN_WIDTH = 23,
         DATE_COLUMN_WIDTH = 120,
         AMOUNT_MINIMUM_COLUMN_WIDTH = 120,

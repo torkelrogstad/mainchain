@@ -29,11 +29,10 @@
 // Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
         Qt::AlignLeft|Qt::AlignVCenter, /* replay status */
-        Qt::AlignLeft|Qt::AlignVCenter, /* status */
-        Qt::AlignLeft|Qt::AlignVCenter, /* watchonly */
+        Qt::AlignLeft|Qt::AlignVCenter, /* # Confs */
         Qt::AlignLeft|Qt::AlignVCenter, /* date */
-        Qt::AlignLeft|Qt::AlignVCenter, /* address */
-        Qt::AlignRight|Qt::AlignVCenter /* amount */
+        Qt::AlignLeft|Qt::AlignVCenter, /* TXiD */
+        Qt::AlignLeft|Qt::AlignVCenter /* amount */
     };
 
 // Comparison operator for sort/binary search of model tx list
@@ -265,7 +264,7 @@ TransactionTableModel::TransactionTableModel(const PlatformStyle *_platformStyle
         fProcessingQueuedTransactions(false),
         platformStyle(_platformStyle)
 {
-    columns << QString() << QString() << QString() << tr("Date") << tr("TxID") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
+    columns << tr("Replay") << tr("# Confs") << tr("Date") << tr("TxID") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
     priv->refreshWallet();
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -328,7 +327,7 @@ int TransactionTableModel::rowCount(const QModelIndex &parent) const
 int TransactionTableModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return columns.length();
+    return 5;
 }
 
 QString TransactionTableModel::formatTxStatus(const TransactionRecord *wtx) const
@@ -639,6 +638,14 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
             return QString::fromStdString(rec->hash.ToString());
         case Amount:
             return formatTxAmount(rec, true, BitcoinUnits::separatorAlways);
+        case Status:
+        {
+            int64_t nDepth = rec->status.depth;
+            if (nDepth > 9999)
+                return ">9999";
+            else
+                return QString::number(nDepth);
+        }
         }
         break;
     case Qt::EditRole:

@@ -30,10 +30,10 @@ public:
     enum ColumnIndex {
         ReplayStatus = 0,
         Status = 1,
-        Watchonly = 2,
-        Date = 3,
-        ToAddress = 4,
-        Amount = 5,
+        Date = 2,
+        ToAddress = 3,
+        Amount = 4,
+        Watchonly = 5,
         Type = 6,
     };
 
