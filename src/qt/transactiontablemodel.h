@@ -77,6 +77,8 @@ public:
         ReplayStatusRole,
         /** Unprocessed icon */
         RawDecorationRole,
+        /** Overview decoration role */
+        OverviewDecorationRole,
     };
 
     int rowCount(const QModelIndex &parent) const;

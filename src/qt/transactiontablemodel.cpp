@@ -606,10 +606,21 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
     case RawDecorationRole:
         switch(index.column())
         {
+            case ReplayStatus:
+                return txReplayStatusDecoration(rec);
+        }
+        break;
+    case OverviewDecorationRole:
+        switch (index.column())
+        {
         case ReplayStatus:
             return txReplayStatusDecoration(rec);
         case Status:
             return txStatusDecoration(rec);
+        case Watchonly:
+            return txWatchonlyDecoration(rec);
+        case ToAddress:
+            return txAddressDecoration(rec);
         }
         break;
     case Qt::DecorationRole:
