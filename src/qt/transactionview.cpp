@@ -80,24 +80,6 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
     dateWidget->addItem(tr("Range..."), Range);
     hlayout->addWidget(dateWidget);
 
-    typeWidget = new QComboBox(this);
-    if (platformStyle->getUseExtraSpacing()) {
-        typeWidget->setFixedWidth(121);
-    } else {
-        typeWidget->setFixedWidth(120);
-    }
-
-    typeWidget->addItem(tr("All"), TransactionFilterProxy::ALL_TYPES);
-    typeWidget->addItem(tr("Received with"), TransactionFilterProxy::TYPE(TransactionRecord::RecvWithAddress) |
-                                        TransactionFilterProxy::TYPE(TransactionRecord::RecvFromOther));
-    typeWidget->addItem(tr("Sent to"), TransactionFilterProxy::TYPE(TransactionRecord::SendToAddress) |
-                                  TransactionFilterProxy::TYPE(TransactionRecord::SendToOther));
-    typeWidget->addItem(tr("To yourself"), TransactionFilterProxy::TYPE(TransactionRecord::SendToSelf));
-    typeWidget->addItem(tr("Mined"), TransactionFilterProxy::TYPE(TransactionRecord::Generated));
-    typeWidget->addItem(tr("Other"), TransactionFilterProxy::TYPE(TransactionRecord::Other));
-
-    hlayout->addWidget(typeWidget);
-
     search_widget = new QLineEdit(this);
 #if QT_VERSION >= 0x040700
     search_widget->setPlaceholderText(tr("Enter address, transaction id, or label to search"));
@@ -153,24 +135,27 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
     transactionView = view;
     transactionView->setObjectName("transactionView");
 
+    // Set monospace font
+    QFont font;
+    font.setStyleHint(QFont::Monospace);
+    font.setFamily("noto");
+    view->setFont(font);
+
     // Actions
     abandonAction = new QAction(tr("Abandon transaction"), this);
     bumpFeeAction = new QAction(tr("Increase transaction fee"), this);
     bumpFeeAction->setObjectName("bumpFeeAction");
     QAction *copyAddressAction = new QAction(tr("Copy address"), this);
-    QAction *copyLabelAction = new QAction(tr("Copy label"), this);
     QAction *copyAmountAction = new QAction(tr("Copy amount"), this);
     QAction *copyTxIDAction = new QAction(tr("Copy transaction ID"), this);
     QAction *copyTxHexAction = new QAction(tr("Copy raw transaction"), this);
     QAction *copyTxPlainText = new QAction(tr("Copy full transaction details"), this);
-    QAction *editLabelAction = new QAction(tr("Edit label"), this);
     QAction *showDetailsAction = new QAction(tr("Show transaction details"), this);
     QAction *splitCoinsAction = new QAction(tr("Split coins and enable replay protection"), this);
 
     contextMenu = new QMenu(this);
     contextMenu->setObjectName("contextMenu");
     contextMenu->addAction(copyAddressAction);
-    contextMenu->addAction(copyLabelAction);
     contextMenu->addAction(copyAmountAction);
     contextMenu->addAction(copyTxIDAction);
     contextMenu->addAction(copyTxHexAction);
@@ -180,7 +165,6 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
     contextMenu->addSeparator();
     contextMenu->addAction(bumpFeeAction);
     contextMenu->addAction(abandonAction);
-    contextMenu->addAction(editLabelAction);
 
     mapperThirdPartyTxUrls = new QSignalMapper(this);
 
@@ -188,7 +172,6 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
     connect(mapperThirdPartyTxUrls, SIGNAL(mapped(QString)), this, SLOT(openThirdPartyTxUrl(QString)));
 
     connect(dateWidget, SIGNAL(activated(int)), this, SLOT(chooseDate(int)));
-    connect(typeWidget, SIGNAL(activated(int)), this, SLOT(chooseType(int)));
     connect(watchOnlyWidget, SIGNAL(activated(int)), this, SLOT(chooseWatchonly(int)));
     connect(amountWidget, SIGNAL(textChanged(QString)), amount_typing_delay, SLOT(start()));
     connect(amount_typing_delay, SIGNAL(timeout()), this, SLOT(changedAmount()));
@@ -201,12 +184,10 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
     connect(bumpFeeAction, SIGNAL(triggered()), this, SLOT(bumpFee()));
     connect(abandonAction, SIGNAL(triggered()), this, SLOT(abandonTx()));
     connect(copyAddressAction, SIGNAL(triggered()), this, SLOT(copyAddress()));
-    connect(copyLabelAction, SIGNAL(triggered()), this, SLOT(copyLabel()));
     connect(copyAmountAction, SIGNAL(triggered()), this, SLOT(copyAmount()));
     connect(copyTxIDAction, SIGNAL(triggered()), this, SLOT(copyTxID()));
     connect(copyTxHexAction, SIGNAL(triggered()), this, SLOT(copyTxHex()));
     connect(copyTxPlainText, SIGNAL(triggered()), this, SLOT(copyTxPlainText()));
-    connect(editLabelAction, SIGNAL(triggered()), this, SLOT(editLabel()));
     connect(showDetailsAction, SIGNAL(triggered()), this, SLOT(showDetails()));
     connect(splitCoinsAction, SIGNAL(triggered()), this, SLOT(showCoinSplitDialog()));
 }
@@ -236,7 +217,6 @@ void TransactionView::setModel(WalletModel *_model)
         transactionView->setColumnWidth(TransactionTableModel::Status, STATUS_COLUMN_WIDTH);
         transactionView->setColumnWidth(TransactionTableModel::Watchonly, WATCHONLY_COLUMN_WIDTH);
         transactionView->setColumnWidth(TransactionTableModel::Date, DATE_COLUMN_WIDTH);
-        transactionView->setColumnWidth(TransactionTableModel::Type, TYPE_COLUMN_WIDTH);
         transactionView->setColumnWidth(TransactionTableModel::Amount, AMOUNT_MINIMUM_COLUMN_WIDTH);
 
         columnResizingFixer = new GUIUtil::TableViewLastColumnResizingFixer(transactionView, AMOUNT_MINIMUM_COLUMN_WIDTH, MINIMUM_COLUMN_WIDTH, this);
@@ -314,14 +294,6 @@ void TransactionView::chooseDate(int idx)
         dateRangeChanged();
         break;
     }
-}
-
-void TransactionView::chooseType(int idx)
-{
-    if(!transactionProxyModel)
-        return;
-    transactionProxyModel->setTypeFilter(
-        typeWidget->itemData(idx).toInt());
 }
 
 void TransactionView::chooseWatchonly(int idx)
@@ -434,7 +406,6 @@ void TransactionView::exportClicked()
     if (model->haveWatchOnly())
         writer.addColumn(tr("Watch-only"), TransactionTableModel::Watchonly);
     writer.addColumn(tr("Date"), 0, TransactionTableModel::DateRole);
-    writer.addColumn(tr("Type"), TransactionTableModel::Type, Qt::EditRole);
     writer.addColumn(tr("Label"), 0, TransactionTableModel::LabelRole);
     writer.addColumn(tr("Address"), 0, TransactionTableModel::AddressRole);
     writer.addColumn(BitcoinUnits::getAmountColumnTitle(model->getOptionsModel()->getDisplayUnit()), 0, TransactionTableModel::FormattedAmountRole);
@@ -510,11 +481,6 @@ void TransactionView::copyAddress()
     GUIUtil::copyEntryData(transactionView, 0, TransactionTableModel::AddressRole);
 }
 
-void TransactionView::copyLabel()
-{
-    GUIUtil::copyEntryData(transactionView, 0, TransactionTableModel::LabelRole);
-}
-
 void TransactionView::copyAmount()
 {
     GUIUtil::copyEntryData(transactionView, 0, TransactionTableModel::FormattedAmountRole);
@@ -533,52 +499,6 @@ void TransactionView::copyTxHex()
 void TransactionView::copyTxPlainText()
 {
     GUIUtil::copyEntryData(transactionView, 0, TransactionTableModel::TxPlainTextRole);
-}
-
-void TransactionView::editLabel()
-{
-    if(!transactionView->selectionModel() ||!model)
-        return;
-    QModelIndexList selection = transactionView->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
-    {
-        AddressTableModel *addressBook = model->getAddressTableModel();
-        if(!addressBook)
-            return;
-        QString address = selection.at(0).data(TransactionTableModel::AddressRole).toString();
-        if(address.isEmpty())
-        {
-            // If this transaction has no associated address, exit
-            return;
-        }
-        // Is address in address book? Address book can miss address when a transaction is
-        // sent from outside the UI.
-        int idx = addressBook->lookupAddress(address);
-        if(idx != -1)
-        {
-            // Edit sending / receiving address
-            QModelIndex modelIdx = addressBook->index(idx, 0, QModelIndex());
-            // Determine type of address, launch appropriate editor dialog type
-            QString type = modelIdx.data(AddressTableModel::TypeRole).toString();
-
-            EditAddressDialog dlg(
-                type == AddressTableModel::Receive
-                ? EditAddressDialog::EditReceivingAddress
-                : EditAddressDialog::EditSendingAddress, this);
-            dlg.setModel(addressBook);
-            dlg.loadRow(idx);
-            dlg.exec();
-        }
-        else
-        {
-            // Add sending address
-            EditAddressDialog dlg(EditAddressDialog::NewSendingAddress,
-                this);
-            dlg.setModel(addressBook);
-            dlg.setAddress(address);
-            dlg.exec();
-        }
-    }
 }
 
 void TransactionView::showDetails()

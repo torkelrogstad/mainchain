@@ -32,9 +32,9 @@ public:
         Status = 1,
         Watchonly = 2,
         Date = 3,
-        Type = 4,
-        ToAddress = 5,
-        Amount = 6
+        ToAddress = 4,
+        Amount = 5,
+        Type = 6,
     };
 
     /** Roles to get specific information from a transaction row.
@@ -53,7 +53,7 @@ public:
         LongDescriptionRole,
         /** Address of transaction */
         AddressRole,
-        /** Label of address related to transaction */
+        /** TXID */
         LabelRole,
         /** Net amount of transaction */
         AmountRole,

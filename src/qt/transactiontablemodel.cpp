@@ -32,7 +32,6 @@ static int column_alignments[] = {
         Qt::AlignLeft|Qt::AlignVCenter, /* status */
         Qt::AlignLeft|Qt::AlignVCenter, /* watchonly */
         Qt::AlignLeft|Qt::AlignVCenter, /* date */
-        Qt::AlignLeft|Qt::AlignVCenter, /* type */
         Qt::AlignLeft|Qt::AlignVCenter, /* address */
         Qt::AlignRight|Qt::AlignVCenter /* amount */
     };
@@ -266,7 +265,7 @@ TransactionTableModel::TransactionTableModel(const PlatformStyle *_platformStyle
         fProcessingQueuedTransactions(false),
         platformStyle(_platformStyle)
 {
-    columns << QString() << QString() << QString() << tr("Date") << tr("Type") << tr("Label") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
+    columns << QString() << QString() << QString() << tr("Date") << tr("TxID") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
     priv->refreshWallet();
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -626,7 +625,7 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
         case Type:
             return formatTxType(rec);
         case ToAddress:
-            return formatTxToAddress(rec, false);
+            return QString::fromStdString(rec->hash.ToString());
         case Amount:
             return formatTxAmount(rec, true, BitcoinUnits::separatorAlways);
         }
@@ -759,8 +758,6 @@ QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientat
                 return tr("Transaction status. Hover over this field to show number of confirmations.");
             case Date:
                 return tr("Date and time that the transaction was received.");
-            case Type:
-                return tr("Type of transaction.");
             case Watchonly:
                 return tr("Whether or not a watch-only address is involved in this transaction.");
             case ToAddress:
