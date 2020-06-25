@@ -158,7 +158,7 @@ void MiningDialog::Update()
     ui->labelDiff->setText(diff);
 
     QString hashps = "Network hashps: ";
-    hashps += QString::number(GetNetworkHashPerSecond(120, -1));
+    hashps += QString::number(GetNetworkHashPerSecond(120, -1), 'f');
     ui->labelHashps->setText(hashps);
 
     QString pooledtx = "Pooled txns: ";
