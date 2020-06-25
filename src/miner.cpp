@@ -1055,8 +1055,6 @@ void static BitcoinMiner(const CChainParams& chainparams)
         if (!coinbaseScript || coinbaseScript->reserveScript.empty())
             throw std::runtime_error("No coinbase script available (mining requires a wallet)");
 
-        bool fAddedBMM = false;
-
         while (true) {
             if (fMiningReqiresPeer) {
                 // Busy-wait for the network to come online so we don't waste time mining
@@ -1082,7 +1080,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrev = chainActive.Tip();
 
-            fAddedBMM = false;
+            bool fAddedBMM = false;
 
             int nMinerSleep = gArgs.GetArg("-minersleep", 0);
             if (nMinerSleep)
@@ -1159,6 +1157,8 @@ void static BitcoinMiner(const CChainParams& chainparams)
                 // the miner so that it recreates the block.
                 if (fBreakForBMM && !fAddedBMM &&
                         mempool.GetCriticalTxnAddedSinceBlock()) {
+                    // Set fAddedBMM true so we don't pause again
+                    fAddedBMM = true;
                     break;
                 }
 

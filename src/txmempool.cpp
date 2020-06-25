@@ -333,7 +333,8 @@ void CTxMemPoolEntry::UpdateAncestorState(int64_t modifySize, CAmount modifyFee,
 }
 
 CTxMemPool::CTxMemPool(CBlockPolicyEstimator* estimator) :
-    nTransactionsUpdated(0), minerPolicyEstimator(estimator)
+    nTransactionsUpdated(0), fCriticalTxnAddedSinceBlock(false),
+    minerPolicyEstimator(estimator)
 {
     _clear(); //lock free clear
 
@@ -635,6 +636,7 @@ void CTxMemPool::_clear()
     blockSinceLastRollingFeeBump = false;
     rollingMinimumFeeRate = 0;
     ++nTransactionsUpdated;
+    fCriticalTxnAddedSinceBlock = false;
 }
 
 void CTxMemPool::clear()
