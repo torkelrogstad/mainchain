@@ -412,7 +412,7 @@ bool SidechainPage::validateFeeAmount()
 
 void SidechainPage::on_pushButtonManageSidechains_clicked()
 {
-    minerDialog->show();
+    ShowManagePage();
 }
 
 void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
@@ -450,4 +450,9 @@ void SidechainPage::numBlocksChanged()
 {
     // Check for sidechain activation updates
     CheckForSidechainUpdates();
+}
+
+void SidechainPage::ShowManagePage()
+{
+    minerDialog->show();
 }

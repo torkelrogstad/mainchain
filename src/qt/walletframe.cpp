@@ -217,3 +217,10 @@ void WalletFrame::outOfSyncWarningClicked()
 {
     Q_EMIT requestedSyncWarningInfo();
 }
+
+void WalletFrame::showMinerManageDialog()
+{
+    WalletView *walletView = currentWalletView();
+    if (walletView)
+        walletView->showMinerManageDialog();
+}

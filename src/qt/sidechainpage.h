@@ -82,6 +82,8 @@ public Q_SLOTS:
 
     void numBlocksChanged();
 
+    void ShowManagePage();
+
 private:
     Ui::SidechainPage *ui;
 

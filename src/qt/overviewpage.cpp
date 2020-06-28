@@ -221,8 +221,6 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     // Setup the WT^ list
     withdrawalModel = new SidechainWithdrawalTableModel(this);
 
-
-
     // Start with the "more" frame invisible
     ui->frameMore->setVisible(false);
     fShowMore = false;

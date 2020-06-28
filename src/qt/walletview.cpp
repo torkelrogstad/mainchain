@@ -365,3 +365,11 @@ void WalletView::requestedSyncWarningInfo()
 {
     Q_EMIT outOfSyncWarningClicked();
 }
+
+void WalletView::showMinerManageDialog()
+{
+    if (sidechainPage)
+        sidechainPage->ShowManagePage();
+}
+
+

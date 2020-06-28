@@ -186,8 +186,12 @@ void MiningDialog::UpdateMiningOutput()
     best += QString::fromStdString(hashBest.ToString());
     ui->labelHashBest->setText(best);
 
-
     QString nonce = "Nonce: ";
     nonce += QString::number(nMiningNonce);
     ui->labelNonce->setText(nonce);
+}
+
+void MiningDialog::on_pushButtonManage_clicked()
+{
+    Q_EMIT ManagePageRequested();
 }
