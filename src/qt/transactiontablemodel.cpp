@@ -26,13 +26,11 @@
 #include <QIcon>
 #include <QList>
 
-// Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
-        Qt::AlignLeft|Qt::AlignVCenter, /* replay status */
-        Qt::AlignLeft|Qt::AlignVCenter, /* # Confs */
+        Qt::AlignHCenter|Qt::AlignVCenter, /* # Confs */
         Qt::AlignLeft|Qt::AlignVCenter, /* date */
         Qt::AlignLeft|Qt::AlignVCenter, /* TXiD */
-        Qt::AlignLeft|Qt::AlignVCenter /* amount */
+        Qt::AlignRight|Qt::AlignVCenter /* amount */
     };
 
 // Comparison operator for sort/binary search of model tx list
@@ -264,7 +262,7 @@ TransactionTableModel::TransactionTableModel(const PlatformStyle *_platformStyle
         fProcessingQueuedTransactions(false),
         platformStyle(_platformStyle)
 {
-    columns << tr("Replay") << tr("# Confs") << tr("Date") << tr("TxID") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
+    columns << tr("Conf") << tr("Date") << tr("TxID") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit()) << QString();
     priv->refreshWallet();
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -602,13 +600,6 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
 
     switch(role)
     {
-    case RawDecorationRole:
-        switch(index.column())
-        {
-            case ReplayStatus:
-                return txReplayStatusDecoration(rec);
-        }
-        break;
     case OverviewDecorationRole:
         switch (index.column())
         {
@@ -761,7 +752,16 @@ QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientat
     {
         if(role == Qt::DisplayRole)
         {
-            return columns[section];
+            switch(section)
+            {
+            case Status:
+            case Date:
+            case Watchonly:
+            case ToAddress:
+            case Amount:
+                return columns[section];
+            }
+
         }
         else if (role == Qt::TextAlignmentRole)
         {
@@ -770,8 +770,6 @@ QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientat
         {
             switch(section)
             {
-            case ReplayStatus:
-                return tr("Transaction replay status.");
             case Status:
                 return tr("Transaction status. Hover over this field to show number of confirmations.");
             case Date:

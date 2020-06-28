@@ -28,13 +28,13 @@ public:
     ~TransactionTableModel();
 
     enum ColumnIndex {
-        ReplayStatus = 0,
-        Status = 1,
-        Date = 2,
-        ToAddress = 3,
-        Amount = 4,
-        Watchonly = 5,
-        Type = 6,
+        Status = 0,
+        Date = 1,
+        ToAddress = 2,
+        Amount = 3,
+        Watchonly = 4,
+        Type = 5,
+        ReplayStatus = 6,
     };
 
     /** Roles to get specific information from a transaction row.

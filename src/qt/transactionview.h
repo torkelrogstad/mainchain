@@ -12,6 +12,7 @@
 
 class PlatformStyle;
 class TransactionFilterProxy;
+class TransactionReplayDialog;
 class WalletModel;
 
 QT_BEGIN_NAMESPACE
@@ -21,6 +22,7 @@ class QFrame;
 class QLineEdit;
 class QMenu;
 class QModelIndex;
+class QPushButton;
 class QSignalMapper;
 class QTableView;
 QT_END_NAMESPACE
@@ -37,24 +39,13 @@ public:
 
     void setModel(WalletModel *model);
 
-    // Date ranges for filter
-    enum DateEnum
-    {
-        All,
-        Today,
-        ThisWeek,
-        ThisMonth,
-        LastMonth,
-        ThisYear,
-        Range
-    };
-
     enum ColumnWidths {
-        REPLAY_STATUS_COLUMN_WIDTH = 64,
-        STATUS_COLUMN_WIDTH = 64,
-        WATCHONLY_COLUMN_WIDTH = 23,
+        CONF_COLUMN_WIDTH = 60,
         DATE_COLUMN_WIDTH = 120,
-        AMOUNT_MINIMUM_COLUMN_WIDTH = 120,
+        TXID_COLUMN_WIDTH = 500,
+        AMOUNT_COLUMN_WIDTH = 120,
+        WATCHONLY_COLUMN_WIDTH = 23,
+
         MINIMUM_COLUMN_WIDTH = 23
     };
 
@@ -62,11 +53,12 @@ private:
     WalletModel *model;
     TransactionFilterProxy *transactionProxyModel;
     QTableView *transactionView;
+    TransactionReplayDialog *replayDialog;
 
-    QComboBox *dateWidget;
-    QComboBox *watchOnlyWidget;
     QLineEdit *search_widget;
-    QLineEdit *amountWidget;
+    QPushButton *replayButton;
+    QPushButton *exportButton;
+    QComboBox *watchOnlyWidget;
 
     QMenu *contextMenu;
     QSignalMapper *mapperThirdPartyTxUrls;
@@ -79,10 +71,6 @@ private:
 
     QWidget *createDateRangeWidget();
 
-    GUIUtil::TableViewLastColumnResizingFixer *columnResizingFixer;
-
-    virtual void resizeEvent(QResizeEvent* event);
-
     bool eventFilter(QObject *obj, QEvent *event);
 
 private Q_SLOTS:
@@ -90,7 +78,6 @@ private Q_SLOTS:
     void dateRangeChanged();
     void showDetails();
     void showCoinSplitDialog();
-    void copyAddress();
     void copyAmount();
     void copyTxID();
     void copyTxHex();
@@ -107,12 +94,10 @@ Q_SIGNALS:
     void message(const QString &title, const QString &message, unsigned int style);
 
 public Q_SLOTS:
-    void chooseDate(int idx);
     void chooseWatchonly(int idx);
-    void changedAmount();
     void changedSearch();
     void exportClicked();
-    void refreshReplayClicked();
+    void replayClicked();
     void focusTransaction(const QModelIndex&);
 
 };

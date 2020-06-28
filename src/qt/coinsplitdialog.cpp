@@ -1,8 +1,6 @@
 #include <qt/coinsplitdialog.h>
 #include <qt/forms/ui_coinsplitdialog.h>
 
-#include <iostream>
-
 #include <QMessageBox>
 
 #include <base58.h>
@@ -14,6 +12,7 @@
 #include <wallet/wallet.h>
 #include <validation.h>
 
+// TODO rename CoinSplitConfirmationDialog
 // TODO this entire thing is a mess, clean up
 
 CoinSplitDialog::CoinSplitDialog(const CAmount& amountIn, QString txidIn, QString formattedAmountIn, QString addressIn, int indexIn, QWidget *parent) :
