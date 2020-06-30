@@ -170,6 +170,8 @@ void TransactionView::setModel(WalletModel *_model)
     this->model = _model;
     if(_model)
     {
+        replayDialog->SetWalletModel(_model);
+
         transactionProxyModel = new TransactionFilterProxy(this);
         transactionProxyModel->setSourceModel(_model->getTransactionTableModel());
         transactionProxyModel->setDynamicSortFilter(true);
