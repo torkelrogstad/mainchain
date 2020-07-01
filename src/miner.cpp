@@ -1047,6 +1047,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
     vpwallets[0]->GetScriptForMining(coinbaseScript);
 
     bool fBreakForBMM = gArgs.GetBoolArg("-minerbreakforbmm", false);
+    int nBMMBreakAttempts = 0;
 
     try {
         // Throw an error if no script was provided.  This can happen
@@ -1127,6 +1128,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
                         LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex(), hashArithTarget.GetHex());
                         ProcessBlockFound(pblock, chainparams);
                         coinbaseScript->KeepScript();
+                        nBMMBreakAttempts = 0;
 
                         break;
                     }
@@ -1144,8 +1146,10 @@ void static BitcoinMiner(const CChainParams& chainparams)
                     break;
                 if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                     break;
-                if (pindexPrev != chainActive.Tip())
+                if (pindexPrev != chainActive.Tip()) {
+                    nBMMBreakAttempts = 0;
                     break;
+                }
 
                 // Update nTime every few seconds
                 if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev) < 0)
@@ -1155,10 +1159,9 @@ void static BitcoinMiner(const CChainParams& chainparams)
                 // If the user has set --minerbreakforbmm, and BMM txns were not
                 // already added to this block but exist in the mempool, break
                 // the miner so that it recreates the block.
-                if (fBreakForBMM && !fAddedBMM &&
+                if (fBreakForBMM && !fAddedBMM && nBMMBreakAttempts < 10 &&
                         mempool.GetCriticalTxnAddedSinceBlock()) {
-                    // Set fAddedBMM true so we don't pause again
-                    fAddedBMM = true;
+                    nBMMBreakAttempts++;
                     break;
                 }
 
