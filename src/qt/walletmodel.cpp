@@ -746,3 +746,15 @@ int WalletModel::getDefaultConfirmTarget() const
 {
     return nTxConfirmTarget;
 }
+
+int WalletModel::GetReplayStatus(const uint256& txid) const
+{
+    LOCK2(cs_main, wallet->cs_wallet);
+    return wallet->GetReplayStatus(txid);
+}
+
+void WalletModel::UpdateReplayStatus(const uint256& txid, const int nReplayStatus)
+{
+    LOCK2(cs_main, wallet->cs_wallet);
+    wallet->UpdateReplayStatus(txid, nReplayStatus);
+}

@@ -11,16 +11,9 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Replay Status</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>replay</string>
-     </property>
-    </widget>
-   </item>
    <item>
     <widget class="QTableWidget" name="tableWidgetCoins">
      <property name="selectionBehavior">

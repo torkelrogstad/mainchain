@@ -223,6 +223,10 @@ public:
 
     int getDefaultConfirmTarget() const;
 
+    int GetReplayStatus(const uint256& txid) const;
+
+    void UpdateReplayStatus(const uint256& txid, const int nReplayStatus);
+
 private:
     CWallet *wallet;
     bool fHaveWatchOnly;

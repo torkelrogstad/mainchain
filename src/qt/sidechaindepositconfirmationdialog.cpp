@@ -41,7 +41,7 @@ void SidechainDepositConfirmationDialog::SetInfo(const QString& strSidechain, co
 
 void SidechainDepositConfirmationDialog::Reset()
 {
-    // Reset the dialog's fields and confirmation status
+    // Reset the dialog's confirmation status
     fConfirmed = false;
 }
 

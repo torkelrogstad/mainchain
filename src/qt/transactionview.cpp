@@ -5,7 +5,7 @@
 #include <qt/transactionview.h>
 
 #include <qt/addresstablemodel.h>
-#include <qt/coinsplitdialog.h>
+#include <qt/coinsplitconfirmationdialog.h>
 #include <qt/drivenetunits.h>
 #include <qt/csvmodelwriter.h>
 #include <qt/editaddressdialog.h>
@@ -22,6 +22,7 @@
 #include <apiclient.h>
 #include <ui_interface.h>
 #include <utilmoneystr.h>
+#include <wallet/wallet.h>
 
 #include <QComboBox>
 #include <QDateTimeEdit>
@@ -378,18 +379,21 @@ void TransactionView::showDetails()
 
 void TransactionView::showCoinSplitDialog()
 {
-    if(!transactionView->selectionModel() ||!model)
+    if(!transactionView->selectionModel() || !model)
         return;
     QModelIndexList selection = transactionView->selectionModel()->selectedRows();
     if (selection.isEmpty())
         return;
     CAmount amount = selection.at(0).data(TransactionTableModel::AmountRole).toLongLong();
     QString strTXID = selection.at(0).data(TransactionTableModel::TxHashRole).toString();
-    QString strAmount = selection.at(0).data(TransactionTableModel::FormattedAmountRole).toString();
     QString strAddress = selection.at(0).data(TransactionTableModel::AddressRole).toString();
     int index = selection.at(0).data(TransactionTableModel::TxOutputIndexRole).toInt();
-    CoinSplitDialog dialog(amount, strTXID, strAmount, strAddress, index);
+    CoinSplitConfirmationDialog dialog;
+    dialog.SetInfo(amount, strTXID, strAddress, index);
     dialog.exec();
+    if (dialog.GetConfirmed()) {
+        model->UpdateReplayStatus(uint256S(strTXID.toStdString()), REPLAY_SPLIT);
+    }
 }
 
 void TransactionView::openThirdPartyTxUrl(QString url)

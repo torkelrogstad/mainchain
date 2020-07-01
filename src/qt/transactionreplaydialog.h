@@ -7,17 +7,20 @@
 
 #include <QDialog>
 
+class ClientModel;
+class CoinSplitConfirmationDialog;
+class PlatformStyle;
 class WalletModel;
 
 enum
 {
-    COLUMN_AMOUNT = 0,
-    COLUMN_LABEL,
+    COLUMN_REPLAY = 0,
+    COLUMN_AMOUNT,
     COLUMN_ADDRESS,
     COLUMN_DATE,
-    COLUMN_CONFIRMATIONS,
     COLUMN_TXHASH,
     COLUMN_VOUT_INDEX,
+    COLUMN_CONFIRMATIONS,
 };
 
 namespace Ui {
@@ -33,18 +36,28 @@ public:
     ~TransactionReplayDialog();
 
     void SetWalletModel(WalletModel* model);
+    void setClientModel(ClientModel *model);
+    void SetPlatformStyle(const PlatformStyle* style);
 
 private Q_SLOTS:
     void on_pushButtonCheckReplay_clicked();
     void on_pushButtonSplitCoins_clicked();
+    void Update();
 
 private:
     Ui::TransactionReplayDialog *ui;
 
-    WalletModel* walletModel;
+    WalletModel* walletModel = nullptr;
+    ClientModel* clientModel= nullptr;
 
-    void Update();
+    const PlatformStyle* platformStyle;
+
+    CoinSplitConfirmationDialog* coinSplitConfirmationDialog;
+
+    QIcon GetReplayIcon(int nReplayStatus) const;
 };
+
+QString FormatReplayStatus(int nReplayStatus);
 
 #endif // TRANSACTIONREPLAYDIALOG_H
 

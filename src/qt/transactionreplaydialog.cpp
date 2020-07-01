@@ -8,15 +8,19 @@
 #include <QProgressDialog>
 
 #include <qt/addresstablemodel.h>
+#include <qt/clientmodel.h>
+#include <qt/coinsplitconfirmationdialog.h>
 #include <qt/drivenetunits.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
+#include <qt/platformstyle.h>
 #include <qt/walletmodel.h>
 
 #include <apiclient.h>
 #include <amount.h>
 #include <uint256.h>
 #include <primitives/transaction.h>
+#include <utilmoneystr.h>
 #include <wallet/wallet.h>
 
 TransactionReplayDialog::TransactionReplayDialog(QWidget *parent) :
@@ -25,10 +29,11 @@ TransactionReplayDialog::TransactionReplayDialog(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->tableWidgetCoins->setColumnCount(COLUMN_VOUT_INDEX + 1);
+    ui->tableWidgetCoins->setColumnCount(COLUMN_CONFIRMATIONS + 1);
     ui->tableWidgetCoins->setHorizontalHeaderLabels(
-                QStringList() << "Amount" << "Label" << "Address" << "Date"
-                << "Confirmations" << "txid" << "n");
+                QStringList() << "Replay status" << "Amount" << "Address"
+                << "Date" << "txid" << "n" << "Confirmations");
+    ui->tableWidgetCoins->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000
@@ -39,6 +44,8 @@ TransactionReplayDialog::TransactionReplayDialog(QWidget *parent) :
 
     ui->tableWidgetCoins->horizontalHeader()->setStretchLastSection(false);
     ui->tableWidgetCoins->verticalHeader()->setVisible(false);
+
+    coinSplitConfirmationDialog = new CoinSplitConfirmationDialog(this);
 }
 
 TransactionReplayDialog::~TransactionReplayDialog()
@@ -52,11 +59,35 @@ void TransactionReplayDialog::SetWalletModel(WalletModel* model)
     Update();
 }
 
+void TransactionReplayDialog::setClientModel(ClientModel *model)
+{
+    this->clientModel = model;
+    if(model)
+    {
+        connect(model, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
+                this, SLOT(Update()));
+    }
+}
+
+void TransactionReplayDialog::SetPlatformStyle(const PlatformStyle* style)
+{
+    platformStyle = style;
+
+    // Set button icons
+    if (platformStyle) {
+        ui->pushButtonCheckReplay->setIcon(platformStyle->SingleColorIcon(":/icons/refresh"));
+        ui->pushButtonSplitCoins->setIcon(platformStyle->SingleColorIcon(":/icons/replay_split"));
+    }
+}
+
 void TransactionReplayDialog::Update()
 {
     if (!walletModel || !walletModel->getOptionsModel()
             || !walletModel->getAddressTableModel())
         return;
+
+    ui->tableWidgetCoins->setSortingEnabled(false);
+    ui->tableWidgetCoins->setUpdatesEnabled(false);
 
     ui->tableWidgetCoins->setRowCount(0);
 
@@ -85,6 +116,18 @@ void TransactionReplayDialog::Update()
             // item with disabled status
             bool fLocked = walletModel->isLockedCoin(txhash, out.i);
 
+            // replay status
+            int nReplayStatus = walletModel->GetReplayStatus(txhash);
+            QTableWidgetItem *itemReplay = new QTableWidgetItem();
+            itemReplay->setText(FormatReplayStatus(nReplayStatus));
+            if (platformStyle) {
+                itemReplay->setIcon(GetReplayIcon(nReplayStatus));
+            }
+            itemReplay->setFlags(itemReplay->flags() & ~Qt::ItemIsEditable);
+            if (fLocked)
+                itemReplay->setFlags(itemReplay->flags() & ~Qt::ItemIsEnabled);
+            ui->tableWidgetCoins->setItem(nRow, COLUMN_REPLAY, itemReplay);
+
             // address
             CTxDestination outputAddress;
             QString sAddress = "";
@@ -98,26 +141,6 @@ void TransactionReplayDialog::Update()
             if (fLocked)
                 itemAddress->setFlags(itemAddress->flags() & ~Qt::ItemIsEnabled);
             ui->tableWidgetCoins->setItem(nRow, COLUMN_ADDRESS, itemAddress);
-
-            // label
-            QTableWidgetItem *itemLabel = new QTableWidgetItem();
-            if (!(sAddress == sWalletAddress)) // change
-            {
-                // tooltip from where the change comes from
-                itemLabel->setToolTip(tr("change from %1 (%2)").arg(sWalletLabel).arg(sWalletAddress));
-                itemLabel->setText(tr("(change)"));
-            }
-            else
-            {
-                QString sLabel = walletModel->getAddressTableModel()->labelForAddress(sAddress);
-                if (sLabel.isEmpty())
-                    sLabel = tr("(no label)");
-                itemLabel->setText(sLabel);
-            }
-            itemLabel->setFlags(itemLabel->flags() & ~Qt::ItemIsEditable);
-            if (fLocked)
-                itemLabel->setFlags(itemLabel->flags() & ~Qt::ItemIsEnabled);
-            ui->tableWidgetCoins->setItem(nRow, COLUMN_LABEL, itemLabel);
 
             // amount
             QTableWidgetItem *itemAmount = new QTableWidgetItem();
@@ -135,14 +158,6 @@ void TransactionReplayDialog::Update()
                 itemDate->setFlags(itemDate->flags() & ~Qt::ItemIsEnabled);
             ui->tableWidgetCoins->setItem(nRow, COLUMN_DATE, itemDate);
 
-            // confirmations
-            QTableWidgetItem *itemConf = new QTableWidgetItem();
-            itemConf->setText(QString::number(out.nDepth));
-            itemConf->setFlags(itemConf->flags() & ~Qt::ItemIsEditable);
-            if (fLocked)
-                itemConf->setFlags(itemConf->flags() & ~Qt::ItemIsEnabled);
-            ui->tableWidgetCoins->setItem(nRow, COLUMN_CONFIRMATIONS, itemConf);
-
             // txid
             QTableWidgetItem *itemTXID = new QTableWidgetItem();
             itemTXID->setText(QString::fromStdString(txhash.GetHex()));
@@ -158,6 +173,14 @@ void TransactionReplayDialog::Update()
             if (fLocked)
                 itemN->setFlags(itemN->flags() & ~Qt::ItemIsEnabled);
             ui->tableWidgetCoins->setItem(nRow, COLUMN_VOUT_INDEX, itemN);
+
+            // confirmations
+            QTableWidgetItem *itemConf = new QTableWidgetItem();
+            itemConf->setText(QString::number(out.nDepth));
+            itemConf->setFlags(itemConf->flags() & ~Qt::ItemIsEditable);
+            if (fLocked)
+                itemConf->setFlags(itemConf->flags() & ~Qt::ItemIsEnabled);
+            ui->tableWidgetCoins->setItem(nRow, COLUMN_CONFIRMATIONS, itemConf);
 
             nRow++;
         }
@@ -197,9 +220,8 @@ void TransactionReplayDialog::Update()
 //            itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Checked);
 //    }
 
-    // TODO ?
-    // sort view
-    // sortView(sortColumn, sortOrder);
+    ui->tableWidgetCoins->setSortingEnabled(true);
+    ui->tableWidgetCoins->setUpdatesEnabled(true);
 }
 
 void TransactionReplayDialog::on_pushButtonCheckReplay_clicked()
@@ -227,7 +249,7 @@ void TransactionReplayDialog::on_pushButtonCheckReplay_clicked()
     warning += "\n\n";
     warning += "Checking the replay status of your wallet's transactions ";
     warning += "will require sending the same data over the internet as ";
-    warning += "if you had vistied a block explorer yourself.\n";
+    warning += "if you had visited a block explorer yourself.\n";
     messageBox.setText(warning);
     messageBox.setIcon(QMessageBox::Warning);
     messageBox.setStandardButtons(QMessageBox::Abort | QMessageBox::Ok);
@@ -260,7 +282,6 @@ void TransactionReplayDialog::on_pushButtonCheckReplay_clicked()
     APIClient client;
     for (int i = 0; i < selection.size(); i++) {
         progress.setValue(i);
-
         if (progress.wasCanceled())
             break;
 
@@ -274,21 +295,123 @@ void TransactionReplayDialog::on_pushButtonCheckReplay_clicked()
 
         progress.setLabelText(strStatus);
 
-        // TODO
-        // if replay status is currently ReplayLoaded, skip
-        // TODO
-        // if replay status is already ReplayTrue, skip
-        // TODO handle request failure and keep set to unknown...
+        // Skip checking transactions that have replay protection enabled
+        if (walletModel->GetReplayStatus(txid) == REPLAY_SPLIT)
+            continue;
+
+        // TODO handle request failure
         if (client.IsTxReplayed(txid)) {
-            // TODO wallet->wtx->updateReplayStatus
+            walletModel->UpdateReplayStatus(txid, REPLAY_TRUE);
         } else {
-            // TODO wallet->wtx->updateReplayStatus
+            walletModel->UpdateReplayStatus(txid, REPLAY_FALSE);
         }
     }
     progress.setValue(selection.size());
+
+    // Update the model - replay status may have changed
+    Update();
 }
 
 void TransactionReplayDialog::on_pushButtonSplitCoins_clicked()
 {
+    if (!walletModel || !walletModel->getOptionsModel()) {
+        return;
+    }
 
+    QMessageBox messageBox;
+    QModelIndexList selection = ui->tableWidgetCoins->selectionModel()->selectedRows(0);
+    if (!selection.size()) {
+        messageBox.setWindowTitle("Please select transaction(s)!");
+        QString str = QString("<p>You must select one or more transactions to split!</p>");
+        messageBox.setText(str);
+        messageBox.setIcon(QMessageBox::Information);
+        messageBox.setStandardButtons(QMessageBox::Ok);
+        messageBox.exec();
+        return;
+    }
+
+    if (selection.size() > 1) {
+        messageBox.setWindowTitle("Are you sure you want to split multiple coins?");
+        QString str = "If you select more than one output, multiple ";
+        str+= "confirmation dialogs will be shown.";
+        messageBox.setText(str);
+        messageBox.setIcon(QMessageBox::Warning);
+        messageBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+        int nRes = messageBox.exec();
+        if (nRes == QMessageBox::Cancel)
+            return;
+    }
+
+    QString strProgress = "Enabling replay protection...\n\n";
+    strProgress += "Moving coins to new replay protected output.\n";
+
+    for (int i = 0; i < selection.size(); i++) {
+        int nRow = selection[i].row();
+
+        QString txid = QVariant(selection[i].sibling(nRow, COLUMN_TXHASH).data()).toString();
+        QString address = QVariant(selection[i].sibling(nRow, COLUMN_ADDRESS).data()).toString();
+        int index = QVariant(selection[i].sibling(nRow, COLUMN_VOUT_INDEX).data()).toInt();
+
+        // Skip transactions that already have replay protection enabled
+        if (walletModel->GetReplayStatus(uint256S(txid.toStdString())) == REPLAY_SPLIT)
+            continue;
+
+        // Parse amount from table
+        int nDisplayUnit = walletModel->getOptionsModel()->getDisplayUnit();
+        CAmount amount;
+        QString qAmount = QVariant(selection[i].sibling(nRow, COLUMN_AMOUNT).data()).toString();
+        if (!BitcoinUnits::parse(nDisplayUnit, qAmount, &amount)) {
+            // This error message shouldn't ever actually be displayed - but
+            // if parsing the amount from the table does fail we want to know.
+            messageBox.setWindowTitle("Failed to parse transaction amount!");
+            QString str = QString("<p>Failed to parse transaction amount!</p>");
+            messageBox.setText(str);
+            messageBox.setIcon(QMessageBox::Critical);
+            messageBox.setStandardButtons(QMessageBox::Ok);
+            messageBox.exec();
+            return;
+        }
+
+        coinSplitConfirmationDialog->SetInfo(amount, txid, address, index);
+        coinSplitConfirmationDialog->exec();
+    }
+
+    // Update the model - replay status may have changed
+    Update();
+}
+
+QIcon TransactionReplayDialog::GetReplayIcon(int nReplayStatus) const
+{
+    switch (nReplayStatus) {
+    case REPLAY_UNKNOWN:
+        return QIcon(platformStyle->SingleColorIcon(":/icons/replay_unknown"));
+    case REPLAY_FALSE:
+        return QIcon(platformStyle->SingleColorIcon(":/icons/replay_not_replayed"));
+    case REPLAY_LOADED:
+        return QIcon(platformStyle->SingleColorIcon(":/icons/replay_loaded"));
+    case REPLAY_TRUE:
+        return QIcon(platformStyle->SingleColorIcon(":/icons/replay_replayed"));
+    case REPLAY_SPLIT:
+        return QIcon(platformStyle->SingleColorIcon(":/icons/replay_split"));
+    default:
+        return QIcon(platformStyle->SingleColorIcon(":/icons/replay_unknown"));
+    }
+}
+
+QString FormatReplayStatus(int nReplayStatus)
+{
+    switch (nReplayStatus) {
+    case REPLAY_UNKNOWN:
+        return "Unknown";
+    case REPLAY_FALSE:
+        return "Not replayed";
+    case REPLAY_LOADED:
+        return "Loaded coin";
+    case REPLAY_TRUE:
+        return "Replayed";
+    case REPLAY_SPLIT:
+        return "Protected";
+    default:
+        return "Unknown";
+    }
 }
