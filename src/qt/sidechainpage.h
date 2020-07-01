@@ -16,6 +16,7 @@
 
 class CBlock;
 
+class PlatformStyle;
 class SidechainDepositConfirmationDialog;
 class SidechainWithdrawalTableModel;
 class SidechainMinerDialog;
@@ -42,7 +43,7 @@ class SidechainPage : public QWidget
     Q_OBJECT
 
 public:
-    explicit SidechainPage(QWidget *parent = 0);
+    explicit SidechainPage(const PlatformStyle *platformStyle, QWidget *parent = 0);
     ~SidechainPage();
 
     void setClientModel(ClientModel *model);
@@ -93,6 +94,8 @@ private:
     SidechainDepositConfirmationDialog *depositConfirmationDialog = nullptr;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
     SidechainMinerDialog *minerDialog = nullptr;
+
+    const PlatformStyle *platformStyle;
 
     void SetupSidechainList();
 

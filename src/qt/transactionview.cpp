@@ -139,6 +139,7 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
 
     replayDialog = new TransactionReplayDialog();
     replayDialog->setParent(this, Qt::Window);
+    replayDialog->SetPlatformStyle(platformStyle);
 
     mapperThirdPartyTxUrls = new QSignalMapper(this);
 
@@ -218,6 +219,15 @@ void TransactionView::setModel(WalletModel *_model)
 
         // Watch-only signal
         connect(_model, SIGNAL(notifyWatchonlyChanged(bool)), this, SLOT(updateWatchOnlyColumn(bool)));
+    }
+}
+
+void TransactionView::setClientModel(ClientModel *model)
+{
+    this->clientModel = model;
+    if(model)
+    {
+        replayDialog->setClientModel(model);
     }
 }
 

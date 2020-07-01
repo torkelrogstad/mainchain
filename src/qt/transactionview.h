@@ -10,6 +10,7 @@
 #include <QWidget>
 #include <QKeyEvent>
 
+class ClientModel;
 class PlatformStyle;
 class TransactionFilterProxy;
 class TransactionReplayDialog;
@@ -38,6 +39,7 @@ public:
     explicit TransactionView(const PlatformStyle *platformStyle, QWidget *parent = 0);
 
     void setModel(WalletModel *model);
+    void setClientModel(ClientModel *model);
 
     enum ColumnWidths {
         CONF_COLUMN_WIDTH = 60,
@@ -51,6 +53,7 @@ public:
 
 private:
     WalletModel *model;
+    ClientModel *clientModel;
     TransactionFilterProxy *transactionProxyModel;
     QTableView *transactionView;
     TransactionReplayDialog *replayDialog;
