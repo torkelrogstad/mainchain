@@ -114,6 +114,14 @@ enum OutputType : int
 extern OutputType g_address_type;
 extern OutputType g_change_type;
 
+enum ReplayStatus : int
+{
+    REPLAY_UNKNOWN,
+    REPLAY_FALSE,
+    REPLAY_LOADED,
+    REPLAY_TRUE,
+    REPLAY_SPLIT
+};
 
 /** A key pool entry */
 class CKeyPool
@@ -330,6 +338,9 @@ public:
     std::string strFromAccount;
     int64_t nOrderPos; //!< position in ordered transaction list
 
+    // Transaction replay status
+    int nReplayStatus;
+
     // memory only
     mutable bool fDebitCached;
     mutable bool fCreditCached;
@@ -391,6 +402,7 @@ public:
         nImmatureWatchCreditCached = 0;
         nChangeCached = 0;
         nOrderPos = -1;
+        nReplayStatus = REPLAY_UNKNOWN;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -420,6 +432,7 @@ public:
         READWRITE(nTimeReceived);
         READWRITE(fFromMe);
         READWRITE(fSpent);
+        READWRITE(nReplayStatus);
 
         if (ser_action.ForRead())
         {
@@ -489,6 +502,16 @@ public:
     bool AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state);
 
     std::set<uint256> GetConflicts() const;
+
+    void UpdateReplayStatus(int nReplayStatusIn)
+    {
+        nReplayStatus = nReplayStatusIn;
+    }
+
+    int GetReplayStatus() const
+    {
+        return nReplayStatus;
+    }
 };
 
 
@@ -1074,7 +1097,7 @@ public:
     {
         LOCK(cs_wallet);
         mapRequestCount[hash] = 0;
-    };
+    }
 
     unsigned int GetKeyPoolSize()
     {
@@ -1190,6 +1213,12 @@ public:
      * This function will automatically add the necessary scripts to the wallet.
      */
     CTxDestination AddAndGetDestinationForScript(const CScript& script, OutputType);
+
+    /** Return replay status for transaction in wallet */
+    int GetReplayStatus(const uint256& txid);
+
+    /** Update the replay status of a wallet transaction */
+    void UpdateReplayStatus(const uint256& txid, const int nReplayStatus);
 };
 
 /** A key allocated from the key pool. */
