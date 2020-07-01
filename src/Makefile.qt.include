@@ -98,7 +98,7 @@ QT_FORMS_UI = \
   qt/forms/addressbookpage.ui \
   qt/forms/askpassphrasedialog.ui \
   qt/forms/coincontroldialog.ui \
-  qt/forms/coinsplitdialog.ui \
+  qt/forms/coinsplitconfirmationdialog.ui \
   qt/forms/editaddressdialog.ui \
   qt/forms/helpmessagedialog.ui \
   qt/forms/intro.ui \
@@ -133,7 +133,7 @@ QT_MOC_CPP = \
   qt/moc_clientmodel.cpp \
   qt/moc_coincontroldialog.cpp \
   qt/moc_coincontroltreewidget.cpp \
-  qt/moc_coinsplitdialog.cpp \
+  qt/moc_coinsplitconfirmationdialog.cpp \
   qt/moc_csvmodelwriter.cpp \
   qt/moc_editaddressdialog.cpp \
   qt/moc_guiutil.cpp \
@@ -213,7 +213,7 @@ DRIVENET_QT_H = \
   qt/clientmodel.h \
   qt/coincontroldialog.h \
   qt/coincontroltreewidget.h \
-  qt/coinsplitdialog.h \
+  qt/coinsplitconfirmationdialog.h \
   qt/csvmodelwriter.h \
   qt/editaddressdialog.h \
   qt/guiconstants.h \
@@ -405,7 +405,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/askpassphrasedialog.cpp \
   qt/coincontroldialog.cpp \
   qt/coincontroltreewidget.cpp \
-  qt/coinsplitdialog.cpp \
+  qt/coinsplitconfirmationdialog.cpp \
   qt/editaddressdialog.cpp \
   qt/miningdialog.cpp \
   qt/openuridialog.cpp \

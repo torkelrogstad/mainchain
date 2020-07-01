@@ -1,39 +1,43 @@
-#include <qt/coinsplitdialog.h>
-#include <qt/forms/ui_coinsplitdialog.h>
+// Copyright (c) 2020 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include <qt/coinsplitconfirmationdialog.h>
+#include <qt/forms/ui_coinsplitconfirmationdialog.h>
 
 #include <QMessageBox>
+
+#include <qt/drivenetunits.h>
 
 #include <base58.h>
 #include <consensus/validation.h>
 #include <net.h>
 #include <primitives/transaction.h>
-
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>
+#include <utilmoneystr.h>
 #include <validation.h>
 
-// TODO rename CoinSplitConfirmationDialog
-// TODO this entire thing is a mess, clean up
-
-CoinSplitDialog::CoinSplitDialog(const CAmount& amountIn, QString txidIn, QString formattedAmountIn, QString addressIn, int indexIn, QWidget *parent) :
+CoinSplitConfirmationDialog::CoinSplitConfirmationDialog(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::CoinSplitDialog)
+    ui(new Ui::CoinSplitConfirmationDialog)
 {
     ui->setupUi(this);
 
-    amount = amountIn;
-    txid = uint256S(txidIn.toStdString());
-    index = indexIn;
+    Reset();
+}
 
-    ui->labelTXID->setText(txidIn);
-    ui->labelAmount->setText(formattedAmountIn);
-    ui->labelAddress->setText(addressIn);
-    ui->labelIndex->setText(QString::number(indexIn));
+CoinSplitConfirmationDialog::~CoinSplitConfirmationDialog()
+{
+    delete ui;
+}
 
-    QMessageBox messageBox;
-
+void CoinSplitConfirmationDialog::SetInfo(const CAmount& amountIn, QString txidIn, QString addressIn, int indexIn)
+{
+    // Get a new key to move funds to
     {
 #ifdef ENABLE_WALLET
+    QMessageBox messageBox;
     if (vpwallets.empty()) {
         messageBox.setWindowTitle("Wallet Error!");
         messageBox.setText("Active wallet required to split coins.");
@@ -67,14 +71,21 @@ CoinSplitDialog::CoinSplitDialog(const CAmount& amountIn, QString txidIn, QStrin
     }
 #endif
     }
+
+    amount = amountIn;
+    txid = uint256S(txidIn.toStdString());
+    index = indexIn;
+
+    ui->labelTXID->setText(txidIn);
+
+    QString strAmount = BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, amountIn, false, BitcoinUnits::separatorAlways);
+
+    ui->labelAmount->setText(strAmount);
+    ui->labelAddress->setText(addressIn);
+    ui->labelIndex->setText(QString::number(indexIn));
 }
 
-CoinSplitDialog::~CoinSplitDialog()
-{
-    delete ui;
-}
-
-void CoinSplitDialog::on_buttonBox_accepted()
+void CoinSplitConfirmationDialog::on_buttonBox_accepted()
 {
     QMessageBox messageBox;
     messageBox.setWindowTitle("Coin split error!");
@@ -134,10 +145,30 @@ void CoinSplitDialog::on_buttonBox_accepted()
     messageBox.setText(message);
     messageBox.exec();
 
+    fConfirmed = true;
+
     this->close();
 }
 
-void CoinSplitDialog::on_buttonBox_rejected()
+void CoinSplitConfirmationDialog::on_buttonBox_rejected()
 {
     this->close();
+}
+
+bool CoinSplitConfirmationDialog::GetConfirmed()
+{
+    // Return the confirmation status and reset dialog
+    if (fConfirmed) {
+        Reset();
+        return true;
+    } else {
+        Reset();
+        return false;
+    }
+}
+
+void CoinSplitConfirmationDialog::Reset()
+{
+    // Reset the dialog's confirmation status
+    fConfirmed = false;
 }

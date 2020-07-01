@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>CoinSplitDialog</class>
- <widget class="QDialog" name="CoinSplitDialog">
+ <class>CoinSplitConfirmationDialog</class>
+ <widget class="QDialog" name="CoinSplitConfirmationDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Split Coins</string>
+   <string>Enable Replay Protection</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
