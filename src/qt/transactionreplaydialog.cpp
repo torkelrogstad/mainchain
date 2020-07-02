@@ -82,6 +82,9 @@ void TransactionReplayDialog::SetPlatformStyle(const PlatformStyle* style)
 
 void TransactionReplayDialog::Update()
 {
+    if (!this->isVisible())
+        return;
+
     if (!walletModel || !walletModel->getOptionsModel()
             || !walletModel->getAddressTableModel())
         return;
@@ -396,6 +399,11 @@ QIcon TransactionReplayDialog::GetReplayIcon(int nReplayStatus) const
     default:
         return QIcon(platformStyle->SingleColorIcon(":/icons/replay_unknown"));
     }
+}
+
+void TransactionReplayDialog::showEvent(QShowEvent* event) {
+    QWidget::showEvent(event);
+    Update();
 }
 
 QString FormatReplayStatus(int nReplayStatus)

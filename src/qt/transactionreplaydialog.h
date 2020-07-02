@@ -55,6 +55,8 @@ private:
     CoinSplitConfirmationDialog* coinSplitConfirmationDialog;
 
     QIcon GetReplayIcon(int nReplayStatus) const;
+
+    void showEvent(QShowEvent* event);
 };
 
 QString FormatReplayStatus(int nReplayStatus);
