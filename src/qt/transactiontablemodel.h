@@ -28,13 +28,13 @@ public:
     ~TransactionTableModel();
 
     enum ColumnIndex {
-        ReplayStatus = 0,
-        Status = 1,
-        Watchonly = 2,
-        Date = 3,
-        Type = 4,
-        ToAddress = 5,
-        Amount = 6
+        Status = 0,
+        Date = 1,
+        ToAddress = 2,
+        Amount = 3,
+        Watchonly = 4,
+        Type = 5,
+        ReplayStatus = 6,
     };
 
     /** Roles to get specific information from a transaction row.
@@ -53,7 +53,7 @@ public:
         LongDescriptionRole,
         /** Address of transaction */
         AddressRole,
-        /** Label of address related to transaction */
+        /** TXID */
         LabelRole,
         /** Net amount of transaction */
         AmountRole,
@@ -77,6 +77,8 @@ public:
         ReplayStatusRole,
         /** Unprocessed icon */
         RawDecorationRole,
+        /** Overview decoration role */
+        OverviewDecorationRole,
     };
 
     int rowCount(const QModelIndex &parent) const;

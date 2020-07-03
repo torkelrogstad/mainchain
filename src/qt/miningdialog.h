@@ -30,10 +30,15 @@ public Q_SLOTS:
 
     void on_pushButtonStopMining_clicked();
 
+    void on_pushButtonManage_clicked();
+
 private Q_SLOTS:
     void Update();
 
     void UpdateMiningOutput();
+
+Q_SIGNALS:
+    void ManagePageRequested();
 
 private:
     Ui::MiningDialog *ui;

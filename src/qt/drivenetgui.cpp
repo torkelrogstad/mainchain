@@ -164,8 +164,13 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         setCentralWidget(walletFrame);
 
         sidechainTableDialog = new SidechainTableDialog(this);
+
         miningDialog = new MiningDialog();
         miningDialog->setParent(this, Qt::Window);
+
+        connect(miningDialog, SIGNAL(ManagePageRequested()),
+                walletFrame, SLOT(showMinerManageDialog()));
+
     } else
 #endif // ENABLE_WALLET
     {

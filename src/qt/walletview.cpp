@@ -43,26 +43,9 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
 
     transactionsPage = new QWidget(this);
     QVBoxLayout *vbox = new QVBoxLayout();
-    QHBoxLayout *hbox_buttons = new QHBoxLayout();
     transactionView = new TransactionView(platformStyle, this);
     vbox->addWidget(transactionView);
 
-    // Add replay status refresh button
-    QPushButton *refreshReplayButton = new QPushButton(tr("&Refresh Replay Status"), this);
-    refreshReplayButton->setToolTip(tr("Refresh the replay status of transactions."));
-    if (platformStyle->getImagesOnButtons()) {
-        refreshReplayButton->setIcon(platformStyle->SingleColorIcon(":/icons/refresh"));
-    }
-    hbox_buttons->addWidget(refreshReplayButton);
-
-    QPushButton *exportButton = new QPushButton(tr("&Export"), this);
-    exportButton->setToolTip(tr("Export the data in the current tab to a file"));
-    if (platformStyle->getImagesOnButtons()) {
-        exportButton->setIcon(platformStyle->SingleColorIcon(":/icons/export"));
-    }
-    hbox_buttons->addStretch();
-    hbox_buttons->addWidget(exportButton);
-    vbox->addLayout(hbox_buttons);
     transactionsPage->setLayout(vbox);
 
     receiveCoinsPage = new ReceiveCoinsDialog(platformStyle);
@@ -71,7 +54,7 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     usedSendingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::SendingTab, this);
     usedReceivingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::ReceivingTab, this);
 
-    sidechainPage = new SidechainPage(this);
+    sidechainPage = new SidechainPage(platformStyle, this);
 
     addWidget(overviewPage);
     addWidget(transactionsPage);
@@ -88,12 +71,6 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
 
     // Double-clicking on a transaction on the transaction history page shows details
     connect(transactionView, SIGNAL(doubleClicked(QModelIndex)), transactionView, SLOT(showDetails()));
-
-    // Clicking on "Refresh replay status" will fetch updated replay info
-    connect(refreshReplayButton, SIGNAL(clicked()), transactionView, SLOT(refreshReplayClicked()));
-
-    // Clicking on "Export" allows to export the transaction list
-    connect(exportButton, SIGNAL(clicked()), transactionView, SLOT(exportClicked()));
 
     // Pass through messages from sendCoinsPage
     connect(sendCoinsPage, SIGNAL(message(QString,QString,unsigned int)), this, SIGNAL(message(QString,QString,unsigned int)));
@@ -133,6 +110,7 @@ void WalletView::setClientModel(ClientModel *_clientModel)
     overviewPage->setClientModel(_clientModel);
     sendCoinsPage->setClientModel(_clientModel);
     sidechainPage->setClientModel(_clientModel);
+    transactionView->setClientModel(_clientModel);
 }
 
 void WalletView::setWalletModel(WalletModel *_walletModel)
@@ -365,3 +343,11 @@ void WalletView::requestedSyncWarningInfo()
 {
     Q_EMIT outOfSyncWarningClicked();
 }
+
+void WalletView::showMinerManageDialog()
+{
+    if (sidechainPage)
+        sidechainPage->ShowManagePage();
+}
+
+

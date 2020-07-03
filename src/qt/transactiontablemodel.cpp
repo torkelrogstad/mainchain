@@ -26,14 +26,10 @@
 #include <QIcon>
 #include <QList>
 
-// Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
-        Qt::AlignLeft|Qt::AlignVCenter, /* replay status */
-        Qt::AlignLeft|Qt::AlignVCenter, /* status */
-        Qt::AlignLeft|Qt::AlignVCenter, /* watchonly */
+        Qt::AlignHCenter|Qt::AlignVCenter, /* # Confs */
         Qt::AlignLeft|Qt::AlignVCenter, /* date */
-        Qt::AlignLeft|Qt::AlignVCenter, /* type */
-        Qt::AlignLeft|Qt::AlignVCenter, /* address */
+        Qt::AlignLeft|Qt::AlignVCenter, /* TXiD */
         Qt::AlignRight|Qt::AlignVCenter /* amount */
     };
 
@@ -266,7 +262,7 @@ TransactionTableModel::TransactionTableModel(const PlatformStyle *_platformStyle
         fProcessingQueuedTransactions(false),
         platformStyle(_platformStyle)
 {
-    columns << QString() << QString() << QString() << tr("Date") << tr("Type") << tr("Label") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
+    columns << tr("Conf") << tr("Date") << tr("TxID") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit()) << QString();
     priv->refreshWallet();
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -329,7 +325,7 @@ int TransactionTableModel::rowCount(const QModelIndex &parent) const
 int TransactionTableModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return columns.length();
+    return 5;
 }
 
 QString TransactionTableModel::formatTxStatus(const TransactionRecord *wtx) const
@@ -604,13 +600,17 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
 
     switch(role)
     {
-    case RawDecorationRole:
-        switch(index.column())
+    case OverviewDecorationRole:
+        switch (index.column())
         {
         case ReplayStatus:
             return txReplayStatusDecoration(rec);
         case Status:
             return txStatusDecoration(rec);
+        case Watchonly:
+            return txWatchonlyDecoration(rec);
+        case ToAddress:
+            return txAddressDecoration(rec);
         }
         break;
     case Qt::DecorationRole:
@@ -626,9 +626,17 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
         case Type:
             return formatTxType(rec);
         case ToAddress:
-            return formatTxToAddress(rec, false);
+            return QString::fromStdString(rec->hash.ToString());
         case Amount:
             return formatTxAmount(rec, true, BitcoinUnits::separatorAlways);
+        case Status:
+        {
+            int64_t nDepth = rec->status.depth;
+            if (nDepth > 9999)
+                return ">9999";
+            else
+                return QString::number(nDepth);
+        }
         }
         break;
     case Qt::EditRole:
@@ -744,7 +752,16 @@ QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientat
     {
         if(role == Qt::DisplayRole)
         {
-            return columns[section];
+            switch(section)
+            {
+            case Status:
+            case Date:
+            case Watchonly:
+            case ToAddress:
+            case Amount:
+                return columns[section];
+            }
+
         }
         else if (role == Qt::TextAlignmentRole)
         {
@@ -753,14 +770,10 @@ QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientat
         {
             switch(section)
             {
-            case ReplayStatus:
-                return tr("Transaction replay status.");
             case Status:
                 return tr("Transaction status. Hover over this field to show number of confirmations.");
             case Date:
                 return tr("Date and time that the transaction was received.");
-            case Type:
-                return tr("Type of transaction.");
             case Watchonly:
                 return tr("Whether or not a watch-only address is involved in this transaction.");
             case ToAddress:

@@ -10,6 +10,7 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
+#include <qt/platformstyle.h>
 #include <qt/sidechaindepositconfirmationdialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/sidechainminerdialog.h>
@@ -40,9 +41,10 @@
 
 #include <sstream>
 
-SidechainPage::SidechainPage(QWidget *parent) :
+SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::SidechainPage)
+    ui(new Ui::SidechainPage),
+    platformStyle(_platformStyle)
 {
     ui->setupUi(this);
 
@@ -412,7 +414,7 @@ bool SidechainPage::validateFeeAmount()
 
 void SidechainPage::on_pushButtonManageSidechains_clicked()
 {
-    minerDialog->show();
+    ShowManagePage();
 }
 
 void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
@@ -450,4 +452,9 @@ void SidechainPage::numBlocksChanged()
 {
     // Check for sidechain activation updates
     CheckForSidechainUpdates();
+}
+
+void SidechainPage::ShowManagePage()
+{
+    minerDialog->show();
 }

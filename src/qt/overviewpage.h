@@ -75,7 +75,6 @@ private Q_SLOTS:
     void updateDisplayUnit();
     void handleTransactionClicked(const QModelIndex &index);
     void handleSidechainWTClicked();
-    // TODO handle sidechain withdraw clicked (go to sidechain withdraw page table)
     void updateAlerts(const QString &warnings);
     void updateWatchOnlyLabels(bool showWatchOnly);
     void handleOutOfSyncWarningClicks();

@@ -162,6 +162,12 @@
       </property>
       <item>
        <widget class="QPushButton" name="pushButtonStartMining">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Start Mining</string>
         </property>
@@ -173,6 +179,12 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonStopMining">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Stop Mining</string>
         </property>
@@ -184,7 +196,7 @@
          <enum>Qt::Horizontal</enum>
         </property>
         <property name="sizeType">
-         <enum>QSizePolicy::Fixed</enum>
+         <enum>QSizePolicy::MinimumExpanding</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -195,7 +207,24 @@
        </spacer>
       </item>
       <item>
+       <widget class="QPushButton" name="pushButtonManage">
+        <property name="text">
+         <string>Manage</string>
+        </property>
+        <property name="icon">
+         <iconset resource="../drivenet.qrc">
+          <normaloff>:/icons/options</normaloff>:/icons/options</iconset>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="pushButtonAbandonBMM">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Abandon failed BMM requests</string>
         </property>

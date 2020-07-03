@@ -561,6 +561,7 @@ void CWallet::SyncMetaData(std::pair<TxSpends::iterator, TxSpends::iterator> ran
         copyTo->nTimeSmart = copyFrom->nTimeSmart;
         copyTo->fFromMe = copyFrom->fFromMe;
         copyTo->strFromAccount = copyFrom->strFromAccount;
+        copyTo->nReplayStatus = copyFrom->nReplayStatus;
         // nOrderPos not copied on purpose
         // cached members not copied on purpose
     }
@@ -948,6 +949,11 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFlushOnClose)
         if (wtxIn.fFromMe && wtxIn.fFromMe != wtx.fFromMe)
         {
             wtx.fFromMe = wtxIn.fFromMe;
+            fUpdated = true;
+        }
+        if (wtxIn.nReplayStatus != wtx.nReplayStatus)
+        {
+            wtx.nReplayStatus = wtxIn.nReplayStatus;
             fUpdated = true;
         }
         // If we have a witness-stripped version of this transaction, and we
@@ -2855,6 +2861,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 txNew.vin.clear();
                 txNew.vout.clear();
                 wtxNew.fFromMe = true;
+                wtxNew.nReplayStatus = REPLAY_UNKNOWN; // TODO
                 bool fFirst = true;
 
                 CAmount nValueToSelect = nValue;
@@ -4353,6 +4360,8 @@ CWallet* CWallet::CreateWalletFromFile(const std::string walletFile)
                     copyTo->fFromMe = copyFrom->fFromMe;
                     copyTo->strFromAccount = copyFrom->strFromAccount;
                     copyTo->nOrderPos = copyFrom->nOrderPos;
+                    copyTo->nReplayStatus = copyFrom->nReplayStatus;
+
                     walletdb.WriteTx(*copyTo);
                 }
             }
@@ -4573,4 +4582,39 @@ CTxDestination CWallet::AddAndGetDestinationForScript(const CScript& script, Out
     }
     default: assert(false);
     }
+}
+
+int CWallet::GetReplayStatus(const uint256& txid)
+{
+    AssertLockHeld(cs_wallet);
+
+    std::map<uint256, CWalletTx>::const_iterator it = mapWallet.find(txid);
+    if (it != mapWallet.end()) {
+        if (it->second.tx->nVersion == 4)
+            return REPLAY_SPLIT;
+        else
+            return it->second.GetReplayStatus();
+    }
+
+    return REPLAY_UNKNOWN;
+}
+
+void CWallet::UpdateReplayStatus(const uint256& txid, const int nReplayStatus)
+{
+    AssertLockHeld(cs_wallet);
+
+    std::map<uint256, CWalletTx>::iterator it = mapWallet.find(txid);
+    if (it == mapWallet.end())
+        return;
+
+    // Update the object
+    it->second.UpdateReplayStatus(nReplayStatus);
+
+    // Write to db
+    CWalletDB walletdb(*dbw, "r+");
+
+    if (!walletdb.WriteTx(it->second))
+        LogPrintf("%s: Updating walletdb tx %s failed", __func__, it->second.GetHash().ToString());
+
+    NotifyTransactionChanged(this, txid, CT_UPDATED);
 }

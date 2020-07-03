@@ -158,7 +158,7 @@ void MiningDialog::Update()
     ui->labelDiff->setText(diff);
 
     QString hashps = "Network hashps: ";
-    hashps += QString::number(GetNetworkHashPerSecond(120, -1));
+    hashps += QString::number(GetNetworkHashPerSecond(120, -1), 'f');
     ui->labelHashps->setText(hashps);
 
     QString pooledtx = "Pooled txns: ";
@@ -186,8 +186,12 @@ void MiningDialog::UpdateMiningOutput()
     best += QString::fromStdString(hashBest.ToString());
     ui->labelHashBest->setText(best);
 
-
     QString nonce = "Nonce: ";
     nonce += QString::number(nMiningNonce);
     ui->labelNonce->setText(nonce);
+}
+
+void MiningDialog::on_pushButtonManage_clicked()
+{
+    Q_EMIT ManagePageRequested();
 }

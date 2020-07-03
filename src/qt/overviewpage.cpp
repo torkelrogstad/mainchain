@@ -22,7 +22,6 @@
 #include <QTimer>
 
 // TODO get data from a model instead of including validation & sidechaindb
-// TODO also list sidechain activity like recent WT^(s) or CTIP updates etc
 // For listing sidechain data
 #include <sidechain.h>
 #include <sidechaindb.h>
@@ -47,7 +46,7 @@ public:
     {
         painter->save();
 
-        QIcon icon = qvariant_cast<QIcon>(index.data(TransactionTableModel::RawDecorationRole));
+        QIcon icon = qvariant_cast<QIcon>(index.data(TransactionTableModel::OverviewDecorationRole));
         QRect mainRect = option.rect;
         QRect decorationRect(mainRect.topLeft(), QSize(DECORATION_SIZE, DECORATION_SIZE));
         int xspace = DECORATION_SIZE + 8;
@@ -221,8 +220,6 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     // TODO add withdrawal model to walletmodel
     // Setup the WT^ list
     withdrawalModel = new SidechainWithdrawalTableModel(this);
-
-
 
     // Start with the "more" frame invisible
     ui->frameMore->setVisible(false);

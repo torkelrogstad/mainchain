@@ -10,8 +10,10 @@
 #include <QWidget>
 #include <QKeyEvent>
 
+class ClientModel;
 class PlatformStyle;
 class TransactionFilterProxy;
+class TransactionReplayDialog;
 class WalletModel;
 
 QT_BEGIN_NAMESPACE
@@ -21,6 +23,7 @@ class QFrame;
 class QLineEdit;
 class QMenu;
 class QModelIndex;
+class QPushButton;
 class QSignalMapper;
 class QTableView;
 QT_END_NAMESPACE
@@ -36,39 +39,29 @@ public:
     explicit TransactionView(const PlatformStyle *platformStyle, QWidget *parent = 0);
 
     void setModel(WalletModel *model);
-
-    // Date ranges for filter
-    enum DateEnum
-    {
-        All,
-        Today,
-        ThisWeek,
-        ThisMonth,
-        LastMonth,
-        ThisYear,
-        Range
-    };
+    void setClientModel(ClientModel *model);
 
     enum ColumnWidths {
-        REPLAY_STATUS_COLUMN_WIDTH = 30,
-        STATUS_COLUMN_WIDTH = 30,
-        WATCHONLY_COLUMN_WIDTH = 23,
+        CONF_COLUMN_WIDTH = 60,
         DATE_COLUMN_WIDTH = 120,
-        TYPE_COLUMN_WIDTH = 113,
-        AMOUNT_MINIMUM_COLUMN_WIDTH = 120,
+        TXID_COLUMN_WIDTH = 500,
+        AMOUNT_COLUMN_WIDTH = 120,
+        WATCHONLY_COLUMN_WIDTH = 23,
+
         MINIMUM_COLUMN_WIDTH = 23
     };
 
 private:
     WalletModel *model;
+    ClientModel *clientModel;
     TransactionFilterProxy *transactionProxyModel;
     QTableView *transactionView;
+    TransactionReplayDialog *replayDialog;
 
-    QComboBox *dateWidget;
-    QComboBox *typeWidget;
-    QComboBox *watchOnlyWidget;
     QLineEdit *search_widget;
-    QLineEdit *amountWidget;
+    QPushButton *replayButton;
+    QPushButton *exportButton;
+    QComboBox *watchOnlyWidget;
 
     QMenu *contextMenu;
     QSignalMapper *mapperThirdPartyTxUrls;
@@ -81,10 +74,6 @@ private:
 
     QWidget *createDateRangeWidget();
 
-    GUIUtil::TableViewLastColumnResizingFixer *columnResizingFixer;
-
-    virtual void resizeEvent(QResizeEvent* event);
-
     bool eventFilter(QObject *obj, QEvent *event);
 
 private Q_SLOTS:
@@ -92,9 +81,6 @@ private Q_SLOTS:
     void dateRangeChanged();
     void showDetails();
     void showCoinSplitDialog();
-    void copyAddress();
-    void editLabel();
-    void copyLabel();
     void copyAmount();
     void copyTxID();
     void copyTxHex();
@@ -111,13 +97,10 @@ Q_SIGNALS:
     void message(const QString &title, const QString &message, unsigned int style);
 
 public Q_SLOTS:
-    void chooseDate(int idx);
-    void chooseType(int idx);
     void chooseWatchonly(int idx);
-    void changedAmount();
     void changedSearch();
     void exportClicked();
-    void refreshReplayClicked();
+    void replayClicked();
     void focusTransaction(const QModelIndex&);
 
 };

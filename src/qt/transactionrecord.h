@@ -11,6 +11,8 @@
 #include <QList>
 #include <QString>
 
+// TODO remove replay status
+
 class CWallet;
 class CWalletTx;
 
