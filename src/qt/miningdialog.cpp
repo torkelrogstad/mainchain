@@ -142,7 +142,7 @@ void MiningDialog::Update()
     // Update things that don't change quickly while mining
 
     QString height = "Current block height: ";
-    height += QString::number(chainActive.Height());
+    height += QString::number(chainActive.Height() + 1);
     ui->labelHeight->setText(height);
 
     QString weight = "Current block weight: ";
