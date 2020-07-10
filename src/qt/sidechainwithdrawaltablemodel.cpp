@@ -108,6 +108,33 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
     {
         return object.hashWTPrime;
     }
+    case Qt::TextAlignmentRole:
+    {
+        // Sidechain name
+        if (col == 0) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // Age
+        if (col == 1) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Max age
+        if (col == 2) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Acks
+        if (col == 3) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Approved
+        if (col == 4) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // WT^ hash
+        if (col == 5) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+    }
     }
     return QVariant();
 }

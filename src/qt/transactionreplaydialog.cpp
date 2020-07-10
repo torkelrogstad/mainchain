@@ -147,6 +147,7 @@ void TransactionReplayDialog::Update()
 
             // amount
             QTableWidgetItem *itemAmount = new QTableWidgetItem();
+            itemAmount->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
             itemAmount->setText(BitcoinUnits::format(nDisplayUnit, out.tx->tx->vout[out.i].nValue));
             itemAmount->setFlags(itemAmount->flags() & ~Qt::ItemIsEditable);
             if (fLocked)
@@ -171,6 +172,7 @@ void TransactionReplayDialog::Update()
 
             // vout n
             QTableWidgetItem *itemN = new QTableWidgetItem();
+            itemN->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
             itemN->setText(QString::number(out.i));
             itemN->setFlags(itemN->flags() & ~Qt::ItemIsEditable);
             if (fLocked)
@@ -179,6 +181,7 @@ void TransactionReplayDialog::Update()
 
             // confirmations
             QTableWidgetItem *itemConf = new QTableWidgetItem();
+            itemConf->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
             itemConf->setText(QString::number(out.nDepth));
             itemConf->setFlags(itemConf->flags() & ~Qt::ItemIsEditable);
             if (fLocked)

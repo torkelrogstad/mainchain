@@ -123,7 +123,7 @@ bool APIClient::IsTxReplayed(const uint256& txid)
                 if (hash.empty())
                     continue;
 
-                // If we find the Tx on Bitcoin "Core", it is replayed here
+                // If we find the Tx on Bitcoin "Core", it is replayed
                 if (txid == uint256S(hash)) {
                     return true;
                 }
