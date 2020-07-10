@@ -58,8 +58,17 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 
     // Initialize miner popup window. We want users to be able to keep this
     // window open while using the rest of the software.
-    minerDialog = new SidechainMinerDialog();
+    minerDialog = new SidechainMinerDialog(platformStyle);
     minerDialog->setParent(this, Qt::Window);
+
+    // Setup platform style single color icons
+
+    // Buttons
+    ui->pushButtonManageSidechains->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonDeposit->setIcon(platformStyle->SingleColorIcon(":/icons/send"));
+    ui->pushButtonPaste->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
+    ui->pushButtonClear->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
+    ui->pushButtonWTDoubleClickHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
 }
 
 SidechainPage::~SidechainPage()

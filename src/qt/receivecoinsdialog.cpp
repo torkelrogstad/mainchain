@@ -75,6 +75,12 @@ ReceiveCoinsDialog::ReceiveCoinsDialog(const PlatformStyle *_platformStyle, QWid
     connect(ui->clearButton, SIGNAL(clicked()), this, SLOT(clear()));
 
     generateAddress();
+
+    // Setup platform style single color icons
+
+    // Buttons
+    ui->pushButtonNew->setIcon(platformStyle->SingleColorIcon(":/movies/spinner-000"));
+    ui->pushButtonCopy->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
 }
 
 void ReceiveCoinsDialog::setModel(WalletModel *_model)

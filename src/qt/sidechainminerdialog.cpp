@@ -13,6 +13,7 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
+#include <qt/platformstyle.h>
 #include <qt/sidechainactivationtablemodel.h>
 #include <qt/sidechainescrowtablemodel.h>
 #include <qt/wtprimevotetablemodel.h>
@@ -39,9 +40,10 @@ enum DefaultWTPrimeVote {
     WTPRIME_DOWNVOTE = 2,
 };
 
-SidechainMinerDialog::SidechainMinerDialog(QWidget *parent) :
+SidechainMinerDialog::SidechainMinerDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::SidechainMinerDialog)
+    ui(new Ui::SidechainMinerDialog),
+    platformStyle(_platformStyle)
 {
     ui->setupUi(this);
 
@@ -95,6 +97,26 @@ SidechainMinerDialog::SidechainMinerDialog(QWidget *parent) :
     Update();
 
     SetupTables();
+
+    // Setup platform style single color icons
+
+    // Buttons
+    ui->pushButtonActivate->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
+    ui->pushButtonReject->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_conflicted"));
+    ui->toolButtonACKSidechains->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->pushButtonUpvoteWTPrime->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
+    ui->pushButtonDownvoteWTPrime->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_conflicted"));
+    ui->pushButtonAbstainWTPrime->setIcon(platformStyle->SingleColorIcon(":/icons/replay_not_replayed"));
+
+    ui->toolButtonKeyHash->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->toolButtonSoftwareHashes->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->toolButtonIDHash1->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->toolButtonIDHash2->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->toolButtonVoteWTPrime->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+
+    ui->comboBoxDefaultWTPrimeVote->setItemIcon(0, platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
+    ui->comboBoxDefaultWTPrimeVote->setItemIcon(1, platformStyle->SingleColorIcon(":/icons/replay_not_replayed"));
+    ui->comboBoxDefaultWTPrimeVote->setItemIcon(2, platformStyle->SingleColorIcon(":/icons/transaction_conflicted"));
 }
 
 SidechainMinerDialog::~SidechainMinerDialog()
