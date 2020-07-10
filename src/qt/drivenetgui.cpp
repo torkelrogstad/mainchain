@@ -165,7 +165,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 
         sidechainTableDialog = new SidechainTableDialog(this);
 
-        miningDialog = new MiningDialog();
+        miningDialog = new MiningDialog(platformStyle);
         miningDialog->setParent(this, Qt::Window);
 
         connect(miningDialog, SIGNAL(ManagePageRequested()),

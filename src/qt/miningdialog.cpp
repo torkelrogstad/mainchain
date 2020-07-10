@@ -7,10 +7,11 @@
 
 #include <QTimer>
 
-#include <rpc/blockchain.h> // For GetDifficulty()
+#include <qt/platformstyle.h>
 
 #include <chainparams.h>
 #include <miner.h>
+#include <rpc/blockchain.h> // For GetDifficulty()
 #include <sidechaindb.h>
 #include <txmempool.h>
 #include <validation.h>
@@ -20,9 +21,10 @@
 #include <wallet/wallet.h>
 #endif
 
-MiningDialog::MiningDialog(QWidget *parent) :
+MiningDialog::MiningDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::MiningDialog)
+    ui(new Ui::MiningDialog),
+    platformStyle(_platformStyle)
 {
     ui->setupUi(this);
 
@@ -41,6 +43,13 @@ MiningDialog::MiningDialog(QWidget *parent) :
     ui->frameMiningOutput->setEnabled(false);
     ui->frameMiningOutput->setVisible(false);
     ui->labelMinerOutput->setVisible(false);
+
+    // Setup platform style single color icons
+
+    // Buttons
+    ui->pushButtonStartMining->setIcon(platformStyle->SingleColorIcon(":/icons/tx_mined"));
+    ui->pushButtonStopMining->setIcon(platformStyle->SingleColorIcon(":/icons/quit"));
+    ui->pushButtonManage->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
 }
 
 MiningDialog::~MiningDialog()

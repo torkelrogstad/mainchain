@@ -188,6 +188,10 @@
         <property name="text">
          <string>Stop Mining</string>
         </property>
+        <property name="icon">
+         <iconset resource="../drivenet.qrc">
+          <normaloff>:/icons/quit</normaloff>:/icons/quit</iconset>
+        </property>
        </widget>
       </item>
       <item>
