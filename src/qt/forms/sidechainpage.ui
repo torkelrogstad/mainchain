@@ -49,6 +49,9 @@
           <pointsize>18</pointsize>
          </font>
         </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
