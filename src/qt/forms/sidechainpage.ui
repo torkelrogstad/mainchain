@@ -24,13 +24,6 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_10">
       <item>
-       <widget class="QLabel" name="label_7">
-        <property name="text">
-         <string>Active Sidechains</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QListWidget" name="listWidgetSidechains">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
@@ -48,6 +41,12 @@
          <font>
           <pointsize>18</pointsize>
          </font>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="lineWidth">
+         <number>0</number>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
