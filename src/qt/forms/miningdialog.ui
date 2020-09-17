@@ -213,7 +213,7 @@
       <item>
        <widget class="QPushButton" name="pushButtonManage">
         <property name="text">
-         <string>Manage</string>
+         <string>Manage Sidechains</string>
         </property>
         <property name="icon">
          <iconset resource="../drivenet.qrc">
