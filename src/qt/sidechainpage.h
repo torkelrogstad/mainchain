@@ -97,13 +97,15 @@ private:
 
     const PlatformStyle *platformStyle;
 
-    void SetupSidechainList();
+    void SetupSidechainList(const std::vector<Sidechain>& vSidechain);
 
     bool validateDepositAmount();
     bool validateFeeAmount();
 
     // The sidechains that are currently cached for the list widget
-    std::vector<Sidechain> vSidechain;
+    std::vector<Sidechain> vSidechainCache;
 };
+
+QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain);
 
 #endif // SIDECHAINPAGE_H

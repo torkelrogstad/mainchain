@@ -7,6 +7,8 @@
 
 #include <QDialog>
 
+class PlatformStyle;
+
 QT_BEGIN_NAMESPACE
 class QTimer;
 QT_END_NAMESPACE
@@ -20,7 +22,7 @@ class MiningDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit MiningDialog(QWidget *parent = 0);
+    explicit MiningDialog(const PlatformStyle *platformStyle, QWidget *parent = 0);
     ~MiningDialog();
 
 public Q_SLOTS:
@@ -47,6 +49,8 @@ private:
 
     QTimer* pollTimer;
     QTimer* miningOutputTimer;
+
+    const PlatformStyle *platformStyle;
 };
 
 #endif // MININGDIALOG_H

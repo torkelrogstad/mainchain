@@ -9,6 +9,7 @@
 
 #include <QDialog>
 
+class PlatformStyle;
 class SidechainActivationTableModel;
 class SidechainEscrowTableModel;
 class WTPrimeVoteTableModel;
@@ -27,7 +28,7 @@ class SidechainMinerDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit SidechainMinerDialog(QWidget *parent = 0);
+    explicit SidechainMinerDialog(const PlatformStyle *platformStyle, QWidget *parent = 0);
     ~SidechainMinerDialog();
 
     void setWalletModel(WalletModel *model);
@@ -89,6 +90,8 @@ private:
     WTPrimeVoteTableModel *wtPrimeVoteModel = nullptr;
 
     QTimer *pollTimer;
+
+    const PlatformStyle *platformStyle;
 
     void SetupTables();
 };

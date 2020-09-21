@@ -161,7 +161,7 @@ void SidechainActivationTableModel::updateModel()
                 // Update fActivate
                 object.fActivate = scdb.GetActivateSidechain(s.proposal.GetHash());
 
-                // TODO emit signal that model data has changed
+                // Emit signal that model data has changed
                 QModelIndex topLeft = index(i, 0);
                 QModelIndex topRight = index(i, columnCount() - 1);
                 Q_EMIT QAbstractItemModel::dataChanged(topLeft, topRight, {Qt::DecorationRole});

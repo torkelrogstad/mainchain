@@ -840,7 +840,18 @@ void SidechainDB::RemoveExpiredWTPrimes()
                     vWTPrimeStatus[x].begin(), vWTPrimeStatus[x].end(),
                     [this](const SidechainWTPrimeState& state)
                     {
-                        if (state.nBlocksLeft == 0) {
+                        // If the WT^ has 0 blocks remaining, or does not have
+                        // enough blocks remaining to gather required work score
+                        // then expire it (which will mark it failed) & remove.
+                        bool fExpire = false;
+
+                        if (state.nBlocksLeft == 0)
+                            fExpire = true;
+                        else
+                        if (SIDECHAIN_MIN_WORKSCORE - state.nWorkScore > state.nBlocksLeft)
+                            fExpire = true;
+
+                        if (fExpire) {
                             LogPrintf("SCDB RemoveExpiredWTPrimes: Erasing expired WT^: %s\n",
                                     state.ToString());
 
@@ -850,14 +861,13 @@ void SidechainDB::RemoveExpiredWTPrimes()
                             failed.hashWTPrime = state.hashWTPrime;
                             AddFailedWTPrimes(std::vector<SidechainFailedWTPrime>{ failed });
 
-                            // Remove the cached transaction for the spent WT^
+                            // Remove the cached transaction for the failed WT^
                             for (size_t i = 0; i < vWTPrimeCache.size(); i++) {
                                 if (vWTPrimeCache[i].GetHash() == state.hashWTPrime) {
                                     vWTPrimeCache[i] = vWTPrimeCache.back();
                                     vWTPrimeCache.pop_back();
                                 }
                             }
-
                             return true;
                         } else {
                             return false;
