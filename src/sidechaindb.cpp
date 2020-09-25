@@ -298,8 +298,14 @@ void SidechainDB::CacheSidechainHashToActivate(const uint256& u)
     vSidechainHashActivate.push_back(u);
 }
 
-bool SidechainDB::CacheWTPrime(const CTransaction& tx)
+bool SidechainDB::CacheWTPrime(const CTransaction& tx, uint8_t nSidechain)
 {
+    if (!IsSidechainNumberValid(nSidechain)) {
+        LogPrintf("%s: Rejecting WT^: %s - Invalid sidechain number!\n",
+                __func__, tx.GetHash().ToString());
+        return false;
+    }
+
     if (vActiveSidechain.empty()) {
         LogPrintf("%s: Rejecting WT^: %s - No active sidechains!\n",
                 __func__, tx.GetHash().ToString());
@@ -313,7 +319,7 @@ bool SidechainDB::CacheWTPrime(const CTransaction& tx)
     }
 
 
-    vWTPrimeCache.push_back(tx);
+    vWTPrimeCache.push_back(std::make_pair(nSidechain, tx));
 
     return true;
 }
@@ -412,9 +418,9 @@ bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
 bool SidechainDB::GetCachedWTPrime(const uint256& hashWTPrime, CMutableTransaction& mtx) const
 {
     // Find the WT^
-    for (const CMutableTransaction& t : vWTPrimeCache) {
-        if (t.GetHash() == hashWTPrime) {
-            mtx = t;
+    for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrimeCache) {
+        if (pair.second.GetHash() == hashWTPrime) {
+            mtx = pair.second;
             return true;
         }
     }
@@ -533,8 +539,8 @@ uint256 SidechainDB::GetTotalSCDBHash() const
     LogPrintf("%s: Hash with vSidechainProposal data: %s\n", __func__, hash.ToString());
 
     // Add vWTPrimeCache
-    for (const CMutableTransaction& tx : vWTPrimeCache) {
-        vLeaf.push_back(tx.GetHash());
+    for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrimeCache) {
+        vLeaf.push_back(pair.second.GetHash());
     }
 
     hash = ComputeMerkleRoot(vLeaf);
@@ -660,12 +666,13 @@ std::vector<std::vector<SidechainWTPrimeState>> SidechainDB::GetState() const
 std::vector<uint256> SidechainDB::GetUncommittedWTPrimeCache(uint8_t nSidechain) const
 {
     std::vector<uint256> vHash;
-    // TODO update the container of WT^ cache, and only loop through the
-    // correct sidechain's (based on nSidechain) WT^(s).
-    for (const CTransaction& t : vWTPrimeCache) {
-        uint256 txid = t.GetHash();
+    for (const std::pair<uint8_t, CTransaction>& pair : vWTPrimeCache) {
+        if (nSidechain != pair.first)
+            continue;
+
+        uint256 txid = pair.second.GetHash();
         if (!HaveWTPrimeWorkScore(txid, nSidechain)) {
-            vHash.push_back(t.GetHash());
+            vHash.push_back(pair.second.GetHash());
         }
     }
     return vHash;
@@ -700,7 +707,7 @@ std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(const cha
     return vNew;
 }
 
-std::vector<CMutableTransaction> SidechainDB::GetWTPrimeCache() const
+std::vector<std::pair<uint8_t, CMutableTransaction>> SidechainDB::GetWTPrimeCache() const
 {
     return vWTPrimeCache;
 }
@@ -794,8 +801,8 @@ bool SidechainDB::HaveFailedWTPrime(const uint256& hashWTPrime, const uint8_t nS
 
 bool SidechainDB::HaveWTPrimeCached(const uint256& hashWTPrime) const
 {
-    for (const CMutableTransaction& tx : vWTPrimeCache) {
-        if (tx.GetHash() == hashWTPrime)
+    for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrimeCache) {
+        if (pair.second.GetHash() == hashWTPrime)
             return true;
     }
     return false;
@@ -863,7 +870,7 @@ void SidechainDB::RemoveExpiredWTPrimes()
 
                             // Remove the cached transaction for the failed WT^
                             for (size_t i = 0; i < vWTPrimeCache.size(); i++) {
-                                if (vWTPrimeCache[i].GetHash() == state.hashWTPrime) {
+                                if (vWTPrimeCache[i].second.GetHash() == state.hashWTPrime) {
                                     vWTPrimeCache[i] = vWTPrimeCache.back();
                                     vWTPrimeCache.pop_back();
                                 }
@@ -1125,7 +1132,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     //
     // Find the cached transaction for the WT^ we spent and remove it
     for (size_t i = 0; i < vWTPrimeCache.size(); i++) {
-        if (vWTPrimeCache[i].GetHash() == hashBlind) {
+        if (vWTPrimeCache[i].second.GetHash() == hashBlind) {
             vWTPrimeCache[i] = vWTPrimeCache.back();
             vWTPrimeCache.pop_back();
         }

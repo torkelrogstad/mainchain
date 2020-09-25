@@ -86,7 +86,7 @@ public:
     void CacheSidechainHashToActivate(const uint256& u);
 
     /** Add WT^ to the in-memory cache */
-    bool CacheWTPrime(const CTransaction& tx);
+    bool CacheWTPrime(const CTransaction& tx, const uint8_t nSidechain);
 
     /** Check SCDB WT^ verification status */
     bool CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime, bool fDebug = false) const;
@@ -183,7 +183,7 @@ public:
     std::vector<SidechainWTPrimeState> GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const;
 
     /** Return cached WT^ transaction(s) */
-    std::vector<CMutableTransaction> GetWTPrimeCache() const;
+    std::vector<std::pair<uint8_t, CMutableTransaction>> GetWTPrimeCache() const;
 
     /** Return cached spent WT^(s) as a vector for dumping to disk */
     std::vector<SidechainSpentWTPrime> GetSpentWTPrimeCache() const;
@@ -297,7 +297,7 @@ private:
 
     /** Cache of potential WT^ transactions
      * TODO consider refactoring to use CTransactionRef */
-    std::vector<CMutableTransaction> vWTPrimeCache;
+    std::vector<std::pair<uint8_t, CMutableTransaction>> vWTPrimeCache;
 
     /** Tracks verification status of WT^(s)
      * x = nSidechain

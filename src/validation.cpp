@@ -5509,7 +5509,7 @@ bool LoadWTPrimeCache(bool fReindex)
         return false;
     }
 
-    std::vector<CTransactionRef> vWTPrime;
+    std::vector<std::pair<uint8_t, CTransactionRef>> vWTPrime;
     std::vector<SidechainSpentWTPrime> vSpent;
     std::vector<SidechainFailedWTPrime> vFailed;
     try {
@@ -5520,12 +5520,19 @@ bool LoadWTPrimeCache(bool fReindex)
             return false;
         }
 
-        int nWT = 0;
-        filein >> nWT;
-        for (int i = 0; i < nWT; i++) {
-            CTransactionRef tx;
-            filein >> tx;
-            vWTPrime.push_back(tx);
+        // If we're loading an old version of the WT^ cache we will skip it
+        // and write new data at shut down
+        if (!(nVersionRequired < CLIENT_VERSION))
+        {
+            int nWT = 0;
+            filein >> nWT;
+            for (int i = 0; i < nWT; i++) {
+                uint8_t nSidechain = 0;
+                filein >> nSidechain;
+                CTransactionRef tx;
+                filein >> tx;
+                vWTPrime.push_back(std::make_pair(nSidechain, tx));
+            }
         }
 
         if (!fReindex) {
@@ -5552,9 +5559,9 @@ bool LoadWTPrimeCache(bool fReindex)
     }
 
     // Add to SCDB
-    // TODO nSidechain
-    for (const CTransactionRef& tx : vWTPrime) {
-        if (!scdb.CacheWTPrime(*tx.get()))
+
+    for (const std::pair<uint8_t, CTransactionRef>& pair : vWTPrime) {
+        if (!scdb.CacheWTPrime(*pair.second.get(), pair.first))
             return false;
     }
 
@@ -5568,7 +5575,7 @@ bool LoadWTPrimeCache(bool fReindex)
 
 void DumpWTPrimeCache()
 {
-    std::vector<CMutableTransaction> vWTPrime = scdb.GetWTPrimeCache();
+    std::vector<std::pair<uint8_t, CMutableTransaction>> vWTPrime = scdb.GetWTPrimeCache();
     std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
     std::vector<SidechainFailedWTPrime> vFailed = scdb.GetFailedWTPrimeCache();
 
@@ -5584,12 +5591,13 @@ void DumpWTPrimeCache()
     }
 
     try {
-        fileout << 290000; // version required to read: 0.29.00 or later
+        fileout << 340100; // version required to read: 0.34.01 or later
         fileout << CLIENT_VERSION; // version that wrote the file
 
         fileout << nWTPrime; // Number of WT^(s) in file
-        for (const CMutableTransaction& tx : vWTPrime) {
-            fileout << MakeTransactionRef(tx);
+        for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrime) {
+            fileout << pair.first;
+            fileout << MakeTransactionRef(pair.second);
         }
 
         fileout << nSpent; // Number of spent WT^(s) in file

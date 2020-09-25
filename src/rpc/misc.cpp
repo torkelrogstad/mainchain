@@ -1003,7 +1003,7 @@ UniValue receivewtprime(const JSONRPCRequest& request)
 
     // Add WT^ to our local cache so that we can create a WT^ hash commitment
     // in the next block we mine to begin the verification process
-    if (!scdb.CacheWTPrime(wtPrime)) {
+    if (!scdb.CacheWTPrime(wtPrime, nSidechain)) {
         strError = "WT^ rejected from cache (duplicate?)";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
