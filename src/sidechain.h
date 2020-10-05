@@ -281,9 +281,4 @@ struct SidechainBlockData: public SidechainObj {
     }
 };
 
-/**
- * Create sidechain object
- */
-SidechainObj *SidechainObjCtr(const CScript &);
-
 #endif // BITCOIN_SIDECHAIN_H

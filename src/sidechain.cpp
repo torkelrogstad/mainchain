@@ -220,27 +220,6 @@ CScript SidechainObj::GetScript(void) const
     return script;
 }
 
-SidechainObj *SidechainObjCtr(const CScript &script)
-{
-    CScript::const_iterator pc = script.begin();
-    std::vector<unsigned char> vch;
-    opcodetype opcode;
-
-    if (!script.GetOp(pc, opcode, vch))
-        return NULL;
-    if (vch.size() == 0)
-        return NULL;
-    const char *vch0 = (const char *) &vch.begin()[0];
-    CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
-
-    if (*vch0 == DB_SIDECHAIN_BLOCK_OP) {
-        SidechainBlockData *obj = new SidechainBlockData;
-        obj->Unserialize(ds);
-        return obj;
-    }
-    return NULL;
-}
-
 std::string SidechainObj::ToString(void) const
 {
     std::stringstream str;
