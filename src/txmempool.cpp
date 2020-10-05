@@ -1134,11 +1134,15 @@ void CTxMemPool::UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& map
         if (itNew == mapCTIP.end())
             continue;
 
+        // TODO refactor - the majority of the rest of the code in this function
+        // can be removed now that RemoveUnsortedSidechainDeposits is used.
+        RemoveUnsortedSidechainDeposits(mapCTIP, s.nSidechain);
+
         auto it = mapLastSidechainDeposit.find(s.nSidechain);
         if (it == mapLastSidechainDeposit.end())
         {
             if (!fJustCheck) {
-                RemoveSidechainDeposits(s.nSidechain, setEntries {});
+                RemoveSidechainDeposits(s.nSidechain, {});
                 if (mapCTIP.count(s.nSidechain))
                     mapLastSidechainDeposit[s.nSidechain] = mapCTIP.at(s.nSidechain);
             }
@@ -1183,7 +1187,7 @@ void CTxMemPool::UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& map
                 // this sidechain spend the block CTIP, remove all deposits for
                 // this sidechain and update the mempool CTIP to the block CTIP
                 if (!fJustCheck) {
-                    RemoveSidechainDeposits(s.nSidechain, setEntries {});
+                    RemoveSidechainDeposits(s.nSidechain, {});
                     if (mapCTIP.count(s.nSidechain))
                         mapLastSidechainDeposit[s.nSidechain] = mapCTIP.at(s.nSidechain);
                 }
@@ -1221,6 +1225,55 @@ void CTxMemPool::RemoveSidechainDeposits(uint8_t nSidechain, const setEntries& s
     for (const txiter& it : txToRemove) {
         scdb.AddRemovedDeposit(it->GetTx().GetHash());
         removeIfExists(it);
+    }
+}
+
+void CTxMemPool::RemoveUnsortedSidechainDeposits(const std::map<uint8_t, SidechainCTIP>& mapCTIP, uint8_t nSidechain)
+{
+    // TODO refactor: this function should be part of / replace the
+    // UpdateCTIPFromBlock function. We are requesting and looping through the
+    // same data that has previously been requested.
+
+    // For each sidechain
+    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    for (const Sidechain& s : vSidechain) {
+        auto itNew = mapCTIP.find(s.nSidechain);
+        if (itNew == mapCTIP.end())
+            continue;
+
+        // Collect deposits to this sidechain from the mempool
+        std::vector<SidechainDeposit> vDeposit;
+        {
+            LOCK(cs);
+
+            for (indexed_transaction_set::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {
+                if (it->GetSidechainDeposit() && it->GetSidechainNumber() == nSidechain)
+                {
+                    SidechainDeposit deposit;
+                    if (!scdb.TxnToDeposit(it->GetTx(), {}, deposit)) {
+                        // If there is an invalid deposit, remove deposits for
+                        // this sidechain from the mempool.
+                        LogPrintf("%s: Removing sidechain deposits for sidechain: %u. Found invalid.\n", __func__, s.nSidechain);
+                        RemoveSidechainDeposits(s.nSidechain, {});
+                        if (mapCTIP.count(s.nSidechain))
+                            mapLastSidechainDeposit[s.nSidechain] = mapCTIP.at(s.nSidechain);
+
+                        vDeposit.clear();
+                        break;
+                    }
+                    vDeposit.push_back(deposit);
+                }
+            }
+        } // end lock
+
+        // Test sorting them
+        std::vector<SidechainDeposit> vSorted;
+        if (!SortDeposits(vDeposit, vSorted)) {
+            // If the deposits cannot be sorted, remove them
+            RemoveSidechainDeposits(s.nSidechain, {});
+            if (mapCTIP.count(s.nSidechain))
+                mapLastSidechainDeposit[s.nSidechain] = mapCTIP.at(s.nSidechain);
+        }
     }
 }
 

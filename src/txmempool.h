@@ -528,6 +528,8 @@ public:
 
     void RemoveSidechainDeposits(uint8_t nSidechain, const setEntries& setKeep);
 
+    void RemoveUnsortedSidechainDeposits(const std::map<uint8_t, SidechainCTIP>& mapCTIP, uint8_t nSidechain);
+
 private:
     typedef std::map<txiter, setEntries, CompareIteratorByHash> cacheMap;
 
