@@ -26,14 +26,13 @@ APIClient::APIClient()
 bool APIClient::IsTxReplayed(const uint256& txid)
 {
     // TODO use sendrequest instead of everything here
-    // TODO everything (loops, reads) need to be safety checked
-    // TODO needs to return false if request failed
-    // TODO return replay status by refernce
+    // TODO needs to return false if request failed and return replay status
+    // by reference
 
     try {
         // Setup BOOST ASIO for a synchronus call to the mainchain
         boost::asio::io_service io_service;
-        boost::asio::ssl::context sslContext(io_service, boost::asio::ssl::context::method::sslv23_client);
+        boost::asio::ssl::context sslContext(boost::asio::ssl::context::method::sslv23_client);
         boost::asio::ssl::stream<tcp::socket> sslSocket(io_service, sslContext);
         tcp::resolver resolver(io_service);
 
