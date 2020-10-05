@@ -62,7 +62,7 @@ bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint25
 
     // Add deposits to cache, note that this AddDeposit call will split deposits
     // by nSidechain and sort them
-    AddDeposits(vDeposit, hashBlock);
+    AddDeposits(vDepositSorted, hashBlock);
 
     return true;
 }
