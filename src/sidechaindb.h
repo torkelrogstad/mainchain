@@ -234,6 +234,10 @@ public:
     /** Spend a WT^ (if we can) */
     bool SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck = false,  bool fDebug = false);
 
+    /** Get SidechainDeposit from deposit CTransaction. Part of SCDB because
+     * we need the list of active sidechains to find deposit outputs. */
+    bool TxnToDeposit(const CTransaction& tx, const uint256& hashBlock, SidechainDeposit& deposit);
+
     /** Print SCDB WT^ verification status */
     std::string ToString() const;
 

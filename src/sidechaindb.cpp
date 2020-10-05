@@ -11,7 +11,7 @@
 #include <sidechain.h>
 #include <streams.h>
 #include <uint256.h>
-#include <util.h> // For LogPrintf TODO move LogPrintf
+#include <util.h>
 #include <utilstrencodings.h>
 
 SidechainDB::SidechainDB()
@@ -44,55 +44,12 @@ bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint25
     // be done after verifying all of the deposits
     std::vector<SidechainDeposit> vDeposit;
     for (const CTransaction& tx : vtx) {
-        // Create sidechain deposit objects from transaction outputs
-        // We loop through the transaction outputs and look for both the burn
-        // output to the sidechain scriptPubKey and the data output which has
-        // the encoded destination keyID for the sidechain.
-
         SidechainDeposit deposit;
-        bool fBurnFound = false;
-        bool fFormatChecked = false;
-        for (size_t i = 0; i < tx.vout.size(); i++) {
-            const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
-
-            uint8_t nSidechain;
-            if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
-                // We found the burn output, copy the output index & nSidechain
-                deposit.nSidechain = nSidechain;
-                deposit.n = i;
-                fBurnFound = true;
-                continue;
-            }
-
-            // Move on to looking for the encoded keyID output
-
-            if (scriptPubKey.front() != OP_RETURN)
-                continue;
-            if (scriptPubKey.size() != 22 && scriptPubKey.size() != 23)
-                continue;
-
-            CScript::const_iterator pkey = scriptPubKey.begin() + 1;
-            opcodetype opcode;
-            std::vector<unsigned char> vch;
-            if (!scriptPubKey.GetOp(pkey, opcode, vch))
-                continue;
-            if (vch.size() != sizeof(uint160))
-                continue;
-
-            CKeyID keyID = CKeyID(uint160(vch));
-            if (keyID.IsNull())
-                continue;
-
-            deposit.tx = tx;
-            deposit.keyID = keyID;
-            deposit.hashBlock = hashBlock;
-
-            fFormatChecked = true;
+        if (!TxnToDeposit(tx, hashBlock, deposit)) {
+            LogPrintf("%s: Failed to read deposit from transaction!\n", __func__);
+            return false;
         }
-        // TODO Confirm single burn & single keyID OP_RETURN output
-        if (fBurnFound && fFormatChecked && CTransaction(deposit.tx) == tx) {
-            vDeposit.push_back(deposit);
-        }
+        vDeposit.push_back(deposit);
     }
 
     // Check that deposits can be sorted
@@ -1152,6 +1109,58 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     LogPrintf("%s WT^ spent: %s for sidechain number: %u.\n", __func__, hashBlind.ToString(), nSidechain);
 
     return true;
+}
+
+bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock, SidechainDeposit& deposit)
+{
+    bool fBurnFound = false;
+    bool fFormatChecked = false;
+    for (size_t i = 0; i < tx.vout.size(); i++) {
+        const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
+
+        uint8_t nSidechain;
+        if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
+            // If we already found a burn output, more make the deposit invalid
+            if (fBurnFound) {
+                LogPrintf("%s: Invalid - multiple burn outputs.\ntxid: %s\n", __func__, tx.GetHash().ToString());
+                return false;
+            }
+
+            // We found the burn output, copy the output index & nSidechain
+            deposit.nSidechain = nSidechain;
+            deposit.n = i;
+            fBurnFound = true;
+            continue;
+        }
+
+        // Move on to looking for the encoded keyID output
+
+        if (scriptPubKey.front() != OP_RETURN)
+            continue;
+        if (scriptPubKey.size() != 22 && scriptPubKey.size() != 23)
+            continue;
+
+        CScript::const_iterator pkey = scriptPubKey.begin() + 1;
+        opcodetype opcode;
+        std::vector<unsigned char> vch;
+        if (!scriptPubKey.GetOp(pkey, opcode, vch))
+            continue;
+        if (vch.size() != sizeof(uint160))
+            continue;
+
+        CKeyID keyID = CKeyID(uint160(vch));
+        if (keyID.IsNull())
+            continue;
+
+        deposit.tx = tx;
+        deposit.keyID = keyID;
+        deposit.hashBlock = hashBlock;
+
+        fFormatChecked = true;
+
+        // TODO confirm only 1 KEYID OP_RETURN output
+    }
+    return (fBurnFound && fFormatChecked && CTransaction(deposit.tx) == tx);
 }
 
 std::string SidechainDB::ToString() const
