@@ -46,8 +46,8 @@ bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint25
     for (const CTransaction& tx : vtx) {
         SidechainDeposit deposit;
         if (!TxnToDeposit(tx, hashBlock, deposit)) {
-            LogPrintf("%s: Failed to read deposit from transaction!\n", __func__);
-            return false;
+            LogPrintf("%s: Failed to read deposit from transaction! Skipping!\n", __func__);
+            continue;
         }
         vDeposit.push_back(deposit);
     }
