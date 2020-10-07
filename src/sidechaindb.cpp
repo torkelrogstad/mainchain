@@ -41,7 +41,15 @@ void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
 bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
-    // be done after verifying all of the deposits
+    // be done after verifying all of the deposits.
+    //
+    // TODO: we are removing the validation of deposit destinations. WT^(s) also
+    // happen to use "invalid" deposit destinations for their change. The new
+    // deposit validation code detects those WT^(s) as invalid deposits. So for
+    // now we skip deposits that are seen as invalid. In the future we will make
+    // deposit validation ignore the destination script and instead check for
+    // WT^(s) here and skip them, and return false if any other deposit is
+    // invalid.
     std::vector<SidechainDeposit> vDeposit;
     for (const CTransaction& tx : vtx) {
         SidechainDeposit deposit;
@@ -52,17 +60,12 @@ bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint25
         vDeposit.push_back(deposit);
     }
 
-    // Check that deposits can be sorted
-    std::vector<SidechainDeposit> vDepositSorted;
-    if (!SortDeposits(vDeposit, vDepositSorted))
-        return false;
-
     if (fJustCheck)
         return true;
 
     // Add deposits to cache, note that this AddDeposit call will split deposits
     // by nSidechain and sort them
-    AddDeposits(vDepositSorted, hashBlock);
+    AddDeposits(vDeposit, hashBlock);
 
     return true;
 }
