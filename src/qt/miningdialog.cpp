@@ -21,6 +21,9 @@
 #include <wallet/wallet.h>
 #endif
 
+static const int POLL_DELAY = 30 * 1000; // 30 seconds
+static const int ABANDON_BMM_DELAY = 10 * 60 * 1000; // 10 minutes
+
 MiningDialog::MiningDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::MiningDialog),
@@ -34,9 +37,11 @@ MiningDialog::MiningDialog(const PlatformStyle *_platformStyle, QWidget *parent)
     miningOutputTimer = new QTimer(this);
     connect(miningOutputTimer, SIGNAL(timeout()), this, SLOT(UpdateMiningOutput()));
 
-    pollTimer->start(30 * 1000); // 30 seconds
+    abandonBMMTimer = new QTimer(this);
+    connect(abandonBMMTimer, SIGNAL(timeout()), this, SLOT(AbandonFailedBMM()));
 
-    Update();
+    pollTimer->start(POLL_DELAY);
+    abandonBMMTimer->start(ABANDON_BMM_DELAY);
 
     ui->pushButtonStopMining->setEnabled(false);
 
@@ -50,6 +55,8 @@ MiningDialog::MiningDialog(const PlatformStyle *_platformStyle, QWidget *parent)
     ui->pushButtonStartMining->setIcon(platformStyle->SingleColorIcon(":/icons/tx_mined"));
     ui->pushButtonStopMining->setIcon(platformStyle->SingleColorIcon(":/icons/quit"));
     ui->pushButtonManage->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+
+    Update();
 }
 
 MiningDialog::~MiningDialog()
@@ -62,9 +69,8 @@ void MiningDialog::AbandonFailedBMM()
     if (vpwallets.empty())
         return; // TODO error message
 
-    if (vpwallets[0]->IsLocked()) {
+    if (vpwallets[0]->IsLocked())
         return; // TODO error message
-    }
 
     std::vector<uint256> vHashRemoved;
     mempool.SelectBMMRequests(vHashRemoved);
@@ -81,7 +87,9 @@ void MiningDialog::AbandonFailedBMM()
 
     LOCK2(cs_main, vpwallets[0]->cs_wallet);
 
-    // TODO display results in a popup message
+    // TODO display results in a popup message?
+    // Maybe they should just be written somewhere to be displayed
+    // on a table or in a file later?
 
     for (const uint256& u : vHashRemoved) {
 
@@ -99,12 +107,10 @@ void MiningDialog::AbandonFailedBMM()
 //        entry.push_back(Pair("abandoned", u.ToString()));
 //        results.push_back(entry);
     }
-    scdb.ClearRemovedBMM();
-}
 
-void MiningDialog::on_pushButtonAbandonBMM_clicked()
-{
-    AbandonFailedBMM();
+    // TODO pass in list of txn that were actually removed
+    // and keep the rest in the cache
+    scdb.ClearRemovedBMM();
 }
 
 void MiningDialog::on_pushButtonStartMining_clicked()
@@ -114,8 +120,6 @@ void MiningDialog::on_pushButtonStartMining_clicked()
 
     ui->pushButtonStartMining->setEnabled(false);
     ui->pushButtonStopMining->setEnabled(true);
-
-    Update();
 
     // TODO use signals instead of making the UI update faster to
     // keep up with changes while mining.
@@ -127,6 +131,8 @@ void MiningDialog::on_pushButtonStartMining_clicked()
     ui->spinBoxThreads->setEnabled(false);
 
     ui->labelMinerOutput->setVisible(true);
+
+    Update();
 }
 
 void MiningDialog::on_pushButtonStopMining_clicked()
@@ -203,4 +209,14 @@ void MiningDialog::UpdateMiningOutput()
 void MiningDialog::on_pushButtonManage_clicked()
 {
     Q_EMIT ManagePageRequested();
+}
+
+void MiningDialog::on_checkBoxAbandonFailedBMM_toggled(bool fChecked)
+{
+    // Start / stop abandon bmm timer
+    if (fChecked) {
+        abandonBMMTimer->start(ABANDON_BMM_DELAY);
+    } else {
+        abandonBMMTimer->stop();
+    }
 }
