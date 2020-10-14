@@ -738,7 +738,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     }
 #endif
 
-    // Is sidechain build commit hash valid?
+    // Check address bytes (sha256 hash)
     std::string strSidechain = request.params[0].get_str();
     uint256 hashSidechain = uint256S(strSidechain);
     if (hashSidechain.IsNull()) {
@@ -1941,7 +1941,7 @@ static const CRPCCommand commands[] =
     /* DriveChain rpc commands (mainly used by sidechains) */
     { "DriveChain",  "createcriticaldatatx",          &createcriticaldatatx,         {"amount", "height", "criticalhash"}},
     { "DriveChain",  "listsidechainctip",             &listsidechainctip,            {"nsidechain"}},
-    { "DriveChain",  "listsidechaindeposits",         &listsidechaindeposits,        {"nsidechain", "count"}},
+    { "DriveChain",  "listsidechaindeposits",         &listsidechaindeposits,        {"addressbytes"}},
     { "DriveChain",  "countsidechaindeposits",        &countsidechaindeposits,       {"nsidechain"}},
     { "DriveChain",  "receivewtprime",                &receivewtprime,               {"nsidechain","rawtx"}},
     { "DriveChain",  "getbmmproof",                   &getbmmproof,                  {"blockhash", "criticalhash"}},
