@@ -1220,20 +1220,18 @@ std::string SidechainDB::ToString() const
     return str;
 }
 
-// TODO remove bool fResync
-
-bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug, bool fResync)
+bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
 {
     // Make a copy of SCDB to test update
     SidechainDB scdbCopy = (*this);
-    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync)) {
-        return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync);
+    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug)) {
+        return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug);
     } else {
         return false;
     }
 }
 
-bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug, bool fResync)
+bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
 {
     if (hashBlock.IsNull()) {
         if (fDebug)
@@ -1261,7 +1259,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    if (!fResync && !hashBlockLastSeen.IsNull() && hashPrevBlock != hashBlockLastSeen) {
+    if (!hashBlockLastSeen.IsNull() && hashPrevBlock != hashBlockLastSeen) {
         if (fDebug)
             LogPrintf("SCDB %s: Failed: previous block hash: %s does not match hashBlockLastSeen: %s at height: %u\n",
                     __func__,
@@ -1323,7 +1321,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
     // Scan for sidechain proposal commitments
     std::vector<SidechainProposal> vProposal;
-    if (!fResync && !fJustCheck) {
+    if (!fJustCheck) {
         for (const CTxOut& out : vout) {
             const CScript& scriptPubKey = out.scriptPubKey;
 
@@ -1348,7 +1346,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             vProposal.push_back(proposal);
         }
     }
-    if (!fJustCheck && !fResync && vProposal.size() == 1) {
+    if (!fJustCheck && vProposal.size() == 1) {
         SidechainActivationStatus status;
         status.nFail = 0;
         status.nAge = 0;
@@ -1386,19 +1384,17 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
     // Scan for sidechain activation commitments
     std::vector<uint256> vActivationHash;
-    if (!fResync) {
-        for (const CTxOut& out : vout) {
-            const CScript& scriptPubKey = out.scriptPubKey;
-            uint256 hashSidechain;
-            if (!scriptPubKey.IsSidechainActivationCommit(hashSidechain))
-                continue;
-            if (hashSidechain.IsNull())
-                continue;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+        uint256 hashSidechain;
+        if (!scriptPubKey.IsSidechainActivationCommit(hashSidechain))
+            continue;
+        if (hashSidechain.IsNull())
+            continue;
 
-            vActivationHash.push_back(hashSidechain);
-        }
+        vActivationHash.push_back(hashSidechain);
     }
-    if (!fJustCheck && !fResync)
+    if (!fJustCheck)
         UpdateActivationStatus(vActivationHash);
 
     // Scan for new WT^(s) and start tracking them
