@@ -30,7 +30,7 @@ bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockDat
 
 void SidechainDB::AddRemovedBMM(const uint256& hashRemoved)
 {
-    vRemovedBMM.push_back(hashRemoved);
+    setRemovedBMM.insert(hashRemoved);
 }
 
 void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
@@ -176,6 +176,11 @@ void SidechainDB::AddFailedWTPrimes(const std::vector<SidechainFailedWTPrime>& v
         mapFailedWTPrime[failed.hashWTPrime] = failed;
 }
 
+void SidechainDB::BMMAbandoned(const uint256& txid)
+{
+    setRemovedBMM.erase(txid);
+}
+
 void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSidechainIn)
 {
     vActiveSidechain = vActiveSidechainIn;
@@ -314,11 +319,6 @@ bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime,
     return false;
 }
 
-void SidechainDB::ClearRemovedBMM()
-{
-    vRemovedBMM.clear();
-}
-
 void SidechainDB::ClearRemovedDeposits()
 {
     vRemovedDeposit.clear();
@@ -351,9 +351,9 @@ std::vector<Sidechain> SidechainDB::GetActiveSidechains() const
     return vActiveSidechain;
 }
 
-std::vector<uint256> SidechainDB::GetRemovedBMM() const
+std::set<uint256> SidechainDB::GetRemovedBMM() const
 {
-    return vRemovedBMM;
+    return setRemovedBMM;
 }
 
 std::vector<uint256> SidechainDB::GetRemovedDeposits() const
@@ -901,6 +901,8 @@ void SidechainDB::Reset()
 
     // Clear out spent WT^ cache
     mapSpentWTPrime.clear();
+    vRemovedDeposit.clear();
+    setRemovedBMM.clear();
 }
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)

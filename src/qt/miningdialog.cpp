@@ -76,10 +76,11 @@ void MiningDialog::AbandonFailedBMM()
     mempool.SelectBMMRequests(vHashRemoved);
     mempool.RemoveExpiredCriticalRequests(vHashRemoved);
 
+    for (const uint256& u : vHashRemoved)
+        scdb.AddRemovedBMM(u);
+
     // Also try to abandon cached BMM txid previously removed from our mempool
-    std::vector<uint256> vCached = scdb.GetRemovedBMM();
-    vHashRemoved.reserve(vCached.size());
-    vHashRemoved.insert(vHashRemoved.end(), vCached.begin(), vCached.end());
+    std::set<uint256> setRemoved = scdb.GetRemovedBMM();
 
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
@@ -91,7 +92,7 @@ void MiningDialog::AbandonFailedBMM()
     // Maybe they should just be written somewhere to be displayed
     // on a table or in a file later?
 
-    for (const uint256& u : vHashRemoved) {
+    for (const uint256& u : setRemoved) {
 
         if (!vpwallets[0]->mapWallet.count(u)) {
 //            entry.push_back(Pair("not-in-wallet", u.ToString()));
@@ -106,11 +107,9 @@ void MiningDialog::AbandonFailedBMM()
         }
 //        entry.push_back(Pair("abandoned", u.ToString()));
 //        results.push_back(entry);
+        // Remove from cache after abandonment
+        scdb.BMMAbandoned(u);
     }
-
-    // TODO pass in list of txn that were actually removed
-    // and keep the rest in the cache
-    scdb.ClearRemovedBMM();
 }
 
 void MiningDialog::on_pushButtonStartMining_clicked()
