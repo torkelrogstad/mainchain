@@ -901,6 +901,10 @@ void SidechainDB::Reset()
 
     // Clear out spent WT^ cache
     mapSpentWTPrime.clear();
+
+    // Clear out failed WT^ cache
+    mapFailedWTPrime.clear();
+
     vRemovedDeposit.clear();
     setRemovedBMM.clear();
 }
