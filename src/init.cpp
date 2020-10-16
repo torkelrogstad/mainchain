@@ -1674,7 +1674,8 @@ bool AppInitMain()
                     // was created by the user and is not in any block
                     if (!LoadSidechainProposalCache() ||
                             !LoadSidechainActivationHashCache() ||
-                            !LoadCustomVoteCache())
+                            !LoadCustomVoteCache() ||
+                            !LoadBMMCache())
                     {
                         std::string strError = "Error loading users vote data!\n\n";
                         strError += "Failed to read sidechain & WT^ custom vote settings!";
