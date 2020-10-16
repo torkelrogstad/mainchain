@@ -572,6 +572,12 @@ bool LoadSidechainActivationHashCache();
 /* Dump sidechain activation hash cache */
 void DumpSidechainActivationHashCache();
 
+/* Load list of failed BMM txid from cache */
+bool LoadBMMCache();
+
+/* Write list of failed BMM txid */
+void DumpBMMCache();
+
 /** Tracks validation status of sidechain WT^(s) */
 extern SidechainDB scdb;
 

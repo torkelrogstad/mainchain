@@ -7,7 +7,7 @@
 
 #include <map>
 #include <memory> // Required for forward declaration of CTransactionRef typedef
-#include <queue>
+#include <set>
 #include <vector>
 
 #include <amount.h>
@@ -49,7 +49,7 @@ public:
 
     bool ApplyLDBData(const uint256& hashBlockLastSeen, const SidechainBlockData& data);
 
-    /** Add txid of removed BMM transaction */
+    /** Add txid of BMM transaction removed from mempool to cache */
     void AddRemovedBMM(const uint256& hashRemoved);
 
     /** Add txid of removed sidechain deposit transaction */
@@ -69,6 +69,9 @@ public:
 
     /** Add failed WT^(s) to SCDB */
     void AddFailedWTPrimes(const std::vector<SidechainFailedWTPrime>& vFailed);
+
+    /** Remove failed BMM request from cache once it has been abandoned */
+    void BMMAbandoned(const uint256& txid);
 
     /** Add active sidechains to the in-memory cache */
     void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
@@ -91,9 +94,6 @@ public:
     /** Check SCDB WT^ verification status */
     bool CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime, bool fDebug = false) const;
 
-    /** Clear out the cached list of removed BMM transactions */
-    void ClearRemovedBMM();
-
     /** Clear out the cached list of removed sidechain deposit transactions */
     void ClearRemovedDeposits();
 
@@ -108,7 +108,7 @@ public:
     std::vector<Sidechain> GetActiveSidechains() const;
 
     /** Get list of BMM txid that miner removed from the mempool. */
-    std::vector<uint256> GetRemovedBMM() const;
+    std::set<uint256> GetRemovedBMM() const;
 
     /** Get list of deposit txid that were removed from the mempool. */
     std::vector<uint256> GetRemovedDeposits() const;
@@ -234,11 +234,15 @@ public:
     /** Spend a WT^ (if we can) */
     bool SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck = false,  bool fDebug = false);
 
+    /** Get SidechainDeposit from deposit CTransaction. Part of SCDB because
+     * we need the list of active sidechains to find deposit outputs. */
+    bool TxnToDeposit(const CTransaction& tx, const uint256& hashBlock, SidechainDeposit& deposit);
+
     /** Print SCDB WT^ verification status */
     std::string ToString() const;
 
     /** Check the updates in a block and then apply them */
-    bool Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false, bool fResync = false);
+    bool Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false);
 
     /** Undo the changes to SCDB of a block - for block is disconnection */
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
@@ -258,7 +262,7 @@ private:
     void ApplyDefaultUpdate();
 
     /** Apply the changes in a block to SCDB */
-    bool ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false, bool fResync = false);
+    bool ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false);
 
     /** Takes a list of sidechain hashes to upvote */
     void UpdateActivationStatus(const std::vector<uint256>& vHash);
@@ -310,10 +314,8 @@ private:
     /** Map of failed WT^(s) key: WT^ hash value: Spent WT^ data **/
     std::map<uint256, SidechainFailedWTPrime> mapFailedWTPrime;
 
-    /** List of BMM request txid that the miner removed from the mempool.
-     * TODO: Change to a map and erase elements once they are abandoned.
-     * TODO: Persist on disk */
-    std::vector<uint256> vRemovedBMM;
+    /** List of BMM request txid that the miner removed from the mempool. */
+    std::set<uint256> setRemovedBMM;
 
     /** List of sidechain deposits that were removed from the mempool for one
      * of a few reasons. The deposit could have been replaced by another deposit

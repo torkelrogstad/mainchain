@@ -1411,15 +1411,36 @@ bool AppInitMain()
     }
 
     // ********************************************************* Step 7: load caches
-    uiInterface.InitMessage(_("Loading active sidechain & deposit cache..."));
     fReindex = gArgs.GetBoolArg("-reindex", false);
 
     bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
 
+    std::string strFailSCDAT;
+    strFailSCDAT = "Failed to load sidechain database files!\n";
+    strFailSCDAT += "They may corrupt or need to be updated.\n";
+    strFailSCDAT += "\n";
+    strFailSCDAT += "Reindex now to fix errors?\n";
+
     // TODO remove
     if (!fReindex && drivechainsEnabled) {
-        LoadActiveSidechainCache();
-        LoadDepositCache();
+        uiInterface.InitMessage(_("Loading active sidechain & deposit cache..."));
+
+        if (!LoadActiveSidechainCache() || !LoadDepositCache()) {
+            // Ask to reindex to fix issue loading DAT
+            bool fRet = uiInterface.ThreadSafeQuestion(
+                strFailSCDAT,
+                "Failed to load sidechain database files. Reindex?",
+                "Failed to load sidechain databae files. Reindex?",
+                CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
+            if (fRet) {
+                scdb.Reset();
+                fReindex = true;
+                fRequestShutdown = false;
+            } else {
+                LogPrintf("Aborted reindex. Exiting.\n");
+                return InitError("Aborted reindex. Exiting.\n");
+            }
+        }
     }
 
     // ********************************************************* Step 8: load block chain
@@ -1447,6 +1468,7 @@ bool AppInitMain()
     LogPrintf("* Using %.1fMiB for chain state database\n", nCoinDBCache * (1.0 / 1024 / 1024));
     LogPrintf("* Using %.1fMiB for in-memory UTXO set (plus up to %.1fMiB of unused mempool space)\n", nCoinCacheUsage * (1.0 / 1024 / 1024), nMempoolSizeMax * (1.0 / 1024 / 1024));
 
+    // TODO refactor this section so that the code is less indendented
     bool fLoaded = false;
     while (!fLoaded && !fRequestShutdown) {
         bool fReset = fReindex;
@@ -1581,6 +1603,88 @@ bool AppInitMain()
                         break;
                     }
                 }
+
+                // TODO remove / refactor.
+                // In order to pass the VerifyDB check above, we need to have loaded the
+                // currently active sidechains and sidechain CTIP info.
+                // After verifydb it will be in an invalid state though, so reload it.
+                // Once SCDB undo is fully supported we can remove this
+
+                if (drivechainsEnabled) {
+                    scdb.Reset();
+                    // Note that LoadActiveSidechainCache will resize deposit and WT^ cache
+                    // vectors of SCDB so it must be done before loading deposits or WT^(s)
+                    if (!fReset && (!LoadActiveSidechainCache() || !LoadWTPrimeCache(fReindex))) {
+                        // Ask to reindex to fix issue loading DAT
+                        bool fRet = uiInterface.ThreadSafeQuestion(
+                            strFailSCDAT,
+                            "Failed to load sidechain database files. Reindex?",
+                            "Failed to load sidechain databae files. Reindex?",
+                            CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
+                        if (fRet) {
+                            scdb.Reset();
+                            fReindex = true;
+                            fRequestShutdown = false;
+                            strLoadError = _("Error reading sidechain database files.");
+                            break;
+                        } else {
+                            LogPrintf("Aborted reindex. Exiting.\n");
+                            return InitError("Aborted reindex. Exiting.\n");
+                        }
+                    }
+                }
+
+                // Synchronize SCDB
+                if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
+                {
+                    uiInterface.InitMessage(_("Synchronizing sidechain database..."));
+                    if (!ResyncSCDB(chainActive.Tip())) {
+                        LogPrintf("%s: Error: Failed to initialize SCDB\n", __func__);
+                        scdb.Reset();
+                        fReindex = true;
+                        fRequestShutdown = false;
+                        strLoadError = _("Failed to initialize SCDB.");
+                        break;
+                    }
+                }
+
+                if (drivechainsEnabled && !fReindex) {
+                    if (!LoadSidechainActivationStatusCache() || !LoadDepositCache()) {
+                        // Ask to reindex to fix issue loading DAT
+                        bool fRet = uiInterface.ThreadSafeQuestion(
+                            strFailSCDAT,
+                            "Failed to load sidechain database files. Reindex?",
+                            "Failed to load sidechain databae files. Reindex?",
+                            CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
+                        if (fRet) {
+                            scdb.Reset();
+                            fReindex = true;
+                            fRequestShutdown = false;
+                            strLoadError = _("Error reading sidechain database files.");
+                            break;
+                        } else {
+                            LogPrintf("Aborted reindex. Exiting.\n");
+                            return InitError("Aborted reindex. Exiting.\n");
+                        }
+                    }
+                }
+
+                if (drivechainsEnabled) {
+                    // We want to read the user's data even if reindexing - this data
+                    // was created by the user and is not in any block
+                    if (!LoadSidechainProposalCache() ||
+                            !LoadSidechainActivationHashCache() ||
+                            !LoadCustomVoteCache() ||
+                            !LoadBMMCache())
+                    {
+                        std::string strError = "Error loading users vote data!\n\n";
+                        strError += "Failed to read sidechain & WT^ custom vote settings!";
+                        strError += "\n\n";
+                        strError += "You may need to re-set any vote settings you have made.";
+                        uiInterface.ThreadSafeMessageBox(_(strError.c_str()), "", CClientUIInterface::MSG_ERROR);
+                        LogPrintf("Error reading custom vote cache.\n");
+                    }
+                }
             } catch (const std::exception& e) {
                 LogPrintf("%s\n", e.what());
                 strLoadError = _("Error opening block database");
@@ -1610,31 +1714,6 @@ bool AppInitMain()
         }
     }
 
-    // TODO remove / refactor.
-    // In order to pass the VerifyDB check above, we need to have loaded the
-    // currently active sidechains and sidechain CTIP info.
-    // After verifydb it will be in an invalid state though, so reload it.
-    // Once SCDB undo is fully supported we can remove this
-
-    if (drivechainsEnabled) {
-        scdb.Reset();
-        // Note that LoadActiveSidechainCache will resize deposit and WT^ cache
-        // vectors of SCDB so it must be done before loading deposits or WT^(s)
-        LoadActiveSidechainCache();
-        LoadWTPrimeCache(fReindex);
-    }
-
-    // Synchronize SCDB
-    if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
-    {
-        // TODO suggest reindex if fails
-        uiInterface.InitMessage(_("Synchronizing sidechain database..."));
-        if (!ResyncSCDB(chainActive.Tip())) {
-            LogPrintf("%s: Error: Failed to initialize SCDB\n", __func__);
-            return InitError("Failed to initialize SCDB. See log for details.\n");
-        }
-    }
-
     // As LoadBlockIndex can take several minutes, it's possible the user
     // requested to kill the GUI during the last operation. If so, exit.
     // As the program has not fully started yet, Shutdown() is possibly overkill.
@@ -1654,19 +1733,6 @@ bool AppInitMain()
         ::feeEstimator.Read(est_filein);
     fFeeEstimatesInitialized = true;
 
-    if (drivechainsEnabled) {
-        // If we're reindexing we don't want to read data that exists in blocks
-        if (!fReindex) {
-            LoadSidechainActivationStatusCache(); // Sidechain activation status
-            LoadDepositCache(); // Sidechain deposit cache
-        }
-
-        // We want to read the user's data even if reindexing - this data
-        // was created by the user and is not in any block
-        LoadSidechainProposalCache(); // Sidechain proposals we have created
-        LoadSidechainActivationHashCache(); // Sidechain hashes we want to ack
-        LoadCustomVoteCache(); // Custom WT^ votes set by user
-    }
 
     // ********************************************************* Step 9: load wallet
 #ifdef ENABLE_WALLET
@@ -1721,6 +1787,10 @@ bool AppInitMain()
     std::vector<fs::path> vImportFiles;
     for (const std::string& strFile : gArgs.GetArgs("-loadblock")) {
         vImportFiles.push_back(strFile);
+    }
+
+    if (fReindex) {
+        scdb.Reset();
     }
 
     // Import blocks: load external block files if reindexing or bootstrap.dat

@@ -26,18 +26,15 @@ public:
     ~MiningDialog();
 
 public Q_SLOTS:
-    void on_pushButtonAbandonBMM_clicked();
-
     void on_pushButtonStartMining_clicked();
-
     void on_pushButtonStopMining_clicked();
-
     void on_pushButtonManage_clicked();
+    void on_checkBoxAbandonFailedBMM_toggled(bool fChecked);
 
 private Q_SLOTS:
     void Update();
-
     void UpdateMiningOutput();
+    void AbandonFailedBMM();
 
 Q_SIGNALS:
     void ManagePageRequested();
@@ -45,10 +42,9 @@ Q_SIGNALS:
 private:
     Ui::MiningDialog *ui;
 
-    void AbandonFailedBMM();
-
     QTimer* pollTimer;
     QTimer* miningOutputTimer;
+    QTimer* abandonBMMTimer;
 
     const PlatformStyle *platformStyle;
 };

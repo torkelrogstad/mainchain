@@ -2258,10 +2258,11 @@ UniValue abandonbmm(const JSONRPCRequest& request)
     mempool.SelectBMMRequests(vHashRemoved);
     mempool.RemoveExpiredCriticalRequests(vHashRemoved);
 
+    for (const uint256& u : vHashRemoved)
+        scdb.AddRemovedBMM(u);
+
     // Also try to abandon cached BMM txid previously removed from our mempool
-    std::vector<uint256> vCached = scdb.GetRemovedBMM();
-    vHashRemoved.reserve(vCached.size());
-    vHashRemoved.insert(vHashRemoved.end(), vCached.begin(), vCached.end());
+    std::set<uint256> setRemoved = scdb.GetRemovedBMM();
 
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
@@ -2270,7 +2271,7 @@ UniValue abandonbmm(const JSONRPCRequest& request)
     LOCK2(cs_main, pwallet->cs_wallet);
 
     UniValue results(UniValue::VARR);
-    for (const uint256& u : vHashRemoved) {
+    for (const uint256& u : setRemoved) {
         UniValue entry(UniValue::VOBJ);
 
         if (!pwallet->mapWallet.count(u)) {
@@ -2284,10 +2285,12 @@ UniValue abandonbmm(const JSONRPCRequest& request)
             results.push_back(entry);
             continue;
         }
+
+        // Remove from the cache after abandonment
+        scdb.BMMAbandoned(u);
         entry.push_back(Pair("abandoned", u.ToString()));
         results.push_back(entry);
     }
-    scdb.ClearRemovedBMM();
 
     return results;
 }

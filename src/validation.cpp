@@ -159,7 +159,7 @@ public:
     bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock);
 
     bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex);
-    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock);
+    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested,  const CDiskBlockPos* dbp, bool* fNewBlock, bool fFromDisk = false);
 
     // Block (dis)connection on a given view:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view);
@@ -3782,7 +3782,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
  *  in ConnectBlock().
  *  Note that -reindex-chainstate skips the validation that happens here!
  */
-static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
+static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev, bool fFromDisk = false)
 {
     const int nHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
 
@@ -3867,7 +3867,6 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         // Track existence of BMM h* commit requests per sidechain
         std::vector<bool> vSidechainBMM;
         vSidechainBMM.resize(scdb.GetActiveSidechainCount());
-
         for (const auto& tx: block.vtx) {
             // Look for transactions with non-null CCriticalData
             if (!tx->criticalData.IsNull()) {
@@ -3895,11 +3894,13 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
                 if (!fFound)
                     return state.DoS(100, false, REJECT_INVALID, "bad-critical-data-no-commit", true, strprintf("%s : no commit found for critical data", __func__));
 
-                // Enforce 1 BMM h* per sidechain per block
+                // Enforce 1 BMM h* per sidechain per block & validate BMM txns.
+                // When loading a block from disk we skip this step as we may be
+                // reindexing and SCDB will not be up to date yet.
                 uint8_t nSidechain;
                 uint16_t nPrevBlockRef;
                 std::string strPrevBlock = "";
-                if (tx->criticalData.IsBMMRequest(nSidechain, nPrevBlockRef, strPrevBlock)) {
+                if (!fFromDisk && tx->criticalData.IsBMMRequest(nSidechain, nPrevBlockRef, strPrevBlock)) {
                     if (nSidechain >= vSidechainBMM.size()) {
                         return state.DoS(100, false, REJECT_INVALID,
                                 "bad-critical-bmm-nsidechain-invalid", true,
@@ -4020,7 +4021,7 @@ static CDiskBlockPos SaveBlockToDisk(const CBlock& block, int nHeight, const CCh
 }
 
 /** Store block on disk. If dbp is non-nullptr, the file is known to already reside on disk */
-bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock)
+bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock, bool fFromDisk)
 {
     const CBlock& block = *pblock;
 
@@ -4067,7 +4068,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     if (fNewBlock) *fNewBlock = true;
 
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
-        !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
+        !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev, fFromDisk)) {
         if (state.IsInvalid() && !state.CorruptionPossible()) {
             pindex->nStatus |= BLOCK_FAILED_VALID;
             setDirtyBlockIndex.insert(pindex);
@@ -4965,7 +4966,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                 if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) {
                     LOCK(cs_main);
                     CValidationState state;
-                    if (g_chainstate.AcceptBlock(pblock, state, chainparams, nullptr, true, dbp, nullptr))
+                    if (g_chainstate.AcceptBlock(pblock, state, chainparams, nullptr, true, dbp, nullptr, true /* fFromDisk */))
                         nLoaded++;
                     if (state.IsError())
                         break;
@@ -4999,7 +5000,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                                     head.ToString());
                             LOCK(cs_main);
                             CValidationState dummy;
-                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr))
+                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr, true /* fFromDisk */))
                             {
                                 nLoaded++;
                                 queue.push_back(pblockrecursive->GetHash());
@@ -5363,20 +5364,21 @@ bool DumpMempool(void)
     return true;
 }
 
+static const uint64_t SCDB_DUMP_VERSION = 1;
+
 bool LoadCustomVoteCache()
 {
     fs::path path = GetDataDir() / "drivechain" / "customvotes.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
-        return false;
+        return true;
     }
 
     std::vector<SidechainCustomVote> vCustomVote;
     try {
-        int nVersionRequired, nVersionThatWrote;
-        filein >> nVersionRequired;
-        filein >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION) {
+        int64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
             return false;
         }
 
@@ -5415,8 +5417,7 @@ void DumpCustomVoteCache()
     }
 
     try {
-        fileout << 210000; // version required to read: 0.21.00 or later
-        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of deposits in file
 
         for (const SidechainCustomVote& v : vCustomVote) {
@@ -5434,15 +5435,14 @@ bool LoadDepositCache()
     fs::path path = GetDataDir() / "drivechain" / "deposit.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
-        return false;
+        return true;
     }
 
     std::vector<SidechainDeposit> vDeposit;
     try {
-        int nVersionRequired, nVersionThatWrote;
-        filein >> nVersionRequired;
-        filein >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION) {
+        uint64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
             return false;
         }
 
@@ -5487,8 +5487,7 @@ void DumpDepositCache()
     }
 
     try {
-        fileout << 210000; // version required to read: 0.21.00 or later
-        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of deposits in file
 
         for (const SidechainDeposit& d : vDeposit) {
@@ -5506,33 +5505,27 @@ bool LoadWTPrimeCache(bool fReindex)
     fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
-        return false;
+        return true;
     }
 
     std::vector<std::pair<uint8_t, CTransactionRef>> vWTPrime;
     std::vector<SidechainSpentWTPrime> vSpent;
     std::vector<SidechainFailedWTPrime> vFailed;
     try {
-        int nVersionRequired, nVersionThatWrote;
-        filein >> nVersionRequired;
-        filein >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION) {
+        uint64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
             return false;
         }
 
-        // If we're loading an old version of the WT^ cache we will skip it
-        // and write new data at shut down
-        if (!(nVersionRequired < CLIENT_VERSION))
-        {
-            int nWT = 0;
-            filein >> nWT;
-            for (int i = 0; i < nWT; i++) {
-                uint8_t nSidechain = 0;
-                filein >> nSidechain;
-                CTransactionRef tx;
-                filein >> tx;
-                vWTPrime.push_back(std::make_pair(nSidechain, tx));
-            }
+        int nWT = 0;
+        filein >> nWT;
+        for (int i = 0; i < nWT; i++) {
+            uint8_t nSidechain = 0;
+            filein >> nSidechain;
+            CTransactionRef tx;
+            filein >> tx;
+            vWTPrime.push_back(std::make_pair(nSidechain, tx));
         }
 
         if (!fReindex) {
@@ -5591,8 +5584,7 @@ void DumpWTPrimeCache()
     }
 
     try {
-        fileout << 340100; // version required to read: 0.34.01 or later
-        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << SCDB_DUMP_VERSION; // version required to read
 
         fileout << nWTPrime; // Number of WT^(s) in file
         for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrime) {
@@ -5621,15 +5613,14 @@ bool LoadSidechainActivationStatusCache()
     fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
-        return false;
+        return true;
     }
 
     std::vector<SidechainActivationStatus> vActivationStatus;
     try {
-        int nVersionRequired, nVersionThatWrote;
-        filein >> nVersionRequired;
-        filein >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION) {
+        uint64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
             return false;
         }
 
@@ -5667,8 +5658,7 @@ void DumpSidechainActivationStatusCache()
     }
 
     try {
-        fileout << 210000; // version required to read: 0.21.00 or later
-        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of sidechains in file
 
         for (const SidechainActivationStatus& s : vActivationStatus) {
@@ -5686,15 +5676,14 @@ bool LoadActiveSidechainCache()
     fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
-        return false;
+        return true;
     }
 
     std::vector<Sidechain> vSidechain;
     try {
-        int nVersionRequired, nVersionThatWrote;
-        filein >> nVersionRequired;
-        filein >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION) {
+        uint64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
             return false;
         }
 
@@ -5731,8 +5720,7 @@ void DumpActiveSidechainCache()
     }
 
     try {
-        fileout << 210000; // version required to read: 0.21.00 or later
-        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of sidechains in file
 
         for (const Sidechain& s : vSidechain) {
@@ -5741,7 +5729,68 @@ void DumpActiveSidechainCache()
     }
     catch (const std::exception& e) {
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
+    }
+}
+
+bool LoadBMMCache()
+{
+    fs::path path = GetDataDir() / "drivechain" / "bmm.dat";
+    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull()) {
+        return true;
+    }
+
+    std::set<uint256> setRemovedBMM;
+    try {
+        uint64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
+            return false;
+        }
+
+        int count = 0;
+        filein >> count;
+        for (int i = 0; i < count; i++) {
+            uint256 txid;
+            filein >> txid;
+            setRemovedBMM.insert(txid);
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Exception: %s\n", __func__, e.what());
+        return false;
+    }
+
+    // TODO add a function to take in the whole set
+    for (const uint256& u : setRemovedBMM)
+        scdb.AddRemovedBMM(u);
+
+    return true;
+}
+
+void DumpBMMCache()
+{
+    std::set<uint256> setRemovedBMM = scdb.GetRemovedBMM();
+
+    int count = setRemovedBMM.size();
+
+    // Write the sidechain activation status cache
+    fs::path path = GetDataDir() / "drivechain" / "bmm.dat";
+    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    if (fileout.IsNull()) {
         return;
+    }
+
+    try {
+        fileout << SCDB_DUMP_VERSION; // version required to read
+        fileout << count; // Number of txid in file
+
+        for (const uint256& u : setRemovedBMM) {
+            fileout << u;
+        }
+    }
+    catch (const std::exception& e) {
+        LogPrintf("%s: Exception: %s\n", __func__, e.what());
     }
 }
 
@@ -5750,15 +5799,14 @@ bool LoadSidechainProposalCache()
     fs::path path = GetDataDir() / "drivechain" / "sidechainproposals.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
-        return false;
+        return true;
     }
 
     std::vector<SidechainProposal> vProposal;
     try {
-        int nVersionRequired, nVersionThatWrote;
-        filein >> nVersionRequired;
-        filein >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION) {
+        uint64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
             return false;
         }
 
@@ -5795,8 +5843,7 @@ void DumpSidechainProposalCache()
     }
 
     try {
-        fileout << 210000; // version required to read: 0.21.00 or later
-        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of proposals in file
 
         for (const SidechainProposal& s : vProposal) {
@@ -5805,7 +5852,6 @@ void DumpSidechainProposalCache()
     }
     catch (const std::exception& e) {
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
-        return;
     }
 }
 
@@ -5814,15 +5860,14 @@ bool LoadSidechainActivationHashCache()
     fs::path path = GetDataDir() / "drivechain" / "sidechainhashactivate.dat";
     CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
-        return false;
+        return true;
     }
 
     std::vector<uint256> vHash;
     try {
-        int nVersionRequired, nVersionThatWrote;
-        filein >> nVersionRequired;
-        filein >> nVersionThatWrote;
-        if (nVersionRequired > CLIENT_VERSION) {
+        uint64_t nVersion;
+        filein >> nVersion;
+        if (nVersion != SCDB_DUMP_VERSION) {
             return false;
         }
 
@@ -5860,8 +5905,7 @@ void DumpSidechainActivationHashCache()
     }
 
     try {
-        fileout << 210000; // version required to read: 0.21.00 or later
-        fileout << CLIENT_VERSION; // version that wrote the file
+        fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of hashes in file
 
         for (const uint256& u : vHash) {
@@ -5870,7 +5914,6 @@ void DumpSidechainActivationHashCache()
     }
     catch (const std::exception& e) {
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
-        return;
     }
 }
 
@@ -5964,6 +6007,7 @@ void DumpSCDBCache()
     DumpActiveSidechainCache();
     DumpSidechainProposalCache();
     DumpSidechainActivationHashCache();
+    DumpBMMCache();
 }
 
 bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect)

@@ -738,7 +738,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     }
 #endif
 
-    // Is sidechain build commit hash valid?
+    // Check address bytes (sha256 hash)
     std::string strSidechain = request.params[0].get_str();
     uint256 hashSidechain = uint256S(strSidechain);
     if (hashSidechain.IsNull()) {
@@ -1896,6 +1896,32 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
     return ret;
 }
 
+UniValue listfailedbmm(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "listfailedbmm\n"
+            "Print the list of failed BMM transactions yet to be abandoned.\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"txid\" : (string) Failed BMM txid.\n"
+            "}\n"
+            "\n"
+            "\nExample:\n"
+            + HelpExampleCli("listfailedbmm", "")
+            );
+
+    std::set<uint256> setTxid = scdb.GetRemovedBMM();
+
+    UniValue ret(UniValue::VARR);
+    for (const uint256& u : setTxid) {
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("txid", u.ToString()));
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
 UniValue echo(const JSONRPCRequest& request)
 {
     if (request.fHelp)
@@ -1937,11 +1963,11 @@ static const CRPCCommand commands[] =
     { "hidden",             "echojson",               &echo,                   {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},
     { "hidden",             "getinfo",                &getinfo_deprecated,     {}},
 
-    // TODO improve & shorten names
+    // TODO improve & shorten name. Sort alphabetically
     /* DriveChain rpc commands (mainly used by sidechains) */
     { "DriveChain",  "createcriticaldatatx",          &createcriticaldatatx,         {"amount", "height", "criticalhash"}},
     { "DriveChain",  "listsidechainctip",             &listsidechainctip,            {"nsidechain"}},
-    { "DriveChain",  "listsidechaindeposits",         &listsidechaindeposits,        {"nsidechain", "count"}},
+    { "DriveChain",  "listsidechaindeposits",         &listsidechaindeposits,        {"addressbytes"}},
     { "DriveChain",  "countsidechaindeposits",        &countsidechaindeposits,       {"nsidechain"}},
     { "DriveChain",  "receivewtprime",                &receivewtprime,               {"nsidechain","rawtx"}},
     { "DriveChain",  "getbmmproof",                   &getbmmproof,                  {"blockhash", "criticalhash"}},
@@ -1965,6 +1991,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "getscdbhash",                   &getscdbhash,                  {}},
     { "DriveChain",  "gettotalscdbhash",              &gettotalscdbhash,             {}},
     { "DriveChain",  "getscdbdataforblock",           &getscdbdataforblock,          {"blockhash"}},
+    { "DriveChain",  "listfailedbmm",                 &listfailedbmm,                {}},
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)

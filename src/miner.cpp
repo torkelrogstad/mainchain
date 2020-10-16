@@ -833,6 +833,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
 
     while (mi != mempool.mapTx.get<ancestor_score>().end() || !mapModifiedTx.empty())
     {
+        // Don't add deposits to the same block as a WT^ for this sidechain
         if (mi->GetSidechainDeposit() &&
                 setSidechainsWithWTPrime.count(mi->GetSidechainNumber())) {
             ++mi;

@@ -11,7 +11,7 @@
 #include <sidechain.h>
 #include <streams.h>
 #include <uint256.h>
-#include <util.h> // For LogPrintf TODO move LogPrintf
+#include <util.h>
 #include <utilstrencodings.h>
 
 SidechainDB::SidechainDB()
@@ -30,7 +30,7 @@ bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockDat
 
 void SidechainDB::AddRemovedBMM(const uint256& hashRemoved)
 {
-    vRemovedBMM.push_back(hashRemoved);
+    setRemovedBMM.insert(hashRemoved);
 }
 
 void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
@@ -41,64 +41,24 @@ void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
 bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
-    // be done after verifying all of the deposits
+    // be done after verifying all of the deposits.
+    //
+    // TODO: we are removing the validation of deposit destinations. WT^(s) also
+    // happen to use "invalid" deposit destinations for their change. The new
+    // deposit validation code detects those WT^(s) as invalid deposits. So for
+    // now we skip deposits that are seen as invalid. In the future we will make
+    // deposit validation ignore the destination script and instead check for
+    // WT^(s) here and skip them, and return false if any other deposit is
+    // invalid.
     std::vector<SidechainDeposit> vDeposit;
     for (const CTransaction& tx : vtx) {
-        // Create sidechain deposit objects from transaction outputs
-        // We loop through the transaction outputs and look for both the burn
-        // output to the sidechain scriptPubKey and the data output which has
-        // the encoded destination keyID for the sidechain.
-
         SidechainDeposit deposit;
-        bool fBurnFound = false;
-        bool fFormatChecked = false;
-        for (size_t i = 0; i < tx.vout.size(); i++) {
-            const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
-
-            uint8_t nSidechain;
-            if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
-                // We found the burn output, copy the output index & nSidechain
-                deposit.nSidechain = nSidechain;
-                deposit.n = i;
-                fBurnFound = true;
-                continue;
-            }
-
-            // Move on to looking for the encoded keyID output
-
-            if (scriptPubKey.front() != OP_RETURN)
-                continue;
-            if (scriptPubKey.size() != 22 && scriptPubKey.size() != 23)
-                continue;
-
-            CScript::const_iterator pkey = scriptPubKey.begin() + 1;
-            opcodetype opcode;
-            std::vector<unsigned char> vch;
-            if (!scriptPubKey.GetOp(pkey, opcode, vch))
-                continue;
-            if (vch.size() != sizeof(uint160))
-                continue;
-
-            CKeyID keyID = CKeyID(uint160(vch));
-            if (keyID.IsNull())
-                continue;
-
-            deposit.tx = tx;
-            deposit.keyID = keyID;
-            deposit.hashBlock = hashBlock;
-
-            fFormatChecked = true;
+        if (!TxnToDeposit(tx, hashBlock, deposit)) {
+            LogPrintf("%s: Failed to read deposit from transaction! Skipping!\n", __func__);
+            continue;
         }
-        // TODO Confirm single burn & single keyID OP_RETURN output
-        if (fBurnFound && fFormatChecked && CTransaction(deposit.tx) == tx) {
-            vDeposit.push_back(deposit);
-        }
+        vDeposit.push_back(deposit);
     }
-
-    // Check that deposits can be sorted
-    std::vector<SidechainDeposit> vDepositSorted;
-    if (!SortDeposits(vDeposit, vDepositSorted))
-        return false;
 
     if (fJustCheck)
         return true;
@@ -214,6 +174,11 @@ void SidechainDB::AddFailedWTPrimes(const std::vector<SidechainFailedWTPrime>& v
 
     for (const SidechainFailedWTPrime& failed : vFailed)
         mapFailedWTPrime[failed.hashWTPrime] = failed;
+}
+
+void SidechainDB::BMMAbandoned(const uint256& txid)
+{
+    setRemovedBMM.erase(txid);
 }
 
 void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSidechainIn)
@@ -354,11 +319,6 @@ bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime,
     return false;
 }
 
-void SidechainDB::ClearRemovedBMM()
-{
-    vRemovedBMM.clear();
-}
-
 void SidechainDB::ClearRemovedDeposits()
 {
     vRemovedDeposit.clear();
@@ -391,9 +351,9 @@ std::vector<Sidechain> SidechainDB::GetActiveSidechains() const
     return vActiveSidechain;
 }
 
-std::vector<uint256> SidechainDB::GetRemovedBMM() const
+std::set<uint256> SidechainDB::GetRemovedBMM() const
 {
-    return vRemovedBMM;
+    return setRemovedBMM;
 }
 
 std::vector<uint256> SidechainDB::GetRemovedDeposits() const
@@ -941,6 +901,12 @@ void SidechainDB::Reset()
 
     // Clear out spent WT^ cache
     mapSpentWTPrime.clear();
+
+    // Clear out failed WT^ cache
+    mapFailedWTPrime.clear();
+
+    vRemovedDeposit.clear();
+    setRemovedBMM.clear();
 }
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)
@@ -1154,6 +1120,58 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     return true;
 }
 
+bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock, SidechainDeposit& deposit)
+{
+    bool fBurnFound = false;
+    bool fFormatChecked = false;
+    for (size_t i = 0; i < tx.vout.size(); i++) {
+        const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
+
+        uint8_t nSidechain;
+        if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
+            // If we already found a burn output, more make the deposit invalid
+            if (fBurnFound) {
+                LogPrintf("%s: Invalid - multiple burn outputs.\ntxid: %s\n", __func__, tx.GetHash().ToString());
+                return false;
+            }
+
+            // We found the burn output, copy the output index & nSidechain
+            deposit.nSidechain = nSidechain;
+            deposit.n = i;
+            fBurnFound = true;
+            continue;
+        }
+
+        // Move on to looking for the encoded keyID output
+
+        if (scriptPubKey.front() != OP_RETURN)
+            continue;
+        if (scriptPubKey.size() != 22 && scriptPubKey.size() != 23)
+            continue;
+
+        CScript::const_iterator pkey = scriptPubKey.begin() + 1;
+        opcodetype opcode;
+        std::vector<unsigned char> vch;
+        if (!scriptPubKey.GetOp(pkey, opcode, vch))
+            continue;
+        if (vch.size() != sizeof(uint160))
+            continue;
+
+        CKeyID keyID = CKeyID(uint160(vch));
+        if (keyID.IsNull())
+            continue;
+
+        deposit.tx = tx;
+        deposit.keyID = keyID;
+        deposit.hashBlock = hashBlock;
+
+        fFormatChecked = true;
+
+        // TODO confirm only 1 KEYID OP_RETURN output
+    }
+    return (fBurnFound && fFormatChecked && CTransaction(deposit.tx) == tx);
+}
+
 std::string SidechainDB::ToString() const
 {
     std::string str;
@@ -1206,20 +1224,18 @@ std::string SidechainDB::ToString() const
     return str;
 }
 
-// TODO remove bool fResync
-
-bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug, bool fResync)
+bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
 {
     // Make a copy of SCDB to test update
     SidechainDB scdbCopy = (*this);
-    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync)) {
-        return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug, fResync);
+    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug)) {
+        return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug);
     } else {
         return false;
     }
 }
 
-bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug, bool fResync)
+bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
 {
     if (hashBlock.IsNull()) {
         if (fDebug)
@@ -1247,7 +1263,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    if (!fResync && !hashBlockLastSeen.IsNull() && hashPrevBlock != hashBlockLastSeen) {
+    if (!hashBlockLastSeen.IsNull() && hashPrevBlock != hashBlockLastSeen) {
         if (fDebug)
             LogPrintf("SCDB %s: Failed: previous block hash: %s does not match hashBlockLastSeen: %s at height: %u\n",
                     __func__,
@@ -1309,7 +1325,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
     // Scan for sidechain proposal commitments
     std::vector<SidechainProposal> vProposal;
-    if (!fResync && !fJustCheck) {
+    if (!fJustCheck) {
         for (const CTxOut& out : vout) {
             const CScript& scriptPubKey = out.scriptPubKey;
 
@@ -1334,7 +1350,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             vProposal.push_back(proposal);
         }
     }
-    if (!fJustCheck && !fResync && vProposal.size() == 1) {
+    if (!fJustCheck && vProposal.size() == 1) {
         SidechainActivationStatus status;
         status.nFail = 0;
         status.nAge = 0;
@@ -1372,19 +1388,17 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
     // Scan for sidechain activation commitments
     std::vector<uint256> vActivationHash;
-    if (!fResync) {
-        for (const CTxOut& out : vout) {
-            const CScript& scriptPubKey = out.scriptPubKey;
-            uint256 hashSidechain;
-            if (!scriptPubKey.IsSidechainActivationCommit(hashSidechain))
-                continue;
-            if (hashSidechain.IsNull())
-                continue;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
+        uint256 hashSidechain;
+        if (!scriptPubKey.IsSidechainActivationCommit(hashSidechain))
+            continue;
+        if (hashSidechain.IsNull())
+            continue;
 
-            vActivationHash.push_back(hashSidechain);
-        }
+        vActivationHash.push_back(hashSidechain);
     }
-    if (!fJustCheck && !fResync)
+    if (!fJustCheck)
         UpdateActivationStatus(vActivationHash);
 
     // Scan for new WT^(s) and start tracking them
