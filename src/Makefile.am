@@ -140,6 +140,8 @@ DRIVENET_CORE_H = \
   script/sign.h \
   script/standard.h \
   script/ismine.h \
+  sidechain.h \
+  sidechaindb.h \
   streams.h \
   support/allocators/secure.h \
   support/allocators/zeroafterfree.h \
@@ -219,6 +221,8 @@ libdrivenet_server_a_SOURCES = \
   rpc/server.cpp \
   script/sigcache.cpp \
   script/ismine.cpp \
+  sidechain.cpp \
+  sidechaindb.cpp \
   timedata.cpp \
   torcontrol.cpp \
   txdb.cpp \
@@ -310,10 +314,6 @@ libdrivenet_consensus_a_SOURCES = \
   script/script_error.cpp \
   script/script_error.h \
   serialize.h \
-  sidechain.cpp \
-  sidechain.h \
-  sidechaindb.cpp \
-  sidechaindb.h \
   tinyformat.h \
   uint256.cpp \
   uint256.h \
