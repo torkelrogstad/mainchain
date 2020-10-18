@@ -7,8 +7,6 @@
 
 #include <primitives/transaction.h>
 #include <pubkey.h>
-#include <support/cleanse.h>
-#include <support/allocators/zeroafterfree.h>
 
 #include <array>
 
