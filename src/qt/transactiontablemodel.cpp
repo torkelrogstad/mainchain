@@ -768,7 +768,7 @@ QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientat
             case Watchonly:
                 return tr("Whether or not a watch-only address is involved in this transaction.");
             case ToAddress:
-                return tr("User-defined intent/purpose of the transaction.");
+                return tr("Transaction ID");
             case Amount:
                 return tr("Amount removed from or added to balance.");
             }
