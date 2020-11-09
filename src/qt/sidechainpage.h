@@ -19,7 +19,8 @@ class CBlock;
 class PlatformStyle;
 class SidechainDepositConfirmationDialog;
 class SidechainWithdrawalTableModel;
-class SidechainMinerDialog;
+class SidechainActivationDialog;
+class SidechainWTPrimeDialog;
 class WalletModel;
 class ClientModel;
 
@@ -73,7 +74,9 @@ public Q_SLOTS:
 
     void on_tableViewWT_doubleClicked(const QModelIndex& index);
 
-    void on_pushButtonManageSidechains_clicked();
+    void on_pushButtonAddRemove_clicked();
+
+    void on_pushButtonWTPrimeVote_clicked();
 
     void on_pushButtonWTDoubleClickHelp_clicked();
 
@@ -83,7 +86,9 @@ public Q_SLOTS:
 
     void numBlocksChanged();
 
-    void ShowManagePage();
+    void ShowActivationDialog();
+
+    void ShowWTPrimeDialog();
 
 private:
     Ui::SidechainPage *ui;
@@ -93,7 +98,8 @@ private:
 
     SidechainDepositConfirmationDialog *depositConfirmationDialog = nullptr;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
-    SidechainMinerDialog *minerDialog = nullptr;
+    SidechainActivationDialog* activationDialog = nullptr;
+    SidechainWTPrimeDialog* wtPrimeDialog = nullptr;
 
     const PlatformStyle *platformStyle;
 

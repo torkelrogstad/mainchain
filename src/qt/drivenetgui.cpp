@@ -168,8 +168,11 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         miningDialog = new MiningDialog(platformStyle);
         miningDialog->setParent(this, Qt::Window);
 
-        connect(miningDialog, SIGNAL(ManagePageRequested()),
-                walletFrame, SLOT(showMinerManageDialog()));
+        connect(miningDialog, SIGNAL(ActivationDialogRequested()),
+                walletFrame, SLOT(showSidechainActivationDialog()));
+
+        connect(miningDialog, SIGNAL(WTPrimeDialogRequested()),
+                walletFrame, SLOT(showSidechainWTPrimeDialog()));
 
     } else
 #endif // ENABLE_WALLET

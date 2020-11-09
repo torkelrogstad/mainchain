@@ -28,7 +28,8 @@ public:
 public Q_SLOTS:
     void on_pushButtonStartMining_clicked();
     void on_pushButtonStopMining_clicked();
-    void on_pushButtonManage_clicked();
+    void on_pushButtonAddRemove_clicked();
+    void on_pushButtonWTPrimeVote_clicked();
     void on_checkBoxAbandonFailedBMM_toggled(bool fChecked);
 
 private Q_SLOTS:
@@ -37,7 +38,8 @@ private Q_SLOTS:
     void AbandonFailedBMM();
 
 Q_SIGNALS:
-    void ManagePageRequested();
+    void ActivationDialogRequested();
+    void WTPrimeDialogRequested();
 
 private:
     Ui::MiningDialog *ui;

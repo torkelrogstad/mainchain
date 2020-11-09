@@ -178,13 +178,20 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonManage">
+      <widget class="QPushButton" name="pushButtonAddRemove">
        <property name="text">
         <string>Manage Sidechains</string>
        </property>
        <property name="icon">
         <iconset resource="../drivenet.qrc">
          <normaloff>:/icons/options</normaloff>:/icons/options</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonWTPrimeVote">
+       <property name="text">
+        <string>ACK WT^(s)</string>
        </property>
       </widget>
      </item>

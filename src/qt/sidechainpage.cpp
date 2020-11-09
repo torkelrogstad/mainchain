@@ -11,9 +11,10 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
+#include <qt/sidechainactivationdialog.h>
 #include <qt/sidechaindepositconfirmationdialog.h>
+#include <qt/sidechainwtprimedialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
-#include <qt/sidechainminerdialog.h>
 #include <qt/sidechainwtprimedetails.h>
 #include <qt/walletmodel.h>
 
@@ -57,15 +58,22 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Initialize deposit confirmation dialog
     depositConfirmationDialog = new SidechainDepositConfirmationDialog(this);
 
-    // Initialize miner popup window. We want users to be able to keep this
-    // window open while using the rest of the software.
-    minerDialog = new SidechainMinerDialog(platformStyle);
-    minerDialog->setParent(this, Qt::Window);
+
+    // Initialize WT^ & sidechain miner configuration dialogs. Any widget that
+    // wants to show them can call ShowActivationDialog() / showWTPrimeDialog()
+    // instead of creating a new instance.
+
+    activationDialog = new SidechainActivationDialog(platformStyle);
+    activationDialog->setParent(this, Qt::Window);
+
+    wtPrimeDialog = new SidechainWTPrimeDialog(platformStyle);
+    wtPrimeDialog->setParent(this, Qt::Window);
 
     // Setup platform style single color icons
 
     // Buttons
-    ui->pushButtonManageSidechains->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonAddRemove->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonWTPrimeVote->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
     ui->pushButtonDeposit->setIcon(platformStyle->SingleColorIcon(":/icons/send"));
     ui->pushButtonPaste->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
     ui->pushButtonClear->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
@@ -433,9 +441,14 @@ bool SidechainPage::validateFeeAmount()
     return true;
 }
 
-void SidechainPage::on_pushButtonManageSidechains_clicked()
+void SidechainPage::on_pushButtonAddRemove_clicked()
 {
-    ShowManagePage();
+    ShowActivationDialog();
+}
+
+void SidechainPage::on_pushButtonWTPrimeVote_clicked()
+{
+    ShowWTPrimeDialog();
 }
 
 void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
@@ -475,9 +488,14 @@ void SidechainPage::numBlocksChanged()
     CheckForSidechainUpdates();
 }
 
-void SidechainPage::ShowManagePage()
+void SidechainPage::ShowActivationDialog()
 {
-    minerDialog->show();
+    activationDialog->show();
+}
+
+void SidechainPage::ShowWTPrimeDialog()
+{
+    wtPrimeDialog->show();
 }
 
 QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain)
