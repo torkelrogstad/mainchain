@@ -116,6 +116,7 @@ QT_FORMS_UI = \
   qt/forms/sidechaindepositconfirmationdialog.ui \
   qt/forms/sidechaintabledialog.ui \
   qt/forms/sidechainpage.ui \
+  qt/forms/sidechainproposaldialog.ui \
   qt/forms/sidechainwtprimedialog.ui \
   qt/forms/sidechainwtprimedetails.ui \
   qt/forms/signverifymessagedialog.ui \
@@ -162,6 +163,7 @@ QT_MOC_CPP = \
   qt/moc_sidechainactivationtablemodel.cpp \
   qt/moc_wtprimevotetablemodel.cpp \
   qt/moc_sidechainactivationdialog.cpp \
+  qt/moc_sidechainproposaldialog.cpp \
   qt/moc_sidechaintabledialog.cpp \
   qt/moc_sidechaindepositconfirmationdialog.cpp \
   qt/moc_sidechainescrowtablemodel.cpp \
@@ -249,6 +251,7 @@ DRIVENET_QT_H = \
   qt/wtprimevotetablemodel.h \
   qt/sidechainactivationdialog.h \
   qt/sidechaindepositconfirmationdialog.h \
+  qt/sidechainproposaldialog.h \
   qt/sidechaintabledialog.h \
   qt/sidechainescrowtablemodel.h \
   qt/sidechainpage.h \
@@ -431,6 +434,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/sidechainescrowtablemodel.cpp \
   qt/sidechaintabledialog.cpp \
   qt/sidechainpage.cpp \
+  qt/sidechainproposaldialog.cpp \
   qt/sidechainwtprimedialog.cpp \
   qt/sidechainwithdrawaltablemodel.cpp \
   qt/sidechainwtprimedetails.cpp \

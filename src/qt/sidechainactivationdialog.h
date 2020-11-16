@@ -24,21 +24,13 @@ public:
     ~SidechainActivationDialog();
 
 public Q_SLOTS:
-    void on_pushButtonPropose_clicked();
-
     void on_pushButtonActivate_clicked();
 
     void on_pushButtonReject_clicked();
 
     void on_pushButtonHelp_clicked();
 
-    void on_toolButtonKeyHash_clicked();
-
-    void on_toolButtonIDHash1_clicked();
-
-    void on_toolButtonIDHash2_clicked();
-
-    void on_toolButtonSoftwareHashes_clicked();
+    void on_pushButtonCreate_clicked();
 
 private:
     Ui::SidechainActivationDialog *ui;

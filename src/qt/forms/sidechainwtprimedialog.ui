@@ -15,13 +15,6 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>WT^ dialog</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QTableView" name="tableViewWTPrimeVote"/>
    </item>
    <item>
