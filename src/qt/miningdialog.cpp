@@ -221,6 +221,9 @@ void MiningDialog::on_checkBoxAbandonFailedBMM_toggled(bool fChecked)
     // Start / stop abandon bmm timer
     if (fChecked) {
         abandonBMMTimer->start(ABANDON_BMM_DELAY);
+        // Also call AbandonFailedBMM right now so the user doesn't have to
+        // wait for the first automatic call.
+        AbandonFailedBMM();
     } else {
         abandonBMMTimer->stop();
     }
