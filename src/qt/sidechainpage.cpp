@@ -38,6 +38,7 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QStackedWidget>
+#include <QString>
 #include <QTimer>
 
 #include <sstream>
@@ -48,8 +49,6 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     platformStyle(_platformStyle)
 {
     ui->setupUi(this);
-
-    ui->listWidgetSidechains->setIconSize(QSize(32, 32));
 
     // Setup sidechain list widget & combo box
     std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
@@ -69,6 +68,22 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     wtPrimeDialog = new SidechainWTPrimeDialog(platformStyle);
     wtPrimeDialog->setParent(this, Qt::Window);
 
+    // Setup recent deposits table
+    ui->tableWidgetRecentDeposits->setColumnCount(COLUMN_STATUS + 1);
+    ui->tableWidgetRecentDeposits->setHorizontalHeaderLabels(
+                QStringList() << "SC #" << "Amount" << "Conf" << "Deposit visible on SC?");
+    ui->tableWidgetRecentDeposits->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+
+    // Resize cells (in a backwards compatible way)
+#if QT_VERSION < 0x050000
+    ui->tableWidgetRecentDeposits->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+#else
+    ui->tableWidgetRecentDeposits->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#endif
+
+    ui->tableWidgetRecentDeposits->horizontalHeader()->setStretchLastSection(false);
+    ui->tableWidgetRecentDeposits->verticalHeader()->setVisible(false);
+
     // Setup platform style single color icons
 
     // Buttons
@@ -78,6 +93,9 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->pushButtonPaste->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
     ui->pushButtonClear->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
     ui->pushButtonWTDoubleClickHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->pushButtonRecentDepositHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+
+    nSelectedSidechain = 0;
 }
 
 SidechainPage::~SidechainPage()
@@ -140,11 +158,6 @@ void SidechainPage::setWithdrawalModel(SidechainWithdrawalTableModel *model)
     }
 }
 
-QString SidechainPage::GetSidechainIconPath(uint8_t nSidechain) const
-{
-    return ":/icons/sidechain_default";
-}
-
 void SidechainPage::setBalance(const CAmount& balance, const CAmount& unconfirmedBalance,
                                const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                                const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance)
@@ -182,16 +195,6 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
         ui->listWidgetSidechains->addItem(item);
     }
 
-    // Remove any existing sidechains from the selection box
-    ui->comboBoxSidechains->clear();
-
-    // Setup sidechain selection combo box
-    for (const Sidechain& s : vSidechain) {
-        ui->comboBoxSidechains->addItem(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)));
-    }
-
-    ui->listWidgetSidechains->setCurrentRow(0);
-
     // Pad list with disabled items to represent inactive sidechains
     int nInactive = SIDECHAIN_ACTIVATION_MAX_ACTIVE - vSidechain.size();
 
@@ -207,13 +210,19 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
 
         ui->listWidgetSidechains->addItem(item);
     }
+
+    // If any sidechains are active but no sidechain is highlighted then
+    // highlight sidechain #0. Otherwise re-highlight the selected sidechain.
+    if (vSidechain.size()) {
+        ui->listWidgetSidechains->setCurrentRow(nSelectedSidechain);
+    }
 }
 
 void SidechainPage::on_pushButtonDeposit_clicked()
 {
     QMessageBox messageBox;
 
-    unsigned int nSidechain = ui->comboBoxSidechains->currentIndex();
+    unsigned int nSidechain = nSelectedSidechain;
 
     if (!IsSidechainNumberValid(nSidechain)) {
         // Should never be displayed
@@ -322,6 +331,16 @@ void SidechainPage::on_pushButtonDeposit_clicked()
     result += BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, nValue, false, BitcoinUnits::separatorAlways);
     messageBox.setText(result);
     messageBox.exec();
+
+    // Cache recent deposit
+    RecentDepositTableObject obj;
+    obj.nSidechain = nSidechain;
+    obj.amount = nValue;
+    obj.txid = tx->GetHash();
+    vRecentDepositCache.push_back(obj);
+
+    // Update recent deposits table
+    UpdateRecentDeposits();
 #endif
 }
 
@@ -336,22 +355,26 @@ void SidechainPage::on_pushButtonClear_clicked()
     ui->payTo->clear();
 }
 
-void SidechainPage::on_comboBoxSidechains_currentIndexChanged(const int i)
+void SidechainPage::on_listWidgetSidechains_currentRowChanged(int nRow)
 {
-    if (!IsSidechainNumberValid(i))
+    if (nRow < 0 || nRow > (int)vSidechainCache.size())
         return;
 
-    ui->listWidgetSidechains->setCurrentRow(i);
+    nSelectedSidechain = nRow;
 
-    // Update deposit button text
-    QString strSidechain = QString::fromStdString(scdb.GetSidechainName(i));
-    QString str = "Deposit to: " + strSidechain;
-    ui->pushButtonDeposit->setText(str);
+    // Format placeholder text (demo version)
+    QString strAddress = "S";
+    strAddress += QString::number(nRow);
+    strAddress += "_xxxxxxxxxxxxxxxxx_xxxxxx";
+
+    ui->payTo->setPlaceholderText(strAddress);
 }
 
 void SidechainPage::on_listWidgetSidechains_doubleClicked(const QModelIndex& i)
 {
-    ui->comboBoxSidechains->setCurrentIndex(i.row());
+    // On double click show sidechain details
+    if (i.row() >= (int)vSidechainCache.size())
+        return;
 }
 
 void SidechainPage::on_tableViewWT_doubleClicked(const QModelIndex& index)
@@ -466,6 +489,28 @@ void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
         QMessageBox::Ok);
 }
 
+void SidechainPage::on_pushButtonRecentDepositHelp_clicked()
+{
+    QMessageBox::information(this, tr("DriveNet - information"),
+        tr("Hello, from the creators of Drivechain! We wrote Drivechain "
+           "(the software you are using right now), and we wrote you this "
+           "message. \n\n"
+           "But the sidechain software (ie, the software that "
+           "you are trying to send your coins to) was (probably) written "
+           "by someone else. As far as we know, they had no idea what "
+           "they were doing! Perhaps your coins will be lost forever. "
+           "Or perhaps they will not show up for a very long time. Or, "
+           "perhaps (via clever scanning of the mempool) they will show "
+           "up immediately. We don't know because we didn't write that "
+           "software.\n\n"
+           "But we can nonetheless give you our expert opinion: "
+           "Drivechain Deposits likely require one mainchain confirmation, "
+           "and one sidechain confirmation. Probably, this means that two "
+           "Mainchain confirmations should do the trick.\n"),
+        QMessageBox::Ok);
+}
+
+
 void SidechainPage::CheckForSidechainUpdates()
 {
     std::vector<Sidechain> vSidechainNew = scdb.GetActiveSidechains();
@@ -486,6 +531,9 @@ void SidechainPage::numBlocksChanged()
 {
     // Check for sidechain activation updates
     CheckForSidechainUpdates();
+
+    // Update recent deposits table
+    UpdateRecentDeposits();
 }
 
 void SidechainPage::ShowActivationDialog()
@@ -496,6 +544,70 @@ void SidechainPage::ShowActivationDialog()
 void SidechainPage::ShowWTPrimeDialog()
 {
     wtPrimeDialog->show();
+}
+
+void SidechainPage::UpdateRecentDeposits()
+{
+    if (!walletModel || !walletModel->getOptionsModel()
+            || !walletModel->getAddressTableModel())
+        return;
+
+    if (vpwallets.empty() || vpwallets[0]->IsLocked())
+        return;
+
+    ui->tableWidgetRecentDeposits->setUpdatesEnabled(false);
+    ui->tableWidgetRecentDeposits->setRowCount(0);
+
+    int nDisplayUnit = walletModel->getOptionsModel()->getDisplayUnit();
+
+    // Locks for GetDepthInMainchain()
+    LOCK2(cs_main, vpwallets[0]->cs_wallet);
+
+    // nRow is always 0, we are always inserting to the top of the table
+    int nRow = 0;
+    for (const RecentDepositTableObject& o : vRecentDepositCache) {
+        ui->tableWidgetRecentDeposits->insertRow(nRow);
+
+        // nSidechain
+        QTableWidgetItem *itemSidechain = new QTableWidgetItem();
+        itemSidechain->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        itemSidechain->setText(QString::number(o.nSidechain));
+        itemSidechain->setFlags(itemSidechain->flags() & ~Qt::ItemIsEditable);
+        ui->tableWidgetRecentDeposits->setItem(nRow, COLUMN_SIDECHAIN, itemSidechain);
+
+        // amount
+        QTableWidgetItem *itemAmount = new QTableWidgetItem();
+        itemAmount->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        itemAmount->setText(BitcoinUnits::format(nDisplayUnit, o.amount));
+        itemAmount->setFlags(itemAmount->flags() & ~Qt::ItemIsEditable);
+        ui->tableWidgetRecentDeposits->setItem(nRow, COLUMN_AMOUNT, itemAmount);
+
+        // Get number of confirmations from the wallet
+        int nConf = -1;
+        std::map<uint256, CWalletTx>::iterator mi = vpwallets[0]->mapWallet.find(o.txid);
+        if (mi != vpwallets[0]->mapWallet.end())
+            nConf = mi->second.GetDepthInMainChain();
+
+        // confirmations
+        QTableWidgetItem *itemConf = new QTableWidgetItem();
+        itemConf->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        itemConf->setText(QString::number(nConf));
+        itemConf->setFlags(itemConf->flags() & ~Qt::ItemIsEditable);
+        ui->tableWidgetRecentDeposits->setItem(nRow, COLUMN_CONFIRMATIONS, itemConf);
+
+        // Status
+        QTableWidgetItem *itemStatus = new QTableWidgetItem();
+        QString strStatus = "";
+        if (nConf < 2)
+            strStatus = "Not yet. Waiting for confirmations.";
+        else
+            strStatus = "Ready for SC processing!";
+        itemStatus->setText(strStatus);
+        itemStatus->setFlags(itemStatus->flags() & ~Qt::ItemIsEditable);
+        ui->tableWidgetRecentDeposits->setItem(nRow, COLUMN_STATUS, itemStatus);
+    }
+
+    ui->tableWidgetRecentDeposits->setUpdatesEnabled(true);
 }
 
 QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain)
@@ -512,18 +624,24 @@ QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechai
         nDigits++;
 
     if (nDigits == 1) {
-        str += ":      ";
+        str += ":   ";
     }
     else
     if (nDigits == 2) {
-        str += ":    ";
+        str += ":  ";
     }
     else
     if (nDigits == 3) {
-        str += ":  ";
+        str += ": ";
     }
 
     str += strSidechain;
+
+    // Cut number + name down to max 21 characters
+    if (str.size() > 21) {
+        str = str.left(18);
+        str += "...";
+    }
 
     return str;
 }

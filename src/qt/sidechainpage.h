@@ -15,7 +15,6 @@
 #include <string>
 
 class CBlock;
-
 class PlatformStyle;
 class SidechainDepositConfirmationDialog;
 class SidechainWithdrawalTableModel;
@@ -26,18 +25,28 @@ class ClientModel;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
+class QListWidgetItem;
 QT_END_NAMESPACE
 
 namespace Ui {
 class SidechainPage;
 }
 
-// Sidechain icons
-static const std::vector<QString> vSidechainIcons =
-{{
-    {":/icons/sidechain_one"},
-    {":/icons/sidechain_payments"},
-}};
+// Recent deposit table columns
+enum
+{
+    COLUMN_SIDECHAIN = 0,
+    COLUMN_AMOUNT,
+    COLUMN_CONFIRMATIONS,
+    COLUMN_STATUS,
+};
+
+struct RecentDepositTableObject
+{
+    unsigned int nSidechain;
+    CAmount amount;
+    uint256 txid;
+};
 
 class SidechainPage : public QWidget
 {
@@ -48,53 +57,35 @@ public:
     ~SidechainPage();
 
     void setClientModel(ClientModel *model);
-
     void setWalletModel(WalletModel *model);
-
     void setWithdrawalModel(SidechainWithdrawalTableModel *model);
 
-    QString GetSidechainIconPath(uint8_t nSidechain) const;
-
 public Q_SLOTS:
-    // TODO make slots that don't need to be public private
-
     void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance,
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
                     const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
-
     void on_pushButtonDeposit_clicked();
-
     void on_pushButtonPaste_clicked();
-
     void on_pushButtonClear_clicked();
-
-    void on_comboBoxSidechains_currentIndexChanged(const int index);
-
+    void on_listWidgetSidechains_currentRowChanged(int nRow);
     void on_listWidgetSidechains_doubleClicked(const QModelIndex& index);
-
     void on_tableViewWT_doubleClicked(const QModelIndex& index);
-
     void on_pushButtonAddRemove_clicked();
-
     void on_pushButtonWTPrimeVote_clicked();
-
     void on_pushButtonWTDoubleClickHelp_clicked();
-
+    void on_pushButtonRecentDepositHelp_clicked();
     void CheckForSidechainUpdates();
-
     void gotoWTPage();
-
     void numBlocksChanged();
-
     void ShowActivationDialog();
-
     void ShowWTPrimeDialog();
+    void UpdateRecentDeposits();
 
 private:
     Ui::SidechainPage *ui;
 
-    ClientModel *clientModel;
-    WalletModel *walletModel;
+    ClientModel *clientModel = nullptr;
+    WalletModel *walletModel = nullptr;
 
     SidechainDepositConfirmationDialog *depositConfirmationDialog = nullptr;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
@@ -103,13 +94,19 @@ private:
 
     const PlatformStyle *platformStyle;
 
-    void SetupSidechainList(const std::vector<Sidechain>& vSidechain);
-
-    bool validateDepositAmount();
-    bool validateFeeAmount();
 
     // The sidechains that are currently cached for the list widget
     std::vector<Sidechain> vSidechainCache;
+
+    // Deposits created by the user during this session (memory only)
+    std::vector<RecentDepositTableObject> vRecentDepositCache;
+
+    // The sidechain that is currently highlighted
+    uint8_t nSelectedSidechain;
+
+    void SetupSidechainList(const std::vector<Sidechain>& vSidechain);
+    bool validateDepositAmount();
+    bool validateFeeAmount();
 };
 
 QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain);
