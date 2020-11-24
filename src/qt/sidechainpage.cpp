@@ -364,9 +364,9 @@ void SidechainPage::on_listWidgetSidechains_currentRowChanged(int nRow)
     nSelectedSidechain = nRow;
 
     // Format placeholder text (demo version)
-    QString strAddress = "S";
+    QString strAddress = "s";
     strAddress += QString::number(nRow);
-    strAddress += "_xxxxxxxxxxxxxxxxx_xxxxxx";
+    strAddress += "_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxx";
 
     ui->payTo->setPlaceholderText(strAddress);
 }
