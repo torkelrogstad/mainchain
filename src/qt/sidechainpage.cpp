@@ -12,6 +12,7 @@
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/sidechainactivationdialog.h>
+#include <qt/sidechaindetailsdialog.h>
 #include <qt/sidechaindepositconfirmationdialog.h>
 #include <qt/sidechainwtprimedialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
@@ -375,6 +376,11 @@ void SidechainPage::on_listWidgetSidechains_doubleClicked(const QModelIndex& i)
     // On double click show sidechain details
     if (i.row() >= (int)vSidechainCache.size())
         return;
+
+    Sidechain s = vSidechainCache[i.row()];
+
+    SidechainDetailsDialog dialog(s);
+    dialog.exec();
 }
 
 void SidechainPage::on_tableViewWT_doubleClicked(const QModelIndex& index)
