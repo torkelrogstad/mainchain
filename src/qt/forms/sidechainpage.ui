@@ -201,6 +201,11 @@
                </property>
                <item>
                 <widget class="QValidatedLineEdit" name="payTo">
+                 <property name="font">
+                  <font>
+                   <family>Noto Mono</family>
+                  </font>
+                 </property>
                  <property name="toolTip">
                   <string>The DriveNet address to send the payment to</string>
                  </property>
