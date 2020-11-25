@@ -281,4 +281,6 @@ struct SidechainBlockData: public SidechainObj {
     }
 };
 
+bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddressOut, unsigned int& nSidechainOut);
+
 #endif // BITCOIN_SIDECHAIN_H

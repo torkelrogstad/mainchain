@@ -233,3 +233,64 @@ std::string SidechainBlockData::ToString() const
     str << "sidechainop=" << sidechainop << std::endl;
     return str.str();
 }
+
+bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddressOut, unsigned int& nSidechainOut)
+{
+    if (strAddressIn.empty())
+        return false;
+
+    // First character should be 's'
+    if (strAddressIn.front() != 's')
+        return false;
+
+    unsigned int delim1 = strAddressIn.find_first_of("_") + 1;
+    unsigned int delim2 = strAddressIn.find_last_of("_");
+
+    if (delim1 == std::string::npos || delim2 == std::string::npos)
+        return false;
+    if (delim1 >= strAddressIn.size() || delim2 + 1 >= strAddressIn.size())
+        return false;
+
+    std::string strSidechain = strAddressIn.substr(1, delim1);
+    if (strSidechain.empty())
+        return false;
+
+    // Get sidechain number
+    try {
+        nSidechainOut = std::stoul(strSidechain);
+    } catch (...) {
+        return false;
+    }
+
+    // Check sidechain number is within range
+    if (nSidechainOut > 255)
+        return false;
+
+    // Get substring without prefix or suffix
+    strAddressOut = strAddressIn.substr(delim1, delim2 - delim1);
+    if (strAddressOut.empty())
+        return false;
+
+    // Get substring without checksum (for generating our checksum)
+    std::string strNoCheck = strAddressIn.substr(0, delim2 + 1);
+    if (strNoCheck.empty())
+        return false;
+
+    // Generate our own checksum of the address - checksum
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << strNoCheck;
+
+    // Invalidates ss
+    uint256 hash = ss.GetHash();
+
+    // Get checksum from address string
+    std::string strCheck = strAddressIn.substr(delim2 + 1, strAddressIn.size());
+    if (strCheck.size() != 6)
+        return false;
+
+    // Compare address checksum with our checksum
+    if (strCheck != hash.ToString().substr(58, 6))
+        return false;
+
+    return true;
+}
