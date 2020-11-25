@@ -254,8 +254,32 @@ void SidechainPage::on_pushButtonDeposit_clicked()
         return;
     }
 
+    // TODO work with non keyID addresses
+
+    // Get the p2pkh from the sidechain deposit address
+    std::string strAddress = "";
+    unsigned int nSidechainFromAddress = 0;
+    if (!ParseDepositAddress(ui->payTo->text().toStdString(), strAddress, nSidechainFromAddress)) {
+        // Invalid deposit address
+        messageBox.setWindowTitle("Invalid sidechain deposit address!");
+        messageBox.setText("Check the address you have entered and try again.");
+        messageBox.exec();
+        return;
+    }
+
+    if (nSidechainFromAddress != nSidechain) {
+        // Invalid sidechain number in deposit address
+        messageBox.setWindowTitle("Incorrect sidechain number in deposit address!");
+        QString error = "The address you have entered is for a different sidechain than you have selected!\n\n";
+        error += "Please check the address you have entered and try again.";
+        messageBox.setText(error);
+        messageBox.exec();
+        return;
+    }
+
+    // TODO remove keyID check - work with non keyID addresses
     // Get keyID
-    CSidechainAddress address(ui->payTo->text().toStdString());
+    CSidechainAddress address(strAddress);
     CKeyID keyID;
     if (!address.GetKeyID(keyID)) {
         // Invalid address message box

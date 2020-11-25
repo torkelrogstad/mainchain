@@ -267,6 +267,7 @@ bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddres
         return false;
 
     // Get substring without prefix or suffix
+    strAddressOut = "";
     strAddressOut = strAddressIn.substr(delim1, delim2 - delim1);
     if (strAddressOut.empty())
         return false;
