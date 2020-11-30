@@ -33,6 +33,7 @@ class MiningDialog;
 class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
+class HashCalcDialog;
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -118,6 +119,7 @@ private:
     QAction *showHelpMessageAction;
     QAction *showSidechainTableDialogAction;
     QAction *showMiningDialogAction;
+    QAction *showHashCalcDialogAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -132,6 +134,8 @@ private:
     SidechainTableDialog *sidechainTableDialog;
     /** Mining dialog */
     MiningDialog *miningDialog;
+    /** Hash calculator dialog */
+    HashCalcDialog *hashCalcDialog;
 #endif
 
     /** Keep track of previous number of blocks, to detect progress */
@@ -230,6 +234,10 @@ private Q_SLOTS:
 
     /** Show mining dialog */
     void showMiningDialog();
+
+    /** Show hash calculator dialog */
+    void showHashCalcDialog();
+
 #endif // ENABLE_WALLET
     /** Show configuration dialog */
     void optionsClicked();
