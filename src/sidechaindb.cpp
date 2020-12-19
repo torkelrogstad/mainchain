@@ -38,7 +38,7 @@ void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
     vRemovedDeposit.push_back(hashRemoved);
 }
 
-bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
+bool SidechainDB::AddDepositsFromBlock(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
     // be done after verifying all of the deposits.
@@ -55,6 +55,10 @@ bool SidechainDB::AddDeposits(const std::vector<CTransaction>& vtx, const uint25
         SidechainDeposit deposit;
         if (!TxnToDeposit(tx, hashBlock, deposit)) {
             LogPrintf("%s: Failed to read deposit from transaction! Skipping!\n", __func__);
+            continue;
+        }
+        // We skip WT^(s) here - they are handled by the SpendWTPrime function.
+        if (deposit.strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
             continue;
         }
         vDeposit.push_back(deposit);
@@ -921,6 +925,16 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
         return false;
     }
 
+    if (tx.vout.size() < 3) {
+        if (fDebug) {
+            LogPrintf("SCDB %s: Cannot spend WT^ (txid): %s for sidechain number: %u. Missing outputs!.\n",
+                __func__,
+                tx.GetHash().ToString(),
+                nSidechain);
+        }
+        return false;
+    }
+
     uint256 hashBlind;
     if (!tx.GetBWTHash(hashBlind)) {
         if (fDebug) {
@@ -934,7 +948,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
 
     if (!CheckWorkScore(nSidechain, hashBlind, fDebug)) {
         if (fDebug) {
-            LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. CheckWorkScore() failed.\n",
+            LogPrintf("SCDB %s: Cannot spend WT^ (blind hash): %s for sidechain number: %u. CheckWorkScore() failed.\n",
                 __func__,
                 hashBlind.ToString(),
                 nSidechain);
@@ -942,15 +956,65 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
         return false;
     }
 
-    // Find the required change output returning to the sidechain script
-    bool fReturnFound = false;
+    // Find the required change output returning to the sidechain script as well
+    // as the required SIDECHAIN_WTPRIME_RETURN_DEST OP_RETURN output.
+    bool fChangeOutputFound = false;
+    bool fReturnDestFound = false;
     uint32_t n = 0;
     uint8_t nSidechainScript;
     CAmount amountChange = 0;
     for (size_t i = 0; i < tx.vout.size(); i++) {
         const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
+
+        // This would be non-standard but still checking
+        if (!scriptPubKey.size())
+            continue;
+
+        // The first OP_RETURN output we find must be an encoding of the
+        // SIDECHAIN_WTPRIME_RETURN_DEST char. So once we find an OP_RETURN in
+        // this loop it must have the correct data encoded. We will return false
+        // if it does not and skip this code if we've already found it.
+        // Is this the SIDECHAIN_WTPRIME_RETURN_DEST OP_RETURN output?
+        if (!fReturnDestFound && scriptPubKey.front() == OP_RETURN) {
+            if (scriptPubKey.size() < 3) {
+                if (fDebug) {
+                    LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. First OP_RETURN output is invalid size for destination. (too small)\n",
+                        __func__,
+                        hashBlind.ToString(),
+                        nSidechain);
+                }
+                return false;
+            }
+
+            CScript::const_iterator pDest = scriptPubKey.begin() + 1;
+            opcodetype opcode;
+            std::vector<unsigned char> vch;
+            if (!scriptPubKey.GetOp(pDest, opcode, vch) || vch.empty()) {
+                if (fDebug) {
+                    LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. First OP_RETURN output is invalid. (GetOp failed)\n",
+                        __func__,
+                        hashBlind.ToString(),
+                        nSidechain);
+                }
+                return false;
+            }
+
+            std::string strDest((const char*)vch.data(), vch.size());
+
+            if (strDest != SIDECHAIN_WTPRIME_RETURN_DEST) {
+                if (fDebug) {
+                    LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. Missing SIDECHAIN_WTPRIME_RETURN_DEST output.\n",
+                        __func__,
+                        hashBlind.ToString(),
+                        nSidechain);
+                }
+                return false;
+            }
+            fReturnDestFound = true;
+        }
+
         if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechainScript)) {
-            if (fReturnFound) {
+            if (fChangeOutputFound) {
                 // We already found a sidechain script output. This second
                 // sidechain output makes the WT^ invalid.
                 if (fDebug) {
@@ -964,7 +1028,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
 
             // Copy output index of sidechain change return deposit
             n = i;
-            fReturnFound = true;
+            fChangeOutputFound = true;
 
             // Copy amount of sidechain change
             amountChange = tx.vout[i].nValue;
@@ -974,7 +1038,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     }
 
     // Make sure that the sidechain output was found
-    if (!fReturnFound) {
+    if (!fChangeOutputFound) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. No sidechain return output in WT^.\n",
                 __func__,
@@ -1015,7 +1079,6 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
                 hashBlind.ToString(),
                 nSidechain);
         }
-
        return false;
     }
 
@@ -1027,20 +1090,18 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
                 hashBlind.ToString(),
                 nSidechain);
         }
-
        return false;
     }
 
     // Decode sum of wt fees
     CAmount amountFees = 0;
-    if (!DecodeWTFees(tx.vout.front().scriptPubKey, amountFees)) {
+    if (!DecodeWTFees(tx.vout[1].scriptPubKey, amountFees)) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^: %s for sidechain number: %u. failed to decode WT fees!\n",
                 __func__,
                 hashBlind.ToString(),
                 nSidechain);
         }
-
        return false;
     }
 
@@ -1058,7 +1119,6 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
                 hashBlind.ToString(),
                 nSidechain);
         }
-
        return false;
     }
 
@@ -1070,7 +1130,6 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
                 hashBlind.ToString(),
                 nSidechain);
         }
-
        return false;
     }
 
@@ -1080,7 +1139,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     // Create a sidechain deposit object for the return amount
     SidechainDeposit deposit;
     deposit.nSidechain = nSidechain;
-    deposit.keyID = CKeyID(uint160(ParseHex("1111111111111111111111111111111111111111")));
+    deposit.strDest = SIDECHAIN_WTPRIME_RETURN_DEST;
     deposit.tx = tx;
     deposit.n = n;
     deposit.hashBlock = hashBlock;
@@ -1122,10 +1181,16 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
 
 bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock, SidechainDeposit& deposit)
 {
+    // Note that the first OP_RETURN output found in a deposit transaction will
+    // be used as the destination. Others are ignored.
+
     bool fBurnFound = false;
-    bool fFormatChecked = false;
+    bool fDestFound = false;
     for (size_t i = 0; i < tx.vout.size(); i++) {
         const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
+
+        if (!scriptPubKey.size())
+            continue;
 
         uint8_t nSidechain;
         if (HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
@@ -1142,34 +1207,39 @@ bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock,
             continue;
         }
 
-        // Move on to looking for the encoded keyID output
+        // Move on to looking for the encoded destination string
 
+        if (fDestFound)
+            continue;
         if (scriptPubKey.front() != OP_RETURN)
             continue;
-        if (scriptPubKey.size() != 22 && scriptPubKey.size() != 23)
-            continue;
 
-        CScript::const_iterator pkey = scriptPubKey.begin() + 1;
+        if (scriptPubKey.size() < 3) {
+            LogPrintf("%s: Invalid - First OP_RETURN is invalid (too small).\ntxid: %s\n", __func__, tx.GetHash().ToString());
+            return false;
+        }
+
+        CScript::const_iterator pDest = scriptPubKey.begin() + 1;
         opcodetype opcode;
         std::vector<unsigned char> vch;
-        if (!scriptPubKey.GetOp(pkey, opcode, vch))
-            continue;
-        if (vch.size() != sizeof(uint160))
-            continue;
+        if (!scriptPubKey.GetOp(pDest, opcode, vch) || vch.empty()) {
+            LogPrintf("%s: Invalid - First OP_RETURN is invalid (failed GetOp).\ntxid: %s\n", __func__, tx.GetHash().ToString());
+            return false;
+        }
 
-        CKeyID keyID = CKeyID(uint160(vch));
-        if (keyID.IsNull())
-            continue;
+        std::string strDest((const char*)vch.data(), vch.size());
+        if (strDest.empty()) {
+            LogPrintf("%s: Invalid - empty dest.\ntxid: %s\n", __func__, tx.GetHash().ToString());
+            return false;
+        }
 
         deposit.tx = tx;
-        deposit.keyID = keyID;
+        deposit.strDest = strDest;
         deposit.hashBlock = hashBlock;
 
-        fFormatChecked = true;
-
-        // TODO confirm only 1 KEYID OP_RETURN output
+        fDestFound = true;
     }
-    return (fBurnFound && fFormatChecked && CTransaction(deposit.tx) == tx);
+    return (fBurnFound && fDestFound && CTransaction(deposit.tx) == tx);
 }
 
 std::string SidechainDB::ToString() const

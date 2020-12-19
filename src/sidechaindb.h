@@ -55,8 +55,8 @@ public:
     /** Add txid of removed sidechain deposit transaction */
     void AddRemovedDeposit(const uint256& hashRemoved);
 
-    /** Add deposit(s) to cache - from block */
-    bool AddDeposits(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck = false);
+    /** Add deposit(s) to cache - from block txns */
+    bool AddDepositsFromBlock(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck = false);
 
     /** Add deposit(s) to cache - from disk cache */
     void AddDeposits(const std::vector<SidechainDeposit>& vDeposit, const uint256& hashBlock);
