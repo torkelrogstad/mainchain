@@ -35,7 +35,11 @@ static const int SIDECHAIN_VERSION_CURRENT = 0;
 //! The max supported sidechain version
 static const int SIDECHAIN_VERSION_MAX = 0;
 
+//! The key for sidechain block data in ldb
 static const char DB_SIDECHAIN_BLOCK_OP = 'S';
+
+//! The destination string for the change of a WT^
+static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
 
 struct SidechainProposal {
     int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
