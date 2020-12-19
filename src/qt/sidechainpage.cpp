@@ -256,10 +256,10 @@ void SidechainPage::on_pushButtonDeposit_clicked()
 
     // TODO work with non keyID addresses
 
-    // Get the p2pkh from the sidechain deposit address
-    std::string strAddress = "";
+    // Get the destination string from the sidechain deposit address
+    std::string strDest = "";
     unsigned int nSidechainFromAddress = 0;
-    if (!ParseDepositAddress(ui->payTo->text().toStdString(), strAddress, nSidechainFromAddress)) {
+    if (!ParseDepositAddress(ui->payTo->text().toStdString(), strDest, nSidechainFromAddress)) {
         // Invalid deposit address
         messageBox.setWindowTitle("Invalid sidechain deposit address!");
         messageBox.setText("Check the address you have entered and try again.");
@@ -273,18 +273,6 @@ void SidechainPage::on_pushButtonDeposit_clicked()
         QString error = "The address you have entered is for a different sidechain than you have selected!\n\n";
         error += "Please check the address you have entered and try again.";
         messageBox.setText(error);
-        messageBox.exec();
-        return;
-    }
-
-    // TODO remove keyID check - work with non keyID addresses
-    // Get keyID
-    CSidechainAddress address(strAddress);
-    CKeyID keyID;
-    if (!address.GetKeyID(keyID)) {
-        // Invalid address message box
-        messageBox.setWindowTitle("Invalid sidechain address!");
-        messageBox.setText("Check the address you have entered and try again.");
         messageBox.exec();
         return;
     }
@@ -328,15 +316,15 @@ void SidechainPage::on_pushButtonDeposit_clicked()
     // Attempt to create the deposit
     CTransactionRef tx;
     std::string strFail = "";
-    CScript scriptPubKey;
-    if (!scdb.GetSidechainScript(nSidechain, scriptPubKey)) {
+    CScript sidechainScriptPubKey;
+    if (!scdb.GetSidechainScript(nSidechain, sidechainScriptPubKey)) {
         // Invalid sidechain message box
         messageBox.setWindowTitle("Invalid Sidechain!");
         messageBox.setText("The sidechain you're trying to deposit to does not appear to be active!");
         messageBox.exec();
         return;
     }
-    if (!vpwallets[0]->CreateSidechainDeposit(tx, strFail, scriptPubKey, nSidechain, nValue, nFee, keyID)) {
+    if (!vpwallets[0]->CreateSidechainDeposit(tx, strFail, sidechainScriptPubKey, nSidechain, nValue, nFee, strDest)) {
         // Create transaction error message box
         messageBox.setWindowTitle("Creating deposit transaction failed!");
         QString createError = "Error creating transaction!\n\n";
