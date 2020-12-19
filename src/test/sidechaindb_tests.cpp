@@ -103,9 +103,9 @@ bool ActivateSidechain(SidechainDB& scdbTest, int nHeight = 0)
     proposal.nVersion = 0;
     proposal.title = "Test";
     proposal.description = "Description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.sidechainKeyID = "58c63096724814c3dcdf088b9bb0dc48e6e1a89c";
+    proposal.sidechainHex = "76a91458c63096724814c3dcdf088b9bb0dc48e6e1a89c88ac";
+    proposal.sidechainPriv = "91jbRcYNm4RpdJy4u99g8KyFTUsWxvXcJcYXYbQp9MU7mX1vg3K";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -428,7 +428,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_create)
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx}, GetRandHash());
+    scdbTest.AddDepositsFromBlock(std::vector<CTransaction>{mtx}, GetRandHash());
 
     // Check if we cached it
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
@@ -484,7 +484,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx}, GetRandHash());
+    scdbTest.AddDepositsFromBlock(std::vector<CTransaction>{mtx}, GetRandHash());
 
     // Check if we cached it
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
@@ -515,7 +515,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
     // Add deposit output
     mtx2.vout.push_back(CTxOut(25 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx2}, GetRandHash());
+    scdbTest.AddDepositsFromBlock(std::vector<CTransaction>{mtx2}, GetRandHash());
 
     // Check if we cached it
     vDeposit.clear();
@@ -575,7 +575,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx}, GetRandHash());
+    scdbTest.AddDepositsFromBlock(std::vector<CTransaction>{mtx}, GetRandHash());
 
     // Check if we cached it
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
@@ -591,6 +591,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     CMutableTransaction wmtx;
     wmtx.nVersion = 2;
     wmtx.vin.push_back(CTxIn(ctip.out.hash, ctip.out.n));
+    wmtx.vout.push_back(CTxOut(CAmount(0), CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST) )));
     wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWTFees(1 * CENT)));
     wmtx.vout.push_back(CTxOut(25 * CENT, GetScriptForDestination(pubkey.GetID())));
     wmtx.vout.push_back(CTxOut(24 * CENT, sidechainScript));
@@ -619,7 +620,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     SidechainCTIP ctipFinal;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctipFinal));
     BOOST_CHECK(ctipFinal.out.hash == wmtx.GetHash());
-    BOOST_CHECK(ctipFinal.out.n == 2);
+    BOOST_CHECK(ctipFinal.out.n == 3);
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
@@ -657,7 +658,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx}, GetRandHash());
+    scdbTest.AddDepositsFromBlock(std::vector<CTransaction>{mtx}, GetRandHash());
 
     // Check if we cached it
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
@@ -673,6 +674,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     CMutableTransaction wmtx;
     wmtx.nVersion = 2;
     wmtx.vin.push_back(CTxIn(ctip.out.hash, ctip.out.n));
+    wmtx.vout.push_back(CTxOut(CAmount(0), CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST) )));
     wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWTFees(1 * CENT)));
     wmtx.vout.push_back(CTxOut(25 * CENT, GetScriptForDestination(pubkey.GetID())));
     wmtx.vout.push_back(CTxOut(24 * CENT, sidechainScript));
@@ -701,7 +703,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     SidechainCTIP ctipFinal;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctipFinal));
     BOOST_CHECK(ctipFinal.out.hash == wmtx.GetHash());
-    BOOST_CHECK(ctipFinal.out.n == 2);
+    BOOST_CHECK(ctipFinal.out.n == 3);
 
     // Create another deposit
     CMutableTransaction mtx2;
@@ -722,7 +724,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     // Add deposit output
     mtx2.vout.push_back(CTxOut(25 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx2}, GetRandHash());
+    scdbTest.AddDepositsFromBlock(std::vector<CTransaction>{mtx2}, GetRandHash());
 
     // Check if we cached it
     vDeposit.clear();
@@ -1710,6 +1712,34 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ nullHashWTPrime }));
     vVoteOut = scdb.GetCustomVoteCache();
     BOOST_CHECK(vVoteOut.empty());
+}
+
+BOOST_AUTO_TEST_CASE(txn_to_deposit)
+{
+    // Test of the TxnToDeposit function. This is used by the memory pool and
+    // connectBlock to easily decode a SidechainDeposit from a deposit transaction.
+
+    // Activate test sidechain
+
+    SidechainDB scdbTest;
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+    BOOST_CHECK(ActivateSidechain(scdbTest, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+
+    // TODO add deposit serialization and check that deposit deserialized from
+    // txn matches deposit example.
+
+    // Serialized transaction
+    std::string strTx1 = "0200000001021cfe01d1bbc1fdaa99126c0baba3573689fbd5f932a014b08612800b1329c40000000049483045022100a58e545a71f2c9cb03e06c0d8aff1a62f6bc204480db8650eeb0a3908d332aaf022038f9ae490fd3ed1825c1397c9ae41cd3aed7711b4e2d99a3a10e380506539da101ffffffff03807a7723010000001976a91470a3e11a039059d01bbf463af74c79c22a6270fd88ac0000000000000000246a227367596b444665487a745544583171384a4e726d614631435165723179527142507700e1f505000000001976a91458c63096724814c3dcdf088b9bb0dc48e6e1a89c88ac00000000";
+
+    // Deserialize
+    CMutableTransaction mtx;
+    BOOST_CHECK(DecodeHexTx(mtx, strTx1));
+
+    // TxnToDeposit
+    SidechainDeposit deposit;
+    BOOST_CHECK(scdbTest.TxnToDeposit(mtx, {}, deposit));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
