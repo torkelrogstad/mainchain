@@ -3070,7 +3070,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     return true;
 }
 
-bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, const CScript& scriptPubKeyIn, const uint8_t nSidechain, const CAmount& nAmount, const CAmount& nFee, const CKeyID& keyID)
+bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, const CScript& sidechainScriptPubKey, const uint8_t nSidechain, const CAmount& nAmount, const CAmount& nFee, const std::string& strDest)
 {
     strFail = "Unknown error!";
 
@@ -3085,9 +3085,9 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     }
 
     // User deposit data script
-    CScript dataScript = CScript() << OP_RETURN << ToByteVector(keyID);
+    CScript dataScript = CScript() << OP_RETURN << ParseHex(HexStr(strDest));
 
-    std::vector<unsigned char> vch(ParseHex(HexStr(scriptPubKeyIn)));
+    std::vector<unsigned char> vch(ParseHex(HexStr(sidechainScriptPubKey)));
     CScript sidechainScript = CScript(vch.begin(), vch.end());
     if (sidechainScript.empty()) {
         strFail = "Invalid sidechain deposit script!";
