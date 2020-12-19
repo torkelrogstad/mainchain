@@ -127,7 +127,7 @@ struct Sidechain {
 
 struct SidechainDeposit {
     uint8_t nSidechain;
-    CKeyID keyID;
+    std::string strDest;
     CMutableTransaction tx;
     uint32_t n;
     uint256 hashBlock;
@@ -141,7 +141,7 @@ struct SidechainDeposit {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nSidechain);
-        READWRITE(keyID);
+        READWRITE(strDest);
         READWRITE(tx);
         READWRITE(n);
         READWRITE(hashBlock);
@@ -232,6 +232,7 @@ struct SidechainCTIP {
     CAmount amount;
 
     uint256 GetHash() const;
+    std::string ToString() const;
 
     // For hash calculation
     ADD_SERIALIZE_METHODS
