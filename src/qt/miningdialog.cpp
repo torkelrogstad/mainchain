@@ -54,7 +54,8 @@ MiningDialog::MiningDialog(const PlatformStyle *_platformStyle, QWidget *parent)
     // Buttons
     ui->pushButtonStartMining->setIcon(platformStyle->SingleColorIcon(":/icons/tx_mined"));
     ui->pushButtonStopMining->setIcon(platformStyle->SingleColorIcon(":/icons/quit"));
-    ui->pushButtonManage->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonAddRemove->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonWTPrimeVote->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
 
     Update();
 }
@@ -205,9 +206,14 @@ void MiningDialog::UpdateMiningOutput()
     ui->labelNonce->setText(nonce);
 }
 
-void MiningDialog::on_pushButtonManage_clicked()
+void MiningDialog::on_pushButtonAddRemove_clicked()
 {
-    Q_EMIT ManagePageRequested();
+    Q_EMIT ActivationDialogRequested();
+}
+
+void MiningDialog::on_pushButtonWTPrimeVote_clicked()
+{
+    Q_EMIT WTPrimeDialogRequested();
 }
 
 void MiningDialog::on_checkBoxAbandonFailedBMM_toggled(bool fChecked)
@@ -215,6 +221,9 @@ void MiningDialog::on_checkBoxAbandonFailedBMM_toggled(bool fChecked)
     // Start / stop abandon bmm timer
     if (fChecked) {
         abandonBMMTimer->start(ABANDON_BMM_DELAY);
+        // Also call AbandonFailedBMM right now so the user doesn't have to
+        // wait for the first automatic call.
+        AbandonFailedBMM();
     } else {
         abandonBMMTimer->stop();
     }

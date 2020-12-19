@@ -690,45 +690,44 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         } else if (amtReturning > amtSidechainUTXO) {
             // M5 Deposit
 
-            // Check format
+            // Find deposit burn output & OP_RETURN output with destination.
+            // Note that the first OP_RETURN output in a deposit txn will always
+            // be taken as the destination and others should be ignored.
             COutPoint outpoint;
-            bool fFormatChecked = false;
+            bool fDestOutput = false;
             for (size_t i = 0; i < tx.vout.size(); i++) {
                 const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
+
+                // This would be non-standard but still checking
+                if (!scriptPubKey.size())
+                    continue;
+
+                if (scriptPubKey.front() == OP_RETURN) {
+                    fDestOutput = true;
+                    continue;
+                }
+
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
+                    if (fSidechainOutput) {
+                        // If we already found the burn output, finding another
+                        // makes the transaction invalid
+                        return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-multiple-burn-outputs");
+                    }
+
                     // We found the deposit burn output
                     fSidechainOutput = true;
 
                     // Copy output index of deposit and move on
                     outpoint.n = i;
                     outpoint.hash = tx.GetHash();
-                    continue;
                 }
-                // scriptPubKey must contain keyID, OP_RETURN
-                if (scriptPubKey.front() != OP_RETURN)
-                    continue;
-                if (scriptPubKey.size() != 22 && scriptPubKey.size() != 23)
-                    continue;
-
-                CScript::const_iterator pkey = scriptPubKey.begin() + 1;
-                opcodetype opcode;
-                std::vector<unsigned char> vch;
-                if (!scriptPubKey.GetOp(pkey, opcode, vch))
-                    continue;
-                if (vch.size() != sizeof(uint160))
-                    continue;
-
-                CKeyID keyID = CKeyID(uint160(vch));
-                if (keyID.IsNull())
-                    continue;
-
-                fFormatChecked = true;
             }
 
-            if (!fFormatChecked)
-                return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-format");
             if (!fSidechainOutput)
                 return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-no-sidechain-output");
+
+            if (!fDestOutput)
+                return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-no-destination-opreturn-output");
 
             // Check nSidechain
             if (!IsSidechainNumberValid(nSidechain))
@@ -2253,7 +2252,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
 
         if (drivechainsEnabled && !tx.IsCoinBase() && !fJustCheck) {
-            // Check for sidechain deposits
+            // Check for possible sidechain deposits
             bool fSidechainOutput = false;
             uint8_t nSidechain;
             for (const CTxOut out : tx.vout) {
@@ -2262,8 +2261,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     fSidechainOutput = true;
                 }
             }
-            if (fSidechainOutput)
+            if (fSidechainOutput) {
                 vDepositTx.push_back(tx);
+            }
         }
 
         CTxUndo undoDummy;
@@ -2288,7 +2288,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
     if (drivechainsEnabled && vDepositTx.size()) {
-        if (!scdb.AddDeposits(vDepositTx, block.GetHash(), fJustCheck)) {
+        if (!scdb.AddDepositsFromBlock(vDepositTx, block.GetHash(), fJustCheck)) {
             LogPrintf("%s: SCDB Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
             return error("%s: SCDB Deposits invalid from block: %s", __func__, block.GetHash().ToString());
         }

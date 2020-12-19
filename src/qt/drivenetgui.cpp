@@ -6,6 +6,7 @@
 
 #include <qt/drivenetunits.h>
 #include <qt/clientmodel.h>
+#include <qt/hashcalcdialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/miningdialog.h>
@@ -117,6 +118,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     showHelpMessageAction(0),
     showSidechainTableDialogAction(0),
     showMiningDialogAction(0),
+    showHashCalcDialogAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -168,8 +170,14 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         miningDialog = new MiningDialog(platformStyle);
         miningDialog->setParent(this, Qt::Window);
 
-        connect(miningDialog, SIGNAL(ManagePageRequested()),
-                walletFrame, SLOT(showMinerManageDialog()));
+        hashCalcDialog = new HashCalcDialog(platformStyle);
+        hashCalcDialog->setParent(this, Qt::Window);
+
+        connect(miningDialog, SIGNAL(ActivationDialogRequested()),
+                walletFrame, SLOT(showSidechainActivationDialog()));
+
+        connect(miningDialog, SIGNAL(WTPrimeDialogRequested()),
+                walletFrame, SLOT(showSidechainWTPrimeDialog()));
 
     } else
 #endif // ENABLE_WALLET
@@ -392,6 +400,9 @@ void BitcoinGUI::createActions()
     showMiningDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_mined"), tr("&Mining"), this);
     showMiningDialogAction->setStatusTip(tr("Show mining window"));
 
+    showHashCalcDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_mined"), tr("&Hash Calculator"), this);
+    showHashCalcDialogAction->setStatusTip(tr("Show hash calculator window"));
+
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
@@ -415,6 +426,7 @@ void BitcoinGUI::createActions()
         connect(openAction, SIGNAL(triggered()), this, SLOT(openClicked()));
         connect(showSidechainTableDialogAction, SIGNAL(triggered()), this, SLOT(showSidechainTableDialog()));
         connect(showMiningDialogAction, SIGNAL(triggered()), this, SLOT(showMiningDialog()));
+        connect(showHashCalcDialogAction, SIGNAL(triggered()), this, SLOT(showHashCalcDialog()));
     }
 #endif // ENABLE_WALLET
 
@@ -451,6 +463,7 @@ void BitcoinGUI::createMenuBar()
     if (walletFrame)
     {
         tools->addAction(showMiningDialogAction);
+        tools->addAction(showHashCalcDialogAction);
     }
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
@@ -669,6 +682,7 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addAction(openRPCConsoleAction);
     trayIconMenu->addAction(showSidechainTableDialogAction);
     trayIconMenu->addAction(showMiningDialogAction);
+    trayIconMenu->addAction(showHashCalcDialogAction);
 #ifndef Q_OS_MAC // This is built-in on Mac
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(quitAction);
@@ -733,6 +747,11 @@ void BitcoinGUI::showSidechainTableDialog()
 void BitcoinGUI::showMiningDialog()
 {
     miningDialog->show();
+}
+
+void BitcoinGUI::showHashCalcDialog()
+{
+    hashCalcDialog->show();
 }
 
 void BitcoinGUI::openClicked()

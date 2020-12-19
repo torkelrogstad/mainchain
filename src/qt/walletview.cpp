@@ -344,10 +344,14 @@ void WalletView::requestedSyncWarningInfo()
     Q_EMIT outOfSyncWarningClicked();
 }
 
-void WalletView::showMinerManageDialog()
+void WalletView::showSidechainActivationDialog()
 {
     if (sidechainPage)
-        sidechainPage->ShowManagePage();
+        sidechainPage->ShowActivationDialog();
 }
 
-
+void WalletView::showSidechainWTPrimeDialog()
+{
+    if (sidechainPage)
+        sidechainPage->ShowWTPrimeDialog();
+}

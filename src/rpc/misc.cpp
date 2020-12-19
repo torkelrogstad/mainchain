@@ -866,7 +866,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
 #ifdef ENABLE_WALLET
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("nsidechain", d.nSidechain));
-        obj.push_back(Pair("keyid", d.keyID.ToString()));
+        obj.push_back(Pair("strdest", d.strDest));
         obj.push_back(Pair("txhex", EncodeHexTx(d.tx)));
         obj.push_back(Pair("n", (int64_t)d.n));
         obj.push_back(Pair("proofhex", strProofHex));
@@ -999,6 +999,37 @@ UniValue receivewtprime(const JSONRPCRequest& request)
         strError = "Rejecting WT^: Withdrawn amount greater than CTIP amount!";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    // Check for the required WT^ change return destination OP_RETURN output
+    for (size_t i = 0; i < mtx.vout.size(); i++) {
+        const CScript& scriptPubKey = mtx.vout[i].scriptPubKey;
+        if (!scriptPubKey.size())
+            continue;
+        if (scriptPubKey.front() != OP_RETURN)
+            continue;
+
+        if (scriptPubKey.size() < 3) {
+            strError = "Rejecting WT^: First OP_RETURN output invalid size (too small)!\n";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_MISC_ERROR, strError);
+        }
+
+        CScript::const_iterator pDest = scriptPubKey.begin() + 1;
+        opcodetype opcode;
+        std::vector<unsigned char> vch;
+        if (!scriptPubKey.GetOp(pDest, opcode, vch) || vch.empty()) {
+            strError = "Rejecting WT^: First OP_RETURN output invalid. (Failed GetOp)!\n";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_MISC_ERROR, strError);
+        }
+        std::string strDest((const char*)vch.data(), vch.size());
+        if (strDest != SIDECHAIN_WTPRIME_RETURN_DEST) {
+            strError = "Rejecting WT^: First OP_RETURN output invalid. (incorrect dest)!\n";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_MISC_ERROR, strError);
+        }
+        break;
     }
 
     // Add WT^ to our local cache so that we can create a WT^ hash commitment

@@ -100,6 +100,7 @@ QT_FORMS_UI = \
   qt/forms/coincontroldialog.ui \
   qt/forms/coinsplitconfirmationdialog.ui \
   qt/forms/editaddressdialog.ui \
+  qt/forms/hashcalcdialog.ui \
   qt/forms/helpmessagedialog.ui \
   qt/forms/intro.ui \
   qt/forms/openuridialog.ui \
@@ -112,10 +113,13 @@ QT_FORMS_UI = \
   qt/forms/debugwindow.ui \
   qt/forms/sendcoinsdialog.ui \
   qt/forms/sendcoinsentry.ui \
+  qt/forms/sidechainactivationdialog.ui \
+  qt/forms/sidechaindetailsdialog.ui \
   qt/forms/sidechaindepositconfirmationdialog.ui \
   qt/forms/sidechaintabledialog.ui \
-  qt/forms/sidechainminerdialog.ui \
   qt/forms/sidechainpage.ui \
+  qt/forms/sidechainproposaldialog.ui \
+  qt/forms/sidechainwtprimedialog.ui \
   qt/forms/sidechainwtprimedetails.ui \
   qt/forms/signverifymessagedialog.ui \
   qt/forms/transactiondescdialog.ui \
@@ -138,6 +142,7 @@ QT_MOC_CPP = \
   qt/moc_csvmodelwriter.cpp \
   qt/moc_editaddressdialog.cpp \
   qt/moc_guiutil.cpp \
+  qt/moc_hashcalcdialog.cpp \
   qt/moc_intro.cpp \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
@@ -160,12 +165,15 @@ QT_MOC_CPP = \
   qt/moc_sendcoinsentry.cpp \
   qt/moc_sidechainactivationtablemodel.cpp \
   qt/moc_wtprimevotetablemodel.cpp \
+  qt/moc_sidechainactivationdialog.cpp \
+  qt/moc_sidechaindetailsdialog.cpp \
+  qt/moc_sidechainproposaldialog.cpp \
   qt/moc_sidechaintabledialog.cpp \
   qt/moc_sidechaindepositconfirmationdialog.cpp \
   qt/moc_sidechainescrowtablemodel.cpp \
-  qt/moc_sidechainminerdialog.cpp \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainwithdrawaltablemodel.cpp \
+  qt/moc_sidechainwtprimedialog.cpp \
   qt/moc_sidechainwtprimedetails.cpp \
   qt/moc_signverifymessagedialog.cpp \
   qt/moc_splashscreen.cpp \
@@ -220,6 +228,7 @@ DRIVENET_QT_H = \
   qt/editaddressdialog.h \
   qt/guiconstants.h \
   qt/guiutil.h \
+  qt/hashcalcdialog.h \
   qt/intro.h \
   qt/macdockiconhandler.h \
   qt/macnotificationhandler.h \
@@ -245,12 +254,15 @@ DRIVENET_QT_H = \
   qt/sendcoinsentry.h \
   qt/sidechainactivationtablemodel.h \
   qt/wtprimevotetablemodel.h \
+  qt/sidechainactivationdialog.h \
+  qt/sidechaindetailsdialog.h \
   qt/sidechaindepositconfirmationdialog.h \
+  qt/sidechainproposaldialog.h \
   qt/sidechaintabledialog.h \
   qt/sidechainescrowtablemodel.h \
-  qt/sidechainminerdialog.h \
   qt/sidechainpage.h \
   qt/sidechainwithdrawaltablemodel.h \
+  qt/sidechainwtprimedialog.h \
   qt/sidechainwtprimedetails.h \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
@@ -386,6 +398,7 @@ DRIVENET_QT_BASE_CPP = \
   qt/clientmodel.cpp \
   qt/csvmodelwriter.cpp \
   qt/guiutil.cpp \
+  qt/hashcalcdialog.cpp \
   qt/intro.cpp \
   qt/networkstyle.cpp \
   qt/notificator.cpp \
@@ -423,11 +436,14 @@ DRIVENET_QT_WALLET_CPP = \
   qt/sendcoinsentry.cpp \
   qt/sidechainactivationtablemodel.cpp \
   qt/wtprimevotetablemodel.cpp \
+  qt/sidechainactivationdialog.cpp \
+  qt/sidechaindetailsdialog.cpp \
   qt/sidechaindepositconfirmationdialog.cpp \
   qt/sidechainescrowtablemodel.cpp \
   qt/sidechaintabledialog.cpp \
-  qt/sidechainminerdialog.cpp \
   qt/sidechainpage.cpp \
+  qt/sidechainproposaldialog.cpp \
+  qt/sidechainwtprimedialog.cpp \
   qt/sidechainwithdrawaltablemodel.cpp \
   qt/sidechainwtprimedetails.cpp \
   qt/signverifymessagedialog.cpp \

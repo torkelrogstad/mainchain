@@ -35,7 +35,11 @@ static const int SIDECHAIN_VERSION_CURRENT = 0;
 //! The max supported sidechain version
 static const int SIDECHAIN_VERSION_MAX = 0;
 
+//! The key for sidechain block data in ldb
 static const char DB_SIDECHAIN_BLOCK_OP = 'S';
+
+//! The destination string for the change of a WT^
+static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
 
 struct SidechainProposal {
     int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
@@ -123,7 +127,7 @@ struct Sidechain {
 
 struct SidechainDeposit {
     uint8_t nSidechain;
-    CKeyID keyID;
+    std::string strDest;
     CMutableTransaction tx;
     uint32_t n;
     uint256 hashBlock;
@@ -137,7 +141,7 @@ struct SidechainDeposit {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nSidechain);
-        READWRITE(keyID);
+        READWRITE(strDest);
         READWRITE(tx);
         READWRITE(n);
         READWRITE(hashBlock);
@@ -228,6 +232,7 @@ struct SidechainCTIP {
     CAmount amount;
 
     uint256 GetHash() const;
+    std::string ToString() const;
 
     // For hash calculation
     ADD_SERIALIZE_METHODS
@@ -280,5 +285,7 @@ struct SidechainBlockData: public SidechainObj {
         return GetHash();
     }
 };
+
+bool ParseDepositAddress(const std::string& strAddressIn, std::string& strAddressOut, unsigned int& nSidechainOut);
 
 #endif // BITCOIN_SIDECHAIN_H

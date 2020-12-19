@@ -218,9 +218,16 @@ void WalletFrame::outOfSyncWarningClicked()
     Q_EMIT requestedSyncWarningInfo();
 }
 
-void WalletFrame::showMinerManageDialog()
+void WalletFrame::showSidechainActivationDialog()
 {
     WalletView *walletView = currentWalletView();
     if (walletView)
-        walletView->showMinerManageDialog();
+        walletView->showSidechainActivationDialog();
+}
+
+void WalletFrame::showSidechainWTPrimeDialog()
+{
+    WalletView *walletView = currentWalletView();
+    if (walletView)
+        walletView->showSidechainWTPrimeDialog();
 }

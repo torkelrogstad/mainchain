@@ -98,7 +98,8 @@ public Q_SLOTS:
     /** Pass on signal over requested out-of-sync-warning information */
     void outOfSyncWarningClicked();
 
-    void showMinerManageDialog();
+    void showSidechainActivationDialog();
+    void showSidechainWTPrimeDialog();
 };
 
 #endif // BITCOIN_QT_WALLETFRAME_H
