@@ -683,13 +683,15 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
             break;
         }
     }
-    if (!mtx.vout.size())
+    // WT^ should have at least the encoded dest output, encoded fee output,
+    // and change return output.
+    if (mtx.vout.size() < 3)
         return false;
 
-    // Get the mainchain fee amount from the first WT^ output which encodes the
+    // Get the mainchain fee amount from the second WT^ output which encodes the
     // sum of WT fees.
     CAmount amountRead = 0;
-    if (!DecodeWTFees(mtx.vout.front().scriptPubKey, amountRead)) {
+    if (!DecodeWTFees(mtx.vout[1].scriptPubKey, amountRead)) {
         LogPrintf("%s: Failed to decode WT fees!\n", __func__);
         return false;
     }
@@ -707,12 +709,16 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     // Add mainchain fees from WT(s)
     amountWithdrawn += nFees;
 
-    // Get sidechain change return script
+    // Get sidechain change return script. We will pay the sidechain the change
+    // left over from this WT^. This WT^ transaction will look like a normal
+    // sidechain deposit but with more outputs and the destination string will
+    // be SIDECHAIN_WTPRIME_RETURN_DEST.
     CScript sidechainScript;
     if (!scdb.GetSidechainScript(nSidechain, sidechainScript))
         return false;
 
-    // Add placeholder change return as last output
+    // Note: WT^ change return must be the final output
+    // Add placeholder change return as the final output.
     mtx.vout.push_back(CTxOut(0, sidechainScript));
 
     // Get sidechain's CTIP
