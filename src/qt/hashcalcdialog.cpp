@@ -74,10 +74,17 @@ void HashCalcDialog::on_pushButtonHelp_clicked()
     QMessageBox::information(this, tr("DriveNet - information"),
         tr(""
            "Hex:\n"
+           "The hexadecimal (base 16) representation.\n\n"
            "SHA-256:\n"
+           "256 bit output from the Secure Hash Algorithm 2 hash function.\n\n"
            "SHA-256D:\n"
+           "256 bit output from Bitcoin's SHA-256D / Hash256 [sha256(sha256())] hash function.\n"
+           "Note that Bitcoin Core will output in Little-Endian byte order.\n\n"
            "RIPEMD160:\n"
+           "160 bit RIPE Message Digest.\n\n"
            "Hash160:\n"
+           "160 bit output from Bitcoin's Hash160 [RIPEMD160(sha256())] hash function.\n"
+           "Note that Bitcoin Core will output in Little-Endian byte order.\n\n"
            ),
         QMessageBox::Ok);
 }
