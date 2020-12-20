@@ -55,12 +55,18 @@ SidechainWTPrimeDialog::SidechainWTPrimeDialog(const PlatformStyle *_platformSty
 
     // If the user has WT^ vote parameters set, update the default vote combobox
     std::string strDefault = gArgs.GetArg("-defaultwtprimevote", "");
-    if (strDefault == "upvote") {
+    if (strDefault == "upvote")
+    {
         ui->comboBoxDefaultVote->setCurrentIndex(WTPRIME_UPVOTE);
     }
     else
-    if (strDefault == "downvote") {
+    if (strDefault == "downvote")
+    {
         ui->comboBoxDefaultVote->setCurrentIndex(WTPRIME_DOWNVOTE);
+    }
+    else
+    {
+        ui->comboBoxDefaultVote->setCurrentIndex(WTPRIME_ABSTAIN);
     }
 
     // Setup platform style single color icons
