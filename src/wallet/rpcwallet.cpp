@@ -3602,14 +3602,25 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
 
     LOCK2(cs_main, pwallet->cs_wallet);
 
-    // strDest
-    std::string strDest = request.params[1].get_str();
-    if (strDest.empty()) {
-        std::string strError = "Invalid sidechain address";
+    // strDepositAddress
+    std::string strDepositAddress = request.params[1].get_str();
+    if (strDepositAddress.empty()) {
+        std::string strError = "Invalid sidechain deposit address";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strError);
     }
 
+    // Get strDest from deposit address
+    std::string strDest = "";
+    unsigned int nSidechainFromAddress;
+    if (!ParseDepositAddress(strDepositAddress, strDest, nSidechainFromAddress)) {
+        std::string strError = "Invalid sidechain deposit address - failed to parse";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strError);
+    }
+
+
+    // Reject deposits to SIDECHAIN_WTPRIME_RETURN_DEST
     if (strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
         std::string strError = "Invalid sidechain address. Cannot be SIDECHAIN_WTPRIME_RETURN_DEST. Choose a different address and try again,";
         LogPrintf("%s: %s\n", __func__, strError);
