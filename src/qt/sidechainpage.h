@@ -81,6 +81,9 @@ public Q_SLOTS:
     void ShowWTPrimeDialog();
     void UpdateRecentDeposits();
 
+private Q_SLOTS:
+    void AnimateAddRemoveIcon();
+
 private:
     Ui::SidechainPage *ui;
 
@@ -89,11 +92,12 @@ private:
 
     SidechainDepositConfirmationDialog *depositConfirmationDialog = nullptr;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
-    SidechainActivationDialog* activationDialog = nullptr;
-    SidechainWTPrimeDialog* wtPrimeDialog = nullptr;
+    SidechainActivationDialog *activationDialog = nullptr;
+    SidechainWTPrimeDialog *wtPrimeDialog = nullptr;
 
-    const PlatformStyle *platformStyle;
+    const PlatformStyle *platformStyle = nullptr;
 
+    QTimer *addRemoveAnimationTimer = nullptr;
 
     // The sidechains that are currently cached for the list widget
     std::vector<Sidechain> vSidechainCache;
@@ -107,6 +111,9 @@ private:
     void SetupSidechainList(const std::vector<Sidechain>& vSidechain);
     bool validateDepositAmount();
     bool validateFeeAmount();
+
+    // true = +, false = -
+    bool fAnimationStatus = false;
 };
 
 QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain);

@@ -96,12 +96,24 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->pushButtonWTDoubleClickHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pushButtonRecentDepositHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
 
+    addRemoveAnimationTimer = new QTimer(this);
+    connect(addRemoveAnimationTimer, SIGNAL(timeout()), this, SLOT(AnimateAddRemoveIcon()));
+    addRemoveAnimationTimer->start(3000);
+    AnimateAddRemoveIcon();
+
     nSelectedSidechain = 0;
 }
 
 SidechainPage::~SidechainPage()
 {
     delete ui;
+}
+
+void SidechainPage::AnimateAddRemoveIcon()
+{
+    QString strIcon = fAnimationStatus ? ":/icons/add" : ":/icons/delete";
+    fAnimationStatus = !fAnimationStatus;
+    ui->pushButtonAddRemove->setIcon(platformStyle->SingleColorIcon(strIcon));
 }
 
 void SidechainPage::setClientModel(ClientModel *model)
