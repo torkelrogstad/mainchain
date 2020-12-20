@@ -702,10 +702,6 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                 if (!scriptPubKey.size())
                     continue;
 
-                if (scriptPubKey.front() == OP_RETURN) {
-                    fDestOutput = true;
-                    continue;
-                }
 
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
                     if (fSidechainOutput) {
@@ -720,6 +716,26 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                     // Copy output index of deposit and move on
                     outpoint.n = i;
                     outpoint.hash = tx.GetHash();
+
+                    continue;
+                }
+
+
+                if (!fDestOutput && scriptPubKey.front() == OP_RETURN) {
+                    if (scriptPubKey.size() < 3)
+                        return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-op-return-too-short");
+
+                    CScript::const_iterator pDest = scriptPubKey.begin() + 1;
+                    opcodetype opcode;
+                    std::vector<unsigned char> vch;
+                    if (!scriptPubKey.GetOp(pDest, opcode, vch) || vch.empty())
+                        return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-getop-failed");
+
+                    std::string strDest((const char*)vch.data(), vch.size());
+                    if (strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
+                        return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-sidechain-wtprime-return-dest");
+
+                    fDestOutput = true;
                 }
             }
 
