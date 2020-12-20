@@ -65,13 +65,13 @@ SidechainWTPrimeDialog::SidechainWTPrimeDialog(const PlatformStyle *_platformSty
 
     // Setup platform style single color icons
 
-    ui->pushButtonUpvote->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
-    ui->pushButtonDownvote->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_conflicted"));
+    ui->pushButtonUpvote->setIcon(platformStyle->SingleColorIcon(":/icons/ack"));
+    ui->pushButtonDownvote->setIcon(platformStyle->SingleColorIcon(":/icons/nack"));
     ui->pushButtonAbstain->setIcon(platformStyle->SingleColorIcon(":/icons/replay_not_replayed"));
     ui->pushButtonHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
-    ui->comboBoxDefaultVote->setItemIcon(0, platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
+    ui->comboBoxDefaultVote->setItemIcon(0, platformStyle->SingleColorIcon(":/icons/ack"));
     ui->comboBoxDefaultVote->setItemIcon(1, platformStyle->SingleColorIcon(":/icons/replay_not_replayed"));
-    ui->comboBoxDefaultVote->setItemIcon(2, platformStyle->SingleColorIcon(":/icons/transaction_conflicted"));
+    ui->comboBoxDefaultVote->setItemIcon(2, platformStyle->SingleColorIcon(":/icons/nack"));
 
     // Start the poll timer to update the page
     pollTimer = new QTimer(this);

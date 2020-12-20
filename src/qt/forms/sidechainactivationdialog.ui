@@ -37,12 +37,24 @@
        <property name="text">
         <string>ACK</string>
        </property>
+       <property name="iconSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonReject">
        <property name="text">
         <string>NACK</string>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
        </property>
       </widget>
      </item>
@@ -74,12 +86,24 @@
         <iconset resource="../drivenet.qrc">
          <normaloff>:/icons/add</normaloff>:/icons/add</iconset>
        </property>
+       <property name="iconSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonHelp">
        <property name="text">
         <string/>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>24</width>
+         <height>24</height>
+        </size>
        </property>
       </widget>
      </item>

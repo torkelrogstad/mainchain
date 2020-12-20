@@ -29,7 +29,7 @@ SidechainProposalDialog::SidechainProposalDialog(const PlatformStyle *_platformS
     ui->toolButtonSoftwareHashes->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->toolButtonIDHash1->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->toolButtonIDHash2->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
-    ui->pushButtonCreate->setIcon(platformStyle->SingleColorIcon(":/icons/add"));
+    ui->pushButtonCreate->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
 }
 
 SidechainProposalDialog::~SidechainProposalDialog()

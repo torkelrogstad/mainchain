@@ -400,7 +400,7 @@ void BitcoinGUI::createActions()
     showMiningDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_mined"), tr("&Mining"), this);
     showMiningDialogAction->setStatusTip(tr("Show mining window"));
 
-    showHashCalcDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_mined"), tr("&Hash Calculator"), this);
+    showHashCalcDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/calculator"), tr("&Hash Calculator"), this);
     showHashCalcDialogAction->setStatusTip(tr("Show hash calculator window"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
