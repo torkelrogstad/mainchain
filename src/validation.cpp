@@ -720,7 +720,6 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                     continue;
                 }
 
-
                 if (!fDestOutput && scriptPubKey.front() == OP_RETURN) {
                     if (scriptPubKey.size() < 3)
                         return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-op-return-too-short");
