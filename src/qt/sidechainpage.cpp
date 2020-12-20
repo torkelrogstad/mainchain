@@ -279,6 +279,14 @@ void SidechainPage::on_pushButtonDeposit_clicked()
         return;
     }
 
+    if (strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
+        // Invalid deposit address
+        messageBox.setWindowTitle("Invalid sidechain deposit address!");
+        messageBox.setText("Destination cannot be SIDECHAIN_WTPRIME_RETURN_DEST, please choose another address and try again.");
+        messageBox.exec();
+        return;
+    }
+
     if (nSidechainFromAddress != nSidechain) {
         // Invalid sidechain number in deposit address
         messageBox.setWindowTitle("Incorrect sidechain number in deposit address!");
