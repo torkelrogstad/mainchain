@@ -724,6 +724,9 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                     if (scriptPubKey.size() < 3)
                         return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-op-return-too-short");
 
+                    if (scriptPubKey.size() > MAX_DEPOSIT_DESTINATION_BYTES)
+                        return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-op-return-too-large");
+
                     CScript::const_iterator pDest = scriptPubKey.begin() + 1;
                     opcodetype opcode;
                     std::vector<unsigned char> vch;

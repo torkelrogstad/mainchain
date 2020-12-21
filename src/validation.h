@@ -152,6 +152,7 @@ static const bool DEFAULT_PEERBLOOMFILTERS = true;
 /** Default for -stopatheight */
 static const int DEFAULT_STOPATHEIGHT = 0;
 
+/** Maximum number of bytes added to a critical transaction (v3 - BMM etc) */
 static const int MAX_CRITICAL_DATA_BYTES = 21;
 
 struct BlockHasher

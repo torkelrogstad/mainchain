@@ -3087,6 +3087,11 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     // User deposit data script
     CScript dataScript = CScript() << OP_RETURN << ParseHex(HexStr(strDest));
 
+    if (dataScript.size() > MAX_DEPOSIT_DESTINATION_BYTES) {
+        strFail = "Invalid sidechain deposit script - destination too large!";
+        return false;
+    }
+
     std::vector<unsigned char> vch(ParseHex(HexStr(sidechainScriptPubKey)));
     CScript sidechainScript = CScript(vch.begin(), vch.end());
     if (sidechainScript.empty()) {

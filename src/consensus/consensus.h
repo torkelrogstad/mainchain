@@ -33,4 +33,10 @@ static constexpr unsigned int LOCKTIME_VERIFY_SEQUENCE = (1 << 0);
 /** Use GetMedianTimePast() instead of nTime for end point timestamp. */
 static constexpr unsigned int LOCKTIME_MEDIAN_TIME_PAST = (1 << 1);
 
+
+/** Maximum number of bytes for a sidechain deposit destination encoding
+ * OP_RETURN outptut. 68 bytes + PUSHDATA + OP_RETURN.
+ */
+static const int MAX_DEPOSIT_DESTINATION_BYTES = 70;
+
 #endif // BITCOIN_CONSENSUS_CONSENSUS_H

@@ -1219,6 +1219,11 @@ bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock,
             return false;
         }
 
+        if (scriptPubKey.size() > MAX_DEPOSIT_DESTINATION_BYTES) {
+            LogPrintf("%s: Invalid - First OP_RETURN is invalid (too large).\ntxid: %s\n", __func__, tx.GetHash().ToString());
+            return false;
+        }
+
         CScript::const_iterator pDest = scriptPubKey.begin() + 1;
         opcodetype opcode;
         std::vector<unsigned char> vch;
