@@ -98,7 +98,7 @@ public:
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000002aaaab1");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x757a6ff870c26fd482e2429cfae7ea6a2c9689159258279e2c1d1f86bb80eb90");
+        consensus.defaultAssumeValid = uint256S("0x923dd6b9f56da99ba254c0113e1590928b9a2d6a705b7815f94c0bd846efb663");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -112,11 +112,11 @@ public:
         nDefaultPort = 8551;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1606283270, 83328573, 0x1d5fffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1608513069, 69085377, 0x1d5fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        // PoW: 0000005cefa38b5affb272426c868da29e7fc8efd20b905ebe5b8655dba13bb2
-        assert(consensus.hashGenesisBlock == uint256S("0x757a6ff870c26fd482e2429cfae7ea6a2c9689159258279e2c1d1f86bb80eb90"));
+        // PoW: 0000005afd9952ad33f421bec770c69c0b09577a66056ad8e9a1c6c76a726d10
+        assert(consensus.hashGenesisBlock == uint256S("0x923dd6b9f56da99ba254c0113e1590928b9a2d6a705b7815f94c0bd846efb663"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
         // Note that of those which support the service bits prefix, most only support a subset of
@@ -138,7 +138,6 @@ public:
 
         bech32_hrp = "bc";
 
-        // TODO add more seed nodes
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 
         fDefaultConsistencyChecks = false;
@@ -147,7 +146,7 @@ public:
 
         checkpointData = {
             {
-                { 0, uint256S("0x757a6ff870c26fd482e2429cfae7ea6a2c9689159258279e2c1d1f86bb80eb90")},
+                { 0, uint256S("0x923dd6b9f56da99ba254c0113e1590928b9a2d6a705b7815f94c0bd846efb663")},
             }
         };
 
