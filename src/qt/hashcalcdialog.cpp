@@ -36,12 +36,6 @@ HashCalcDialog::HashCalcDialog(const PlatformStyle *_platformStyle, QWidget *par
     ui->pushButtonHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pushButtonHelpInvalidHex->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
 
-    ui->pushButtonCopySHA256D->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
-    ui->pushButtonCopyHash160->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
-    ui->pushButtonCopyRIPEMD160->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
-    ui->pushButtonCopySHA256->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
-    ui->pushButtonCopyHex->setIcon(platformStyle->SingleColorIcon(":/icons/editcopy"));
-
     ui->pushButtonHexWarning->setIcon(platformStyle->SingleColorIcon(":/icons/warning"));
 
     // Make text browsers transparent
