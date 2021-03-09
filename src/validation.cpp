@@ -5387,7 +5387,7 @@ static const uint64_t SCDB_DUMP_VERSION = 1;
 bool LoadCustomVoteCache()
 {
     fs::path path = GetDataDir() / "drivechain" / "customvotes.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return true;
     }
@@ -5428,8 +5428,8 @@ void DumpCustomVoteCache()
     int count = vCustomVote.size();
 
     // Write the votes
-    fs::path path = GetDataDir() / "drivechain" / "customvotes.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    fs::path path = GetDataDir() / "drivechain" / "customvotes.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
@@ -5446,12 +5446,18 @@ void DumpCustomVoteCache()
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
         return;
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "customvotes.dat.new", GetDataDir() /  "drivechain" / "customvotes.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 bool LoadDepositCache()
 {
     fs::path path = GetDataDir() / "drivechain" / "deposit.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return true;
     }
@@ -5498,8 +5504,8 @@ void DumpDepositCache()
     int count = vDeposit.size();
 
     // Write the deposits
-    fs::path path = GetDataDir() / "drivechain" / "deposit.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    fs::path path = GetDataDir() / "drivechain" / "deposit.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
@@ -5516,12 +5522,18 @@ void DumpDepositCache()
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
         return;
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "deposit.dat.new", GetDataDir() /  "drivechain" / "deposit.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 bool LoadWTPrimeCache(bool fReindex)
 {
     fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return true;
     }
@@ -5595,8 +5607,8 @@ void DumpWTPrimeCache()
     int nFailed = vFailed.size();
 
     // Write the WT^ raw tx cache & spent WT^ cache
-    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
@@ -5624,12 +5636,18 @@ void DumpWTPrimeCache()
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
         return;
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "wtprime.dat.new", GetDataDir() /  "drivechain" / "wtprime.dat");
+
+    LogPrintf("%s: Wrote %u WT^, %u spent, %u failed\n", __func__, nWTPrime, nSpent, nFailed);
 }
 
 bool LoadSidechainActivationStatusCache()
 {
     fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return true;
     }
@@ -5669,8 +5687,8 @@ void DumpSidechainActivationStatusCache()
     int count = vActivationStatus.size();
 
     // Write the sidechain activation status cache
-    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
+    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
     }
@@ -5687,23 +5705,27 @@ void DumpSidechainActivationStatusCache()
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
         return;
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "sidechainactivation.dat.new", GetDataDir() /  "drivechain" / "sidechainactivation.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 bool LoadActiveSidechainCache()
 {
     fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
-    CAutoFile filein(fsbridge::fopen(path, "r"), SER_DISK, CLIENT_VERSION);
-    if (filein.IsNull()) {
+    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull())
         return true;
-    }
 
     std::vector<Sidechain> vSidechain;
     try {
         uint64_t nVersion;
         filein >> nVersion;
-        if (nVersion != SCDB_DUMP_VERSION) {
+        if (nVersion != SCDB_DUMP_VERSION)
             return false;
-        }
 
         int count = 0;
         filein >> count;
@@ -5731,11 +5753,10 @@ void DumpActiveSidechainCache()
     int count = vSidechain.size();
 
     // Write the active sidechain cache
-    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
-    CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
-    if (fileout.IsNull()) {
+    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat.new";
+    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
+    if (fileout.IsNull())
         return;
-    }
 
     try {
         fileout << SCDB_DUMP_VERSION; // version required to read
@@ -5748,6 +5769,12 @@ void DumpActiveSidechainCache()
     catch (const std::exception& e) {
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "activesidechains.dat.new", GetDataDir() /  "drivechain" / "activesidechains.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 bool LoadBMMCache()
@@ -5793,7 +5820,7 @@ void DumpBMMCache()
     int count = setRemovedBMM.size();
 
     // Write the sidechain activation status cache
-    fs::path path = GetDataDir() / "drivechain" / "bmm.dat";
+    fs::path path = GetDataDir() / "drivechain" / "bmm.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5810,6 +5837,12 @@ void DumpBMMCache()
     catch (const std::exception& e) {
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "bmm.dat.new", GetDataDir() /  "drivechain" / "bmm.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 bool LoadSidechainProposalCache()
@@ -5854,7 +5887,7 @@ void DumpSidechainProposalCache()
     int count = vProposal.size();
 
     // Write the sidechain proposal cache
-    fs::path path = GetDataDir() / "drivechain" / "sidechainproposals.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainproposals.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5871,6 +5904,12 @@ void DumpSidechainProposalCache()
     catch (const std::exception& e) {
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "sidechainproposals.dat.new", GetDataDir() /  "drivechain" / "sidechainproposals.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 bool LoadSidechainActivationHashCache()
@@ -5916,7 +5955,7 @@ void DumpSidechainActivationHashCache()
     int count = vHash.size();
 
     // Write the sidechain activation hash cache
-    fs::path path = GetDataDir() / "drivechain" / "sidechainhashactivate.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechainhashactivate.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "w"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5933,6 +5972,12 @@ void DumpSidechainActivationHashCache()
     catch (const std::exception& e) {
         LogPrintf("%s: Exception: %s\n", __func__, e.what());
     }
+
+    FileCommit(fileout.Get());
+    fileout.fclose();
+    RenameOver(GetDataDir() / "drivechain" / "sidechainhashactivate.dat.new", GetDataDir() /  "drivechain" / "sidechainhashactivate.dat");
+
+    LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
 //! Guess how far we are in the verification process at the given block index
