@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,6 +8,8 @@
 #include <consensus/consensus.h>
 #include <consensus/validation.h>
 #include <crypto/sha256.h>
+#include <sidechain.h>
+#include <sidechaindb.h>
 #include <validation.h>
 #include <miner.h>
 #include <net_processing.h>
@@ -180,6 +182,68 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn) {
     return CTxMemPoolEntry(MakeTransactionRef(txn), nFee, nTime, nHeight,
                            spendsCoinbase, spendsBMMRequest, false, 0,
                            sigOpCost, lp);
+}
+
+bool ActivateSidechain(SidechainDB& scdbTest, const SidechainProposal& proposal, int nHeight)
+{
+    /* Activate a sidechain for testing purposes */
+    unsigned int nActive = scdbTest.GetActiveSidechainCount();
+
+    // Create transaction output with sidechain proposal
+    CTxOut out;
+    out.scriptPubKey = proposal.GetScript();
+    out.nValue = 50 * CENT;
+
+    if (!out.scriptPubKey.IsSidechainProposalCommit()) {
+        return false;
+    }
+
+    uint256 hashBlock1 = GetRandHash();
+    scdbTest.Update(nHeight, hashBlock1, scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out});
+
+    std::vector<SidechainActivationStatus> vActivation;
+    vActivation = scdbTest.GetSidechainActivationStatus();
+
+    if (vActivation.size() != 1) {
+        return false;
+    }
+    if (vActivation.front().proposal.GetHash() != proposal.GetHash())
+    {
+        return false;
+    }
+
+    // Use the function from validation to generate the commit, and then
+    // copy it from the block.
+    // TODO do this for all of the other unit tests that test commitments
+    CBlock block;
+    CMutableTransaction mtx;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+    GenerateSidechainActivationCommitment(block, proposal.GetHash(), Params().GetConsensus());
+
+    // Add votes until the sidechain is activated
+    int nHeightUpdate = nHeight + 1;
+    uint256 hashPrev = hashBlock1;
+    for (int i = 0; i <= SIDECHAIN_ACTIVATION_MAX_AGE; i++) {
+        uint256 hashNew = GetRandHash();
+        if (!scdbTest.Update(nHeightUpdate, hashNew, hashPrev, block.vtx.front()->vout)) {
+            return false;
+        }
+        hashPrev = hashNew;
+        nHeightUpdate++;
+    }
+
+    // Check activation status
+    // Sidechain should have been removed from activation cache
+    // Sidechain should be in ValidSidechains
+    vActivation = scdbTest.GetSidechainActivationStatus();
+    if (!vActivation.empty()) {
+        return false;
+    }
+
+    std::vector<Sidechain> vSidechain = scdbTest.GetActiveSidechains();
+    return(vSidechain.size() == nActive + 1 && vSidechain.back() == proposal);
 }
 
 /**

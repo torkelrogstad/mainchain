@@ -1,4 +1,4 @@
-// Copyright (c) 2017 The Bitcoin Core developers
+// Copyright (c) 2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,12 +10,6 @@
 #include "test/test_drivenet.h"
 
 #include <boost/test/unit_test.hpp>
-
-
-// TODO refactor.
-// Combine this file with sidechaindb_tests where we have a convenient sidechain
-// activation function and more sidechain activation tests. Sidechain activation
-// is a fundamental part of SCDB anyways.
 
 
 BOOST_FIXTURE_TEST_SUITE(sidechainactivation_tests, TestingSetup)
@@ -157,6 +151,105 @@ BOOST_AUTO_TEST_CASE(sidechainproposal_perblocklimit)
 
     // Nothing should have been added
     BOOST_CHECK(vActivation.empty());
+}
+
+BOOST_AUTO_TEST_CASE(activate_single_sidechain)
+{
+    SidechainDB scdbTest;
+
+    // Creat sidechain proposal
+    SidechainProposal proposal;
+    proposal.nVersion = 0;
+    proposal.title = "test";
+    proposal.description = "description";
+    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+}
+
+BOOST_AUTO_TEST_CASE(activate_multiple_sidechains)
+{
+    SidechainDB scdbTest;
+
+    SidechainProposal proposal1;
+    proposal1.nVersion = 0;
+    proposal1.title = "sidechain1";
+    proposal1.description = "description";
+    proposal1.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal1.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal1.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal1, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+
+    // Proposal for a second sidechain
+    SidechainProposal proposal2;
+    proposal2.nVersion = 0;
+    proposal2.title = "sidechain2";
+    proposal2.description = "test";
+    proposal2.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
+    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac"; // TODO
+    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
+    proposal2.hashID1 = GetRandHash();
+    proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 2);
+
+    // Modify the proposal to create a third sidechain with the same params
+    // besides the title.
+    proposal2.title = "sidechain3";
+
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
+}
+
+BOOST_AUTO_TEST_CASE(activate_max_sidechains)
+{
+    SidechainDB scdbTest;
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+
+    SidechainProposal proposal;
+    proposal.nVersion = 0;
+    proposal.title = "sidechain";
+    proposal.description = "test";
+    proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
+    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac"; // TODO
+    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
+    proposal.hashID1 = GetRandHash();
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    unsigned int nSidechains = 0;
+    for (int i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
+        proposal.title = "sidechain" + std::to_string(i);
+
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+
+        nSidechains++;
+
+        BOOST_CHECK(scdbTest.GetActiveSidechainCount() == nSidechains);
+    }
+
+    // Check that the maximum number have been activated
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Now try to activate one more than the max, it should be rejected.
+    proposal.title = "one too many...";
+    BOOST_CHECK(!ActivateSidechain(scdbTest, proposal, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
 }
 
 BOOST_AUTO_TEST_CASE(sidechainactivation_invalid)

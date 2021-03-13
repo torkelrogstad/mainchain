@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2017 The Bitcoin Core developers
+// Copyright (c) 2015-2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -92,6 +92,8 @@ struct TestChain100Setup : public TestingSetup {
 };
 
 class CTxMemPoolEntry;
+class SidechainDB;
+class SidechainProposal;
 
 struct TestMemPoolEntryHelper
 {
@@ -119,6 +121,8 @@ struct TestMemPoolEntryHelper
     TestMemPoolEntryHelper &SpendsBMMRequest(bool _flag) { spendsBMMRequest = _flag; return *this; }
     TestMemPoolEntryHelper &SigOpsCost(unsigned int _sigopsCost) { sigOpCost = _sigopsCost; return *this; }
 };
+
+bool ActivateSidechain(SidechainDB& scdbTest, const SidechainProposal& proposal, int nHeight);
 
 CBlock getBlock13b8a();
 
