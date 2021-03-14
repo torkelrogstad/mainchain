@@ -267,6 +267,15 @@ private:
     /** Takes a list of sidechain hashes to upvote */
     void UpdateActivationStatus(const std::vector<uint256>& vHash);
 
+    /** Update CTIP to match the deposit cache - called after sorting / undo */
+    void UpdateCTIP(const uint256& hashBlock);
+
+    /** Calls SortDeposits for all of SCDB's deposit cache */
+    bool SortSCDBDeposits();
+
+    /** Sidechains which are currently active */
+    std::vector<Sidechain> vActiveSidechain;
+
     /*
      * The CTIP of nSidechain up to the latest connected block (does not include
      * mempool txns). */
@@ -274,9 +283,6 @@ private:
 
     /** The most recent block that SCDB has processed */
     uint256 hashBlockLastSeen;
-
-    /** Sidechains which are currently active */
-    std::vector<Sidechain> vActiveSidechain;
 
     /** Activation status of proposed sidechains */
     std::vector<SidechainActivationStatus> vActivationStatus;
@@ -324,11 +330,6 @@ private:
      * same CTIP as the deposit. */
     std::vector<uint256> vRemovedDeposit;
 
-    /** Calls SortDeposits for all of SCDB's deposit cache */
-    bool SortSCDBDeposits();
-
-    /** Update CTIP to match the deposit cache - called after sorting / undo */
-    void UpdateCTIP(const uint256& hashBlock);
 };
 
 /** Read encoded sum of WT fees from WT^ output script */

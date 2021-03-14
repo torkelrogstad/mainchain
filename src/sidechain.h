@@ -18,9 +18,6 @@ static const int SIDECHAIN_MIN_WORKSCORE = 140;
 //static const int SIDECHAIN_VERIFICATION_PERIOD = 26298;
 //static const int SIDECHAIN_MIN_WORKSCORE = 13140;
 
-//! Sidechain deposit fee (TODO make configurable per sidechain)
-static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
-
 //! Max number of failures (blocks without commits) for a sidechain to activate
 static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 32;
 //! The amount of time a sidechain has to activate

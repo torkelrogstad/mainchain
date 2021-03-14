@@ -44,6 +44,8 @@
 
 #include <sstream>
 
+const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
+
 SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SidechainPage),
