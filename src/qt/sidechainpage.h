@@ -74,7 +74,6 @@ public Q_SLOTS:
     void on_pushButtonWTPrimeVote_clicked();
     void on_pushButtonWTDoubleClickHelp_clicked();
     void on_pushButtonRecentDepositHelp_clicked();
-    void CheckForSidechainUpdates();
     void gotoWTPage();
     void numBlocksChanged();
     void ShowActivationDialog();
@@ -98,9 +97,6 @@ private:
     const PlatformStyle *platformStyle = nullptr;
 
     QTimer *addRemoveAnimationTimer = nullptr;
-
-    // The sidechains that are currently cached for the list widget
-    std::vector<Sidechain> vSidechainCache;
 
     // Deposits created by the user during this session (memory only)
     std::vector<RecentDepositTableObject> vRecentDepositCache;

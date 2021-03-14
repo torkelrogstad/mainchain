@@ -392,10 +392,8 @@ void SidechainPage::on_pushButtonClear_clicked()
 
 void SidechainPage::on_listWidgetSidechains_currentRowChanged(int nRow)
 {
-    if (nRow < 0 || nRow > (int)vSidechainCache.size())
+    if (nRow < 0 || nRow >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return;
-
-    nSelectedSidechain = nRow;
 
     // Format placeholder text (demo version)
     QString strAddress = "s";
@@ -408,12 +406,14 @@ void SidechainPage::on_listWidgetSidechains_currentRowChanged(int nRow)
 void SidechainPage::on_listWidgetSidechains_doubleClicked(const QModelIndex& i)
 {
     // On double click show sidechain details
-    if (i.row() >= (int)vSidechainCache.size())
+    if (i.row() >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return;
 
-    Sidechain s = vSidechainCache[i.row()];
+    Sidechain sidechain;
+    if (!scdb.GetSidechain(i.row(), sidechain))
+        return;
 
-    SidechainDetailsDialog dialog(s);
+    SidechainDetailsDialog dialog(sidechain);
     dialog.exec();
 }
 
@@ -550,17 +550,6 @@ void SidechainPage::on_pushButtonRecentDepositHelp_clicked()
         QMessageBox::Ok);
 }
 
-
-void SidechainPage::CheckForSidechainUpdates()
-{
-    std::vector<Sidechain> vSidechainNew = scdb.GetActiveSidechains();
-    if (vSidechainNew != vSidechainCache) {
-        vSidechainCache = vSidechainNew;
-
-        SetupSidechainList(vSidechainNew);
-    }
-}
-
 void SidechainPage::gotoWTPage()
 {
     // Go to the WT^ table
@@ -569,8 +558,12 @@ void SidechainPage::gotoWTPage()
 
 void SidechainPage::numBlocksChanged()
 {
-    // Check for sidechain activation updates
-    CheckForSidechainUpdates();
+    // TODO only update sidechain list when a sidechain is activated or
+    // deactivated
+    //
+    // Update sidechain list
+    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    SetupSidechainList(vSidechain);
 
     // Update recent deposits table
     UpdateRecentDeposits();
