@@ -12,12 +12,6 @@
 
 #include <sstream>
 
-
-bool Sidechain::operator==(const Sidechain& a) const
-{
-    return (a.nSidechain == nSidechain);
-}
-
 bool Sidechain::operator==(const SidechainProposal& a) const
 {
     return (sidechainPriv == a.sidechainPriv &&

@@ -101,7 +101,6 @@ struct Sidechain {
     uint160 hashID2;
 
     std::string GetSidechainName() const;
-    bool operator==(const Sidechain& a) const;
     bool operator==(const SidechainProposal& a) const;
     std::string ToString() const;
     uint256 GetHash() const;
