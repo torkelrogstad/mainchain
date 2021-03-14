@@ -91,8 +91,8 @@ struct SidechainActivationStatus
 
 struct Sidechain {
     bool fActive;
-    int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
     uint8_t nSidechain;
+    int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
     std::string sidechainKeyID;
     std::string sidechainPriv;
     std::string sidechainHex;
@@ -111,8 +111,8 @@ struct Sidechain {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(fActive);
-        READWRITE(nVersion);
         READWRITE(nSidechain);
+        READWRITE(nVersion);
         READWRITE(sidechainKeyID);
         READWRITE(sidechainPriv);
         READWRITE(sidechainHex);

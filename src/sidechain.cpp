@@ -33,8 +33,8 @@ std::string Sidechain::ToString() const
 {
     std::stringstream ss;
     ss << "fActive=" << fActive << std::endl;
-    ss << "nVersion=" << nVersion << std::endl;
     ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
+    ss << "nVersion=" << nVersion << std::endl;
     ss << "sidechainPriv=" << sidechainPriv << std::endl;
     ss << "sidechainHex=" << sidechainHex << std::endl;
     ss << "sidechainKeyID=" << sidechainKeyID << std::endl;
