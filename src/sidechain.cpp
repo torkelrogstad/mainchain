@@ -32,6 +32,7 @@ std::string Sidechain::GetSidechainName() const
 std::string Sidechain::ToString() const
 {
     std::stringstream ss;
+    ss << "fActive=" << fActive << std::endl;
     ss << "nVersion=" << nVersion << std::endl;
     ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
     ss << "sidechainPriv=" << sidechainPriv << std::endl;
