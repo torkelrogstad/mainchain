@@ -391,4 +391,119 @@ BOOST_AUTO_TEST_CASE(activate_duplicate)
     // that has already activated. Should be rejected.
 }
 
+BOOST_AUTO_TEST_CASE(none_active)
+{
+    // Test that when no sidechains have been activated, the sidechain list
+    // lists all of them with inactive status and the correct sidechain number.
+    SidechainDB scdbTest;
+
+    // No sidechains should be active
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+
+    std::vector<Sidechain> vActive = scdbTest.GetActiveSidechains();
+    BOOST_CHECK(vActive.empty());
+
+    std::vector<Sidechain> vSidechain = scdbTest.GetSidechains();
+    BOOST_CHECK(vSidechain.size() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Check sidechain numbers and active status
+    for (size_t i = 0; i < vSidechain.size(); i++) {
+        BOOST_CHECK(vSidechain[i].fActive == false);
+        BOOST_CHECK(vSidechain[i].nSidechain == i);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(max_active_reverse)
+{
+    // Test activating the maximum number of sidechains but in reverse order
+    // from sidechain #255 to #0.
+    SidechainDB scdbTest;
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+
+    // TODO sidechains with the same key and IDs should be rejected
+    SidechainProposal proposal;
+    proposal.nVersion = 0;
+    proposal.description = "test";
+    proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
+    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.hashID1 = GetRandHash();
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    unsigned int nSidechains = 0;
+    for (int i = SIDECHAIN_ACTIVATION_MAX_ACTIVE - 1; i >= 0; i--) {
+        proposal.nSidechain = i;
+        proposal.title = "sidechain" + std::to_string(i);
+
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+
+        nSidechains++;
+
+        BOOST_CHECK(scdbTest.GetActiveSidechainCount() == nSidechains);
+    }
+
+    // Check that the maximum number have been activated
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    std::vector<Sidechain> vSidechain = scdbTest.GetSidechains();
+    BOOST_CHECK(vSidechain.size() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Check sidechain numbers and active status
+    for (size_t i = 0; i < vSidechain.size(); i++) {
+        BOOST_CHECK(vSidechain[i].fActive == true);
+        BOOST_CHECK(vSidechain[i].nSidechain == i);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(every_other_active)
+{
+    // Test activating half of the maximum number of sidechains skipping one
+    // sidechain slot between each activated sidechain.
+    SidechainDB scdbTest;
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+
+    // TODO sidechains with the same key and IDs should be rejected
+    SidechainProposal proposal;
+    proposal.nVersion = 0;
+    proposal.description = "test";
+    proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
+    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.hashID1 = GetRandHash();
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    unsigned int nSidechains = 0;
+    for (int i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
+        if (i % 2 == 0)
+            continue;
+
+        proposal.nSidechain = i;
+        proposal.title = "sidechain" + std::to_string(i);
+
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+
+        nSidechains++;
+
+        BOOST_CHECK(scdbTest.GetActiveSidechainCount() == nSidechains);
+    }
+
+    // Check that half of the maximum number have been activated
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == SIDECHAIN_ACTIVATION_MAX_ACTIVE / 2);
+
+    std::vector<Sidechain> vSidechain = scdbTest.GetSidechains();
+    BOOST_CHECK(vSidechain.size() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Check sidechain numbers and active status
+    for (size_t i = 0; i < vSidechain.size(); i++) {
+        if (i % 2 == 0)
+            BOOST_CHECK(vSidechain[i].fActive == false);
+        else
+            BOOST_CHECK(vSidechain[i].fActive == true);
+
+        BOOST_CHECK(vSidechain[i].nSidechain == i);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
