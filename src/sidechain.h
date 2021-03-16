@@ -39,6 +39,7 @@ static const char DB_SIDECHAIN_BLOCK_OP = 'S';
 static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
 
 struct SidechainProposal {
+    uint8_t nSidechain;
     int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
     std::string title;
     std::string description;
@@ -60,6 +61,7 @@ struct SidechainProposal {
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(nSidechain);
         READWRITE(nVersion);
         READWRITE(title);
         READWRITE(description);
@@ -100,6 +102,20 @@ struct Sidechain {
     std::string description;
     uint256 hashID1;
     uint160 hashID2;
+
+    Sidechain()
+    {
+        fActive = false;
+        nSidechain = 0;
+        nVersion = SIDECHAIN_VERSION_CURRENT;
+        sidechainKeyID = "";
+        sidechainPriv = "";
+        sidechainHex = "";
+        title = "";
+        description = "";
+        hashID1.SetNull();
+        hashID2.SetNull();
+    }
 
     std::string GetSidechainName() const;
     bool operator==(const SidechainProposal& a) const;

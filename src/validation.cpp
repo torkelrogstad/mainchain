@@ -5713,9 +5713,9 @@ void DumpSidechainActivationStatusCache()
     LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
-bool LoadActiveSidechainCache()
+bool LoadSidechainCache()
 {
-    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat";
+    fs::path path = GetDataDir() / "drivechain" / "sidechains.dat";
     CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull())
         return true;
@@ -5741,19 +5741,19 @@ bool LoadActiveSidechainCache()
     }
 
     // Add to SCDB
-    scdb.CacheActiveSidechains(vSidechain);
+    scdb.CacheSidechains(vSidechain);
 
     return true;
 }
 
-void DumpActiveSidechainCache()
+void DumpSidechainCache()
 {
-    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
 
     int count = vSidechain.size();
 
-    // Write the active sidechain cache
-    fs::path path = GetDataDir() / "drivechain" / "activesidechains.dat.new";
+    // Write the sidechain cache
+    fs::path path = GetDataDir() / "drivechain" / "sidechains.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull())
         return;
@@ -5772,7 +5772,7 @@ void DumpActiveSidechainCache()
 
     FileCommit(fileout.Get());
     fileout.fclose();
-    RenameOver(GetDataDir() / "drivechain" / "activesidechains.dat.new", GetDataDir() /  "drivechain" / "activesidechains.dat");
+    RenameOver(GetDataDir() / "drivechain" / "sidechains.dat.new", GetDataDir() /  "drivechain" / "sidechains.dat");
 
     LogPrintf("%s: Wrote %u\n", __func__, count);
 }
@@ -6067,7 +6067,7 @@ void DumpSCDBCache()
     DumpCustomVoteCache();
     DumpWTPrimeCache();
     DumpSidechainActivationStatusCache();
-    DumpActiveSidechainCache();
+    DumpSidechainCache();
     DumpSidechainProposalCache();
     DumpSidechainActivationHashCache();
     DumpBMMCache();

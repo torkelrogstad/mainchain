@@ -74,7 +74,7 @@ public:
     void BMMAbandoned(const uint256& txid);
 
     /** Add active sidechains to the in-memory cache */
-    void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
+    void CacheSidechains(const std::vector<Sidechain>& vSidechainIn);
 
     /** Add a users custom vote to the in-memory cache */
     bool CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote);
@@ -106,6 +106,9 @@ public:
 
     /** Get list of currently active sidechains */
     std::vector<Sidechain> GetActiveSidechains() const;
+
+    /** Get list of all sidechains */
+    std::vector<Sidechain> GetSidechains() const;
 
     /** Get list of BMM txid that miner removed from the mempool. */
     std::set<uint256> GetRemovedBMM() const;
@@ -213,6 +216,7 @@ public:
     /** Check if SCDB is tracking the work score of a WT^ */
     bool HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSidechain) const;
 
+    // TODO rename to IsSidechainActive
     /** Check if a sidechain with nSidechain exists in the DB */
     bool IsSidechainNumberValid(uint8_t nSidechain) const;
 
@@ -273,8 +277,8 @@ private:
     /** Calls SortDeposits for all of SCDB's deposit cache */
     bool SortSCDBDeposits();
 
-    /** Sidechains which are currently active */
-    std::vector<Sidechain> vActiveSidechain;
+    /** All sidechain slots, their activation status, and params if active */
+    std::vector<Sidechain> vSidechain;
 
     /*
      * The CTIP of nSidechain up to the latest connected block (does not include

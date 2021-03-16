@@ -1425,7 +1425,7 @@ bool AppInitMain()
     if (!fReindex && drivechainsEnabled) {
         uiInterface.InitMessage(_("Loading active sidechain & deposit cache..."));
 
-        if (!LoadActiveSidechainCache() || !LoadDepositCache()) {
+        if (!LoadSidechainCache() || !LoadDepositCache()) {
             // Ask to reindex to fix issue loading DAT
             bool fRet = uiInterface.ThreadSafeQuestion(
                 strFailSCDAT,
@@ -1612,9 +1612,7 @@ bool AppInitMain()
 
                 if (drivechainsEnabled) {
                     scdb.Reset();
-                    // Note that LoadActiveSidechainCache will resize deposit and WT^ cache
-                    // vectors of SCDB so it must be done before loading deposits or WT^(s)
-                    if (!fReset && (!LoadActiveSidechainCache() || !LoadWTPrimeCache(fReindex))) {
+                    if (!fReset && (!LoadSidechainCache() || !LoadWTPrimeCache(fReindex))) {
                         // Ask to reindex to fix issue loading DAT
                         bool fRet = uiInterface.ThreadSafeQuestion(
                             strFailSCDAT,

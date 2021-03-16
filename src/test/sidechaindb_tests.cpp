@@ -34,10 +34,12 @@ CScript EncodeWTFees(const CAmount& amount)
 
 BOOST_FIXTURE_TEST_SUITE(sidechaindb_tests, TestingSetup)
 
-bool ActivateSidechain(SidechainDB& scdbTest, int nHeight = 0)
+bool ActivateTestSidechain(SidechainDB& scdbTest, int nHeight = 0)
 {
-    // Create sidechain proposal
+    // Activate a test sidechain as sidechain #0
+
     SidechainProposal proposal;
+    proposal.nSidechain = 0;
     proposal.nVersion = 0;
     proposal.title = "Test";
     proposal.description = "Description";
@@ -55,7 +57,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wtprime)
     // Test creating a WT^ and approving it with enough workscore
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     uint256 hashWTTest = GetRandHash();
@@ -81,7 +83,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     // same sidechain
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // WT^ hash for first period
@@ -154,7 +156,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     // in the tree, and a single WT^ to be updated.
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Create scdbTest with initial WT^
@@ -190,7 +192,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     // WT^'s score is unchanged.
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Add initial WT^s to scdbTest
@@ -228,7 +230,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     // work scores are updated for more than one sidechain per block.
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Add initial WT^s to scdbTest
@@ -263,7 +265,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_create)
     // Create a deposit (and CTIP) for a single sidechain
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // TODO use the wallet function
@@ -310,7 +312,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_sidechain)
     // Create a deposit (and CTIP) for multiple sidechains
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 }
 
@@ -319,7 +321,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
     // Create many deposits and make sure that single valid CTIP results
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // TODO use the wallet function
@@ -400,7 +402,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits_multi_sidechain)
     // for multiple sidechains.
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 }
 
@@ -410,7 +412,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     // and then spend it with a WT^
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // TODO use the wallet function
@@ -493,7 +495,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     // with a WT^. After doing that, create another deposit.
     SidechainDB scdbTest;
 
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // TODO use the wallet function
@@ -714,11 +716,12 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     SidechainDB scdbTest;
 
     // Activate first sidechain (default test sidechain)
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // A second sidechain proposal
     SidechainProposal proposal;
+    proposal.nSidechain = 1;
     proposal.nVersion = 0;
     proposal.title = "sidechain2";
     proposal.description = "test";
@@ -809,7 +812,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
     SidechainDB scdbTest;
 
     // Activate sidechain (default test sidechain)
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Add initial WT^s to scdbTest
@@ -899,7 +902,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
     SidechainDB scdbTest;
 
     // Activate sidechain (default test sidechain)
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Add initial WT^s to scdbTest
@@ -996,11 +999,12 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     SidechainDB scdbTest;
 
     // Activate first sidechain (default test sidechain)
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // A second sidechain proposal
     SidechainProposal proposal;
+    proposal.nSidechain = 1;
     proposal.nVersion = 0;
     proposal.title = "sidechain2";
     proposal.description = "test 2";
@@ -1016,6 +1020,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
 
     // A third sidechain proposal
     SidechainProposal proposal2;
+    proposal2.nSidechain = 2;
     proposal2.nVersion = 0;
     proposal2.title = "sidechain3";
     proposal2.description = "test 3";
@@ -1125,11 +1130,12 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     SidechainDB scdbTest;
 
     // Activate first sidechain (default test sidechain)
-    BOOST_CHECK(ActivateSidechain(scdbTest));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // A second sidechain proposal
     SidechainProposal proposal;
+    proposal.nSidechain = 1;
     proposal.nVersion = 0;
     proposal.title = "sidechain2";
     proposal.description = "test 2";
@@ -1145,6 +1151,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
 
     // A third sidechain proposal
     SidechainProposal proposal2;
+    proposal2.nSidechain = 2;
     proposal2.nVersion = 0;
     proposal2.title = "sidechain3";
     proposal2.description = "test 3";
@@ -1154,7 +1161,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     proposal2.hashID1 = GetRandHash();
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
-    // Activate second sidechain
+    // Activate third sidechain
     BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 
@@ -1355,6 +1362,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     // Activate the maximum number of sidechains allowed
     unsigned int nSidechains = 0;
     for (int i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
+        proposal.nSidechain = i;
         proposal.title = "sidechain" + std::to_string(i);
 
         BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
@@ -1588,7 +1596,7 @@ BOOST_AUTO_TEST_CASE(txn_to_deposit)
     SidechainDB scdbTest;
 
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
-    BOOST_CHECK(ActivateSidechain(scdbTest, 0));
+    BOOST_CHECK(ActivateTestSidechain(scdbTest, 0));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // TODO add deposit serialization and check that deposit deserialized from

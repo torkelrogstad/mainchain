@@ -214,7 +214,6 @@ bool ActivateSidechain(SidechainDB& scdbTest, const SidechainProposal& proposal,
 
     // Use the function from validation to generate the commit, and then
     // copy it from the block.
-    // TODO do this for all of the other unit tests that test commitments
     CBlock block;
     CMutableTransaction mtx;
     mtx.vin.resize(1);
@@ -243,7 +242,7 @@ bool ActivateSidechain(SidechainDB& scdbTest, const SidechainProposal& proposal,
     }
 
     std::vector<Sidechain> vSidechain = scdbTest.GetActiveSidechains();
-    return(vSidechain.size() == nActive + 1 && vSidechain.back() == proposal);
+    return(vSidechain.size() == nActive + 1);
 }
 
 /**

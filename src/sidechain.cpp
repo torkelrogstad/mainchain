@@ -48,6 +48,8 @@ std::string Sidechain::ToString() const
 std::string SidechainProposal::ToString() const
 {
     std::stringstream ss;
+    ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
+    ss << "nVersion=" << nVersion << std::endl;
     ss << "sidechainPriv=" << sidechainPriv << std::endl;
     ss << "sidechainHex=" << sidechainHex << std::endl;
     ss << "sidechainKeyID=" << sidechainKeyID << std::endl;
@@ -55,7 +57,6 @@ std::string SidechainProposal::ToString() const
     ss << "description=" << description << std::endl;
     ss << "hashID1=" << hashID1.ToString() << std::endl;
     ss << "hashID2=" << hashID2.ToString() << std::endl;
-    ss << "nVersion=" << nVersion << std::endl;
     return ss.str();
 }
 
@@ -77,7 +78,8 @@ bool SidechainProposal::operator==(const SidechainProposal& proposal) const
             proposal.sidechainPriv == sidechainPriv &&
             proposal.hashID1 == hashID1 &&
             proposal.hashID2 == hashID2 &&
-            proposal.nVersion == nVersion);
+            proposal.nVersion == nVersion &&
+            proposal.nSidechain == nSidechain);
 }
 
 std::string SidechainDeposit::ToString() const
@@ -138,17 +140,18 @@ bool SidechainProposal::DeserializeFromScript(const CScript& script)
     const char *vch0 = (const char *) &vch.begin()[0];
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
-    SidechainProposal sidechain;
-    sidechain.Unserialize(ds);
+    SidechainProposal proposal;
+    proposal.Unserialize(ds);
 
-    nVersion = sidechain.nVersion;
-    title = sidechain.title;
-    description = sidechain.description;
-    sidechainKeyID = sidechain.sidechainKeyID;
-    sidechainHex = sidechain.sidechainHex;
-    sidechainPriv = sidechain.sidechainPriv;
-    hashID1 = sidechain.hashID1;
-    hashID2 = sidechain.hashID2;
+    nSidechain = proposal.nSidechain;
+    nVersion = proposal.nVersion;
+    title = proposal.title;
+    description = proposal.description;
+    sidechainKeyID = proposal.sidechainKeyID;
+    sidechainHex = proposal.sidechainHex;
+    sidechainPriv = proposal.sidechainPriv;
+    hashID1 = proposal.hashID1;
+    hashID2 = proposal.hashID2;
 
     return true;
 }

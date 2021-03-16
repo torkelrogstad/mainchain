@@ -555,11 +555,11 @@ bool LoadSidechainActivationStatusCache();
 /* Dump sidechain activation status cache */
 void DumpSidechainActivationStatusCache();
 
-/* Load active sidechain cache */
-bool LoadActiveSidechainCache();
+/* Load sidechain cache */
+bool LoadSidechainCache();
 
-/* Dump active sidechain cache */
-void DumpActiveSidechainCache();
+/* Dump sidechain cache */
+void DumpSidechainCache();
 
 /* Load sidechain proposal cache */
 bool LoadSidechainProposalCache();

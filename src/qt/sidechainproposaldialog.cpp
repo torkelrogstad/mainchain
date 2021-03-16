@@ -105,6 +105,14 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     std::string strHashID1 = ui->lineEditIDHash1->text().toStdString();
     std::string strHashID2 = ui->lineEditIDHash2->text().toStdString();
     int nVersion = ui->spinBoxVersion->value();
+    int nSidechain = ui->spinBoxNSidechain->value();
+
+    if (nSidechain < 0 || nSidechain > 255) {
+        QMessageBox::critical(this, tr("DriveNet - error"),
+            tr("Sidechain number must be 0-255!"),
+            QMessageBox::Ok);
+        return;
+    }
 
     if (strTitle.empty()) {
         QMessageBox::critical(this, tr("DriveNet - error"),
