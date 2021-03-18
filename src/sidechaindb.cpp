@@ -17,17 +17,6 @@
 SidechainDB::SidechainDB()
 {
     Reset();
-
-    // Resize vWTPrimeStatus to keep track of WT^(s)
-    vWTPrimeStatus.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
-
-    // Resize vDepositCache to keep track of deposit(s)
-    vDepositCache.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
-
-    // Initialize with blank inactive sidechains
-    vSidechain.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
-    for (size_t i = 0; i < vSidechain.size(); i++)
-        vSidechain[i].nSidechain = i;
 }
 
 bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockData& data)
@@ -921,6 +910,17 @@ void SidechainDB::Reset()
 
     vRemovedDeposit.clear();
     setRemovedBMM.clear();
+
+    // Resize vWTPrimeStatus to keep track of WT^(s)
+    vWTPrimeStatus.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Resize vDepositCache to keep track of deposit(s)
+    vDepositCache.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Initialize with blank inactive sidechains
+    vSidechain.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+    for (size_t i = 0; i < vSidechain.size(); i++)
+        vSidechain[i].nSidechain = i;
 }
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)

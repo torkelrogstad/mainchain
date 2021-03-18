@@ -179,6 +179,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
 
     SidechainProposal proposal;
+    proposal.nSidechain = nSidechain;
     proposal.title = strTitle;
     proposal.description = strDescription;
     proposal.sidechainPriv = vchSecret.ToString();
@@ -194,6 +195,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     scdb.CacheSidechainProposals(std::vector<SidechainProposal>{proposal});
 
     QString message = QString("Sidechain proposal created!\n\n");
+    message += QString("Sidechain Number:\n%1\n\n").arg(nSidechain);
     message += QString("Version:\n%1\n\n").arg(nVersion);
     message += QString("Title:\n%1\n\n").arg(QString::fromStdString(strTitle));
     message += QString("Description:\n%1\n\n").arg(QString::fromStdString(strDescription));
