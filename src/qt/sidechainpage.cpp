@@ -239,7 +239,7 @@ void SidechainPage::on_pushButtonDeposit_clicked()
 
     unsigned int nSidechain = nSelectedSidechain;
 
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!scdb.IsSidechainActive(nSidechain)) {
         // Should never be displayed
         messageBox.setWindowTitle("Invalid sidechain selected");
         messageBox.exec();

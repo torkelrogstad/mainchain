@@ -588,9 +588,6 @@ bool GetTxOutProof(const uint256& txid, const uint256& hashBlock, std::string& s
 /** Verify txout proof */
 bool VerifyTxOutProof(const std::string& strProof);
 
-/** Verify that nSidechain refers to an active sidechain */
-bool IsSidechainNumberValid(uint8_t nSidechain);
-
 /** Flush SCDB cache data to disk */
 void DumpSCDBCache();
 

@@ -748,7 +748,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                 return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-no-destination-opreturn-output");
 
             // Check nSidechain
-            if (!IsSidechainNumberValid(nSidechain))
+            if (!scdb.IsSidechainActive(nSidechain))
                 return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-sidechain-number");
 
             // Check that CTIP input was spent if there is one
@@ -5749,7 +5749,6 @@ bool LoadSidechainCache()
 void DumpSidechainCache()
 {
     std::vector<Sidechain> vSidechain = scdb.GetSidechains();
-
     int count = vSidechain.size();
 
     // Write the sidechain cache
@@ -6048,11 +6047,6 @@ bool VerifyTxOutProof(const std::string& strProof)
         return false;
 
     return true;
-}
-
-bool IsSidechainNumberValid(uint8_t nSidechain)
-{
-    return scdb.IsSidechainNumberValid(nSidechain);
 }
 
 void DumpSCDBCache()

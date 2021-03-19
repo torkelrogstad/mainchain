@@ -33,15 +33,6 @@ struct SidechainWTPrimeState;
 struct SidechainSpentWTPrime;
 struct SidechainFailedWTPrime;
 
-// TODO custom operator[] or getter functions for private data members which
-// will check the index and throw an error instead of going out of bounds
-
-// TODO Refactor: remove AddWTPrime() and UpdateSCDBIndex() - handle both inside
-// of SCDB::Update()
-
-// TODO use the bitcoin core lock system or std::mutex & std::lock_guard to
-// protect private data structures.
-
 class SidechainDB
 {
 public:
@@ -216,9 +207,8 @@ public:
     /** Check if SCDB is tracking the work score of a WT^ */
     bool HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSidechain) const;
 
-    // TODO rename to IsSidechainActive
-    /** Check if a sidechain with nSidechain exists in the DB */
-    bool IsSidechainNumberValid(uint8_t nSidechain) const;
+    /** Check if a sidechain slot number has active sidechain */
+    bool IsSidechainActive(uint8_t nSidechain) const;
 
     void RemoveExpiredWTPrimes();
 

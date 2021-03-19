@@ -3074,7 +3074,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
 {
     strFail = "Unknown error!";
 
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!scdb.IsSidechainActive(nSidechain)) {
         strFail = "Invalid Sidechain number!\n";
         return false;
     }

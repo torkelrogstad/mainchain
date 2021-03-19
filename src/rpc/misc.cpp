@@ -694,7 +694,7 @@ UniValue listsidechainctip(const JSONRPCRequest& request)
 
     // Is nSidechain valid?
     int nSidechain = request.params[0].get_int();
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number!");
 
     SidechainCTIP ctip;
@@ -909,7 +909,7 @@ UniValue countsidechaindeposits(const JSONRPCRequest& request)
 
     // Is nSidechain valid?
     int nSidechain = request.params[0].get_int();
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number");
 
     int count = 0;
@@ -954,7 +954,7 @@ UniValue receivewtprime(const JSONRPCRequest& request)
 
     // Is nSidechain valid?
     int nSidechain = request.params[0].get_int();
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!scdb.IsSidechainActive(nSidechain)) {
         strError = "Invalid sidechain number!";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
@@ -1434,7 +1434,7 @@ UniValue setwtprimevote(const JSONRPCRequest& request)
     // nSidechain
     int nSidechain = request.params[1].get_int();
 
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
     std::string strHash = request.params[2].get_str();
@@ -1611,7 +1611,7 @@ UniValue getworkscore(const JSONRPCRequest& request)
     // nSidechain
     int nSidechain = request.params[0].get_int();
 
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
     std::string strHash = request.params[1].get_str();
@@ -1662,7 +1662,7 @@ UniValue listwtprimestatus(const JSONRPCRequest& request)
     // nSidechain
     int nSidechain = request.params[0].get_int();
 
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
     std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
@@ -1703,7 +1703,7 @@ UniValue listcachedwtprimetransactions(const JSONRPCRequest& request)
     // nSidechain
     int nSidechain = request.params[0].get_int();
 
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
     std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
@@ -1742,7 +1742,7 @@ UniValue havespentwtprime(const JSONRPCRequest& request)
 
     int nSidechain = request.params[1].get_int();
 
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
     bool fSpent = scdb.HaveSpentWTPrime(hashWTPrime, nSidechain);
@@ -1771,7 +1771,7 @@ UniValue havefailedwtprime(const JSONRPCRequest& request)
 
     int nSidechain = request.params[1].get_int();
 
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
     bool fFailed = scdb.HaveFailedWTPrime(hashWTPrime, nSidechain);

@@ -80,7 +80,7 @@ void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, con
     std::vector<std::vector<SidechainDeposit>> vDepositSplit;
     vDepositSplit.resize(vDepositCache.size());
     for (const SidechainDeposit& d : vDeposit) {
-        if (!IsSidechainNumberValid(d.nSidechain))
+        if (!IsSidechainActive(d.nSidechain))
             continue;
         if (HaveDepositCached(d))
             continue;
@@ -105,7 +105,7 @@ void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, con
 
 bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int nHeight, bool fDebug)
 {
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!IsSidechainActive(nSidechain)) {
         LogPrintf("SCDB %s: Rejected WT^: %s. Invalid sidechain number: %u\n",
                 __func__,
                 hashWTPrime.ToString());
@@ -263,7 +263,7 @@ void SidechainDB::CacheSidechainHashToActivate(const uint256& u)
 
 bool SidechainDB::CacheWTPrime(const CTransaction& tx, uint8_t nSidechain)
 {
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!IsSidechainActive(nSidechain)) {
         LogPrintf("%s: Rejecting WT^: %s - Invalid sidechain number!\n",
                 __func__, tx.GetHash().ToString());
         return false;
@@ -283,7 +283,7 @@ bool SidechainDB::CacheWTPrime(const CTransaction& tx, uint8_t nSidechain)
 
 bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime, bool fDebug) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
     std::vector<SidechainWTPrimeState> vState = GetState(nSidechain);
@@ -373,7 +373,7 @@ std::vector<uint256> SidechainDB::GetRemovedDeposits() const
 
 bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
     std::map<uint8_t, SidechainCTIP>::const_iterator it = mapCTIP.find(nSidechain);
@@ -410,7 +410,7 @@ std::vector<SidechainCustomVote> SidechainDB::GetCustomVoteCache() const
 std::vector<SidechainDeposit> SidechainDB::GetDeposits(uint8_t nSidechain) const
 {
     std::vector<SidechainDeposit> vDeposit;
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return vDeposit;
 
     return vDepositCache[nSidechain];
@@ -560,7 +560,7 @@ uint256 SidechainDB::GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState
 
 bool SidechainDB::GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
     sidechain = vSidechain[nSidechain];
@@ -619,7 +619,7 @@ std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimesForBlock(const u
 
 std::vector<SidechainWTPrimeState> SidechainDB::GetState(uint8_t nSidechain) const
 {
-    if (!HasState() || !IsSidechainNumberValid(nSidechain))
+    if (!HasState() || !IsSidechainActive(nSidechain))
         return std::vector<SidechainWTPrimeState>();
 
     // TODO See comment in UpdateSCDBIndex about accessing vector by nSidechain
@@ -733,7 +733,7 @@ bool SidechainDB::HasSidechainScript(const std::vector<CScript>& vScript, uint8_
 
 bool SidechainDB::HaveDepositCached(const SidechainDeposit &deposit) const
 {
-    if (!IsSidechainNumberValid(deposit.nSidechain))
+    if (!IsSidechainActive(deposit.nSidechain))
         return false;
 
     for (const SidechainDeposit& d : vDepositCache[deposit.nSidechain]) {
@@ -778,7 +778,7 @@ bool SidechainDB::HaveWTPrimeCached(const uint256& hashWTPrime) const
 
 bool SidechainDB::HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSidechain) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
     std::vector<SidechainWTPrimeState> vState = GetState(nSidechain);
@@ -789,7 +789,7 @@ bool SidechainDB::HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSide
     return false;
 }
 
-bool SidechainDB::IsSidechainNumberValid(uint8_t nSidechain) const
+bool SidechainDB::IsSidechainActive(uint8_t nSidechain) const
 {
     if (nSidechain >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return false;
@@ -798,6 +798,9 @@ bool SidechainDB::IsSidechainNumberValid(uint8_t nSidechain) const
         return false;
 
     if (nSidechain >= vDepositCache.size())
+        return false;
+
+    if (nSidechain >= vSidechain.size())
         return false;
 
     return vSidechain[nSidechain].fActive;
@@ -925,7 +928,7 @@ void SidechainDB::Reset()
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)
 {
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!IsSidechainActive(nSidechain)) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^ (txid): %s for sidechain number: %u.\n Invalid sidechain number.\n",
                 __func__,
@@ -1493,7 +1496,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         uint8_t nSidechain;
         uint256 hashWTPrime;
         if (scriptPubKey.IsWTPrimeHashCommit(hashWTPrime, nSidechain)) {
-            if (!IsSidechainNumberValid(nSidechain)) {
+            if (!IsSidechainActive(nSidechain)) {
                 if (fDebug)
                     LogPrintf("SCDB %s: Skipping new WT^: %s, invalid sidechain number: %u\n",
                             __func__,
@@ -1594,7 +1597,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     std::vector<SidechainSpentWTPrime> vSpent;
     vSpent = GetSpentWTPrimesForBlock(hashBlock);
     for (const SidechainSpentWTPrime& s : vSpent) {
-        if (!IsSidechainNumberValid(s.nSidechain)) {
+        if (!IsSidechainActive(s.nSidechain)) {
             if (fDebug) {
                 LogPrintf("SCDB %s: Spent WT^ has invalid sidechain number: %u at height: %u\n",
                         __func__,
@@ -1751,7 +1754,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
 
     // First check that sidechain numbers are valid
     for (const SidechainWTPrimeState& s : vNewScores) {
-        if (!IsSidechainNumberValid(s.nSidechain)) {
+        if (!IsSidechainActive(s.nSidechain)) {
             if (fDebug)
                 LogPrintf("SCDB %s: Update failed! Invalid sidechain number: %u\n",
                         __func__,
@@ -1803,7 +1806,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
         size_t x = s.nSidechain;
 
         // Check nSidechain again
-        if (!IsSidechainNumberValid(x)) {
+        if (!IsSidechainActive(x)) {
             if (fDebug)
                 LogPrintf("SCDB %s: Update failed! Invalid sidechain number (double check): %u\n",
                         __func__,
@@ -1881,7 +1884,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
             }
 
             // Check a third time...
-            if (!IsSidechainNumberValid(x)) {
+            if (!IsSidechainActive(x)) {
                 if (fDebug)
                     LogPrintf("SCDB %s: Rejected new WT^: %s. Invalid sidechain number: %u\n",
                             __func__,

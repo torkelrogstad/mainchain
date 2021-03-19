@@ -650,7 +650,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
 #ifdef ENABLE_WALLET
     if (!scdb.HasState())
         return false;
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         return false;
 
     Sidechain sidechain;

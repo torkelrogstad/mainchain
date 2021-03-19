@@ -1067,7 +1067,7 @@ void CTxMemPool::SelectBMMRequests(std::vector<uint256>& vHashRemoved)
                 uint16_t nPrevBlockRef;
                 std::string strPrevBlock = "";
                 if (it->GetTx().criticalData.IsBMMRequest(nSidechain, nPrevBlockRef, strPrevBlock)) {
-                    if (!scdb.IsSidechainNumberValid(nSidechain)) {
+                    if (!scdb.IsSidechainActive(nSidechain)) {
                         // A BMM request for an invalid sidechain shouldn't be
                         // accepted, but a sidechain can be deactivated so if we
                         // have BMM requests for a sidechain that doesn't exist
@@ -1230,7 +1230,7 @@ void CTxMemPool::RemoveSidechainDeposits(uint8_t nSidechain, const setEntries& s
 
 void CTxMemPool::RemoveUnsortedSidechainDeposits(const std::map<uint8_t, SidechainCTIP>& mapCTIP, uint8_t nSidechain)
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         return;
 
     // TODO refactor: this function should be part of / replace the
