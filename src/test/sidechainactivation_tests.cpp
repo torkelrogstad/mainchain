@@ -506,4 +506,178 @@ BOOST_AUTO_TEST_CASE(every_other_active)
     }
 }
 
+BOOST_AUTO_TEST_CASE(replace_sidechain)
+{
+    SidechainDB scdbTest;
+
+    // Activate first sidechain
+
+    // Creat sidechain proposal
+    SidechainProposal proposal;
+    proposal.nSidechain = 0;
+    proposal.nVersion = 0;
+    proposal.nVersion = 0;
+    proposal.title = "test";
+    proposal.description = "description";
+    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+
+    // Create replacement sidechain proposal
+
+    // Creat sidechain proposal
+    SidechainProposal proposal2;
+    proposal2.nSidechain = 0;
+    proposal2.nVersion = 0;
+    proposal2.nVersion = 0;
+    proposal2.title = "replacement";
+    proposal2.description = "description";
+    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Create transaction output with sidechain proposal
+    CTxOut out;
+    out.scriptPubKey = proposal2.GetScript();
+    out.nValue = 50 * CENT;
+
+    BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
+
+    uint256 hash1 = GetRandHash();
+    BOOST_CHECK(scdbTest.Update(0, hash1, scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out}));
+
+    std::vector<SidechainActivationStatus> vActivation;
+    vActivation = scdbTest.GetSidechainActivationStatus();
+
+    BOOST_CHECK((vActivation.size() == 1) && (vActivation.front().proposal.GetHash() == proposal2.GetHash()));
+
+    // Generate a sidechain activation commit for the replacement
+    CBlock block;
+    CMutableTransaction mtx;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+    GenerateSidechainActivationCommitment(block, proposal2.GetHash(), Params().GetConsensus());
+
+    // Add the requirement to replace
+    for (int i = 1; i <= SIDECHAIN_REPLACEMENT_PERIOD; i++) {
+        uint256 hashNew = GetRandHash();
+        BOOST_CHECK(scdbTest.Update(i, hashNew, scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout));
+    }
+
+    // Check that the proposal has half of the replacement requirement
+    vActivation = scdbTest.GetSidechainActivationStatus();
+
+    // Check activation status
+    // replacement should have been pruned from activation cache
+    std::vector<SidechainActivationStatus> vActivationFinal;
+    vActivationFinal = scdbTest.GetSidechainActivationStatus();
+    BOOST_CHECK(vActivationFinal.empty());
+
+    // Sidechain 0 should now be "replacement"
+    // Check that "replacement" sidechain was activated
+    std::vector<Sidechain> vSidechain = scdbTest.GetSidechains();
+    BOOST_CHECK(vSidechain[0].title == "replacement");
+}
+
+BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
+{
+    SidechainDB scdbTest;
+
+    // Activate first sidechain
+
+    // Creat sidechain proposal
+    SidechainProposal proposal;
+    proposal.nSidechain = 0;
+    proposal.nVersion = 0;
+    proposal.nVersion = 0;
+    proposal.title = "test";
+    proposal.description = "description";
+    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+
+    // Create replacement sidechain proposal
+
+    // Creat sidechain proposal
+    SidechainProposal proposal2;
+    proposal2.nSidechain = 0;
+    proposal2.nVersion = 0;
+    proposal2.nVersion = 0;
+    proposal2.title = "replacement";
+    proposal2.description = "description";
+    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Create transaction output with sidechain proposal
+    CTxOut out;
+    out.scriptPubKey = proposal2.GetScript();
+    out.nValue = 50 * CENT;
+
+    BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
+
+    uint256 hash1 = GetRandHash();
+    BOOST_CHECK(scdbTest.Update(0, hash1, scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out}));
+
+    std::vector<SidechainActivationStatus> vActivation;
+    vActivation = scdbTest.GetSidechainActivationStatus();
+
+    BOOST_CHECK((vActivation.size() == 1) && (vActivation.front().proposal.GetHash() == proposal2.GetHash()));
+
+    // Generate a sidechain activation commit for the replacement
+    CBlock block;
+    CMutableTransaction mtx;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+    GenerateSidechainActivationCommitment(block, proposal2.GetHash(), Params().GetConsensus());
+
+    // Add half of the requirement to replace
+    for (int i = 1; i <= SIDECHAIN_REPLACEMENT_PERIOD / 2; i++) {
+        uint256 hashNew = GetRandHash();
+        BOOST_CHECK(scdbTest.Update(i, hashNew, scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout));
+    }
+
+    // Generate blocks without activation commitments to make proposal fail
+
+    out.scriptPubKey = OP_TRUE;
+    out.nValue = 50 * CENT;
+
+    for (int i = 1; i <= SIDECHAIN_ACTIVATION_MAX_FAILURES + 1; i++) {
+        uint256 hash2 = GetRandHash();
+        BOOST_CHECK(scdbTest.Update(i, hash2, scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out}));
+    }
+
+    // Check activation status
+    // replacement should have been pruned from activation cache
+    // replacement should not be active
+    std::vector<SidechainActivationStatus> vActivationFinal;
+    vActivationFinal = scdbTest.GetSidechainActivationStatus();
+    BOOST_CHECK(vActivationFinal.empty());
+
+    // Check that "replacement" sidechain was not activated
+    // Sidechain 0 should still be "test"
+    std::vector<Sidechain> vSidechain = scdbTest.GetSidechains();
+    BOOST_CHECK(vSidechain[0].title == "test");
+}
+
 BOOST_AUTO_TEST_SUITE_END()
