@@ -10,8 +10,12 @@
 
 #include <array>
 
-// These are the temporary values to speed things up during testing
+// These are temporary WT^ verification values to speed things up during testing
+
+//! The number of blocks that a WT^ has to acheieve minimum work score votes
 static const int SIDECHAIN_VERIFICATION_PERIOD = 300;
+
+//! The minimum workscore votes for a WT^ to be paid out.
 static const int SIDECHAIN_MIN_WORKSCORE = 140;
 
 // These are the values that will be used in the final release
@@ -32,6 +36,7 @@ static const int SIDECHAIN_ACTIVATION_MAX_ACTIVE = 256;
 
 //! The current sidechain version
 static const int SIDECHAIN_VERSION_CURRENT = 0;
+
 //! The max supported sidechain version
 static const int SIDECHAIN_VERSION_MAX = 0;
 
