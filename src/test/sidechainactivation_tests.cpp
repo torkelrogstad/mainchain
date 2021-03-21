@@ -315,7 +315,7 @@ BOOST_AUTO_TEST_CASE(activate_fail)
     GenerateSidechainActivationCommitment(block, proposal.GetHash(), Params().GetConsensus());
 
     // Add votes until the sidechain is half way activated
-    for (int i = 1; i <= SIDECHAIN_ACTIVATION_MAX_AGE / 2; i++) {
+    for (int i = 1; i <= SIDECHAIN_ACTIVATION_PERIOD / 2; i++) {
         uint256 hash2 = GetRandHash();
         scdbTest.Update(i, hash2, hash1, block.vtx.front()->vout);
         hash1 = hash2;

@@ -224,7 +224,7 @@ bool ActivateSidechain(SidechainDB& scdbTest, const SidechainProposal& proposal,
     // Add votes until the sidechain is activated
     int nHeightUpdate = nHeight + 1;
     uint256 hashPrev = hashBlock1;
-    for (int i = 0; i <= SIDECHAIN_ACTIVATION_MAX_AGE; i++) {
+    for (int i = 0; i <= SIDECHAIN_ACTIVATION_PERIOD; i++) {
         uint256 hashNew = GetRandHash();
         if (!scdbTest.Update(nHeightUpdate, hashNew, hashPrev, block.vtx.front()->vout)) {
             return false;

@@ -1990,7 +1990,14 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
     // Increment the age of all sidechain proposals, remove expired.
     for (size_t i = 0; i < vActivationStatus.size(); i++) {
         vActivationStatus[i].nAge++;
-        if (vActivationStatus[i].nAge > SIDECHAIN_ACTIVATION_MAX_AGE) {
+
+        int nPeriod = 0;
+        if (IsSidechainActive(vActivationStatus[i].proposal.nSidechain))
+            nPeriod = SIDECHAIN_REPLACEMENT_PERIOD;
+        else
+            nPeriod = SIDECHAIN_ACTIVATION_PERIOD;
+
+        if (vActivationStatus[i].nAge > nPeriod) {
             LogPrintf("SCDB %s: Sidechain proposal expired:\n%s\n",
                     __func__,
                     vActivationStatus[i].proposal.ToString());
@@ -2035,7 +2042,18 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
 
     // Move activated sidechains to vActivatedSidechain
     for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        if (vActivationStatus[i].nAge == SIDECHAIN_ACTIVATION_MAX_AGE) {
+        // The required period to activated is either the normal sidechain
+        // activation period for a new sidechain, or double (sidechain
+        // replacement period) for a proposal that replaces an active sidechain.
+        int nPeriodRequired = 0;
+        if (IsSidechainActive(vActivationStatus[i].proposal.nSidechain))
+            nPeriodRequired = SIDECHAIN_REPLACEMENT_PERIOD;
+        else
+            nPeriodRequired = SIDECHAIN_ACTIVATION_PERIOD;
+
+        // If a proposal makes it to the required age without being killed off
+        // by failures then it will be activated.
+        if (vActivationStatus[i].nAge == nPeriodRequired) {
             // Create sidechain object from proposal
             Sidechain sidechain;
             sidechain.fActive = true;

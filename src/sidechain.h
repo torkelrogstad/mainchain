@@ -20,10 +20,13 @@ static const int SIDECHAIN_MIN_WORKSCORE = 140;
 
 //! Max number of failures (blocks without commits) for a sidechain to activate
 static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 32;
-//! The amount of time a sidechain has to activate
-static const int SIDECHAIN_ACTIVATION_MAX_AGE = 64;
-//! The number of sidechains which may be signaled for activation at once
-static const int SIDECHAIN_ACTIVATION_MAX_SIGNALS = 32;
+
+//! The number of blocks in a sidechain activation period
+static const int SIDECHAIN_ACTIVATION_PERIOD = 64;
+
+//! The number of blocks in a sidechain replacement period
+static const int SIDECHAIN_REPLACEMENT_PERIOD = SIDECHAIN_ACTIVATION_PERIOD * 2;
+
 //! The number of sidechains which may be active at once
 static const int SIDECHAIN_ACTIVATION_MAX_ACTIVE = 256;
 
