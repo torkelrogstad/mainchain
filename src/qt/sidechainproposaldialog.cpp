@@ -114,6 +114,21 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
         return;
     }
 
+    // TODO also check if sidechain number is the same as an existing proposal
+
+    // Check if this sidechain number is already being used and warn them.
+    if (scdb.IsSidechainActive(nSidechain)) {
+        QString warning = "This sidechain number is already in use!\n";
+        warning += "Replacing an existing sidechain will take twice as long as activating a new one.\n\n";
+        warning += "Are you sure?\n";
+        int nRes = QMessageBox::critical(this, tr("DriveNet - warning"),
+            warning,
+            QMessageBox::Ok, QMessageBox::Cancel);
+
+        if (nRes == QMessageBox::Cancel)
+            return;
+    }
+
     if (strTitle.empty()) {
         QMessageBox::critical(this, tr("DriveNet - error"),
             tr("Sidechain must have a title!"),
