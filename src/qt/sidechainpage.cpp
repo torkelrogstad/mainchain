@@ -54,7 +54,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->setupUi(this);
 
     // Setup sidechain list widget & combo box
-    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
     SetupSidechainList(vSidechain);
 
     // Initialize deposit confirmation dialog
@@ -201,36 +201,37 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
     for (const Sidechain& s : vSidechain) {
         QListWidgetItem *item = new QListWidgetItem(ui->listWidgetSidechains);
 
-        // Set text
-        item->setText(FormatSidechainNameWithNumber(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)), s.nSidechain));
-        QFont font = item->font();
-        font.setPointSize(12);
-        item->setFont(font);
+        if (scdb.IsSidechainActive(s.nSidechain)) {
+            // Display active sidechain
+            item->setText(FormatSidechainNameWithNumber(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)), s.nSidechain));
+            QFont font = item->font();
+            font.setPointSize(12);
+            item->setFont(font);
 
-        ui->listWidgetSidechains->addItem(item);
+            ui->listWidgetSidechains->addItem(item);
+        } else {
+            // Display inactive sidechain slot
+            item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+
+            // Set text
+            item->setText(FormatSidechainNameWithNumber("Inactive", s.nSidechain));
+            QFont font = item->font();
+            font.setPointSize(12);
+            item->setFont(font);
+
+            ui->listWidgetSidechains->addItem(item);
+        }
     }
 
-    // Pad list with disabled items to represent inactive sidechains
-    int nInactive = SIDECHAIN_ACTIVATION_MAX_ACTIVE - vSidechain.size();
-
-    for (int i = 0; i < nInactive; i++) {
-        QListWidgetItem *item = new QListWidgetItem(ui->listWidgetSidechains);
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-
-        // Set text
-        item->setText(FormatSidechainNameWithNumber("Inactive", vSidechain.size() + i));
-        QFont font = item->font();
-        font.setPointSize(12);
-        item->setFont(font);
-
-        ui->listWidgetSidechains->addItem(item);
+    // If the highlighted sidechain number is inactive, highlight the first
+    // active sidechain in the list.
+    if (!scdb.IsSidechainActive(nSelectedSidechain)) {
+        std::vector<Sidechain> vActive = scdb.GetActiveSidechains();
+        if (vActive.size())
+            nSelectedSidechain = vActive.front().nSidechain;
     }
 
-    // If any sidechains are active but no sidechain is highlighted then
-    // highlight sidechain #0. Otherwise re-highlight the selected sidechain.
-    if (vSidechain.size()) {
-        ui->listWidgetSidechains->setCurrentRow(nSelectedSidechain);
-    }
+    ui->listWidgetSidechains->setCurrentRow(nSelectedSidechain);
 }
 
 void SidechainPage::on_pushButtonDeposit_clicked()
@@ -267,8 +268,6 @@ void SidechainPage::on_pushButtonDeposit_clicked()
         messageBox.exec();
         return;
     }
-
-    // TODO work with non keyID addresses
 
     // Get the destination string from the sidechain deposit address
     std::string strDest = "";
@@ -394,6 +393,8 @@ void SidechainPage::on_listWidgetSidechains_currentRowChanged(int nRow)
 {
     if (nRow < 0 || nRow >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return;
+
+    nSelectedSidechain = nRow;
 
     // Format placeholder text (demo version)
     QString strAddress = "s";
@@ -562,7 +563,7 @@ void SidechainPage::numBlocksChanged()
     // deactivated
     //
     // Update sidechain list
-    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
     SetupSidechainList(vSidechain);
 
     // Update recent deposits table
