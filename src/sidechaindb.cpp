@@ -806,6 +806,35 @@ bool SidechainDB::IsSidechainActive(uint8_t nSidechain) const
     return vSidechain[nSidechain].fActive;
 }
 
+bool SidechainDB::IsSidechainUnique(const Sidechain& sidechain) const
+{
+    // Check list of active sidechains
+    std::vector<Sidechain> vActive = GetActiveSidechains();
+    for (const Sidechain& s : vActive) {
+        if (sidechain.title == s.title ||
+                sidechain.sidechainKeyID == s.sidechainKeyID ||
+                sidechain.sidechainHex == s.sidechainHex ||
+                sidechain.sidechainPriv == s.sidechainPriv)
+        {
+            return false;
+        }
+    }
+
+    // Check list of sidechain proposals
+    for (const SidechainActivationStatus& s : vActivationStatus) {
+        Sidechain proposal = s.proposal;
+        if (sidechain.title == proposal.title ||
+                sidechain.sidechainKeyID == proposal.sidechainKeyID ||
+                sidechain.sidechainHex == proposal.sidechainHex ||
+                sidechain.sidechainPriv == proposal.sidechainPriv)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void SidechainDB::RemoveExpiredWTPrimes()
 {
     for (size_t x = 0; x < vWTPrimeStatus.size(); x++) {

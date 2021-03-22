@@ -206,6 +206,11 @@ public:
     /** Check if a sidechain slot number has active sidechain */
     bool IsSidechainActive(uint8_t nSidechain) const;
 
+    /** Return true if the sidechain title, KeyID, deposit script hex & private
+     * key are all different than the values for every active sidechain and
+     * pending sidechain proposal. */
+    bool IsSidechainUnique(const Sidechain& sidechain) const;
+
     void RemoveExpiredWTPrimes();
 
     /** Remove sidechain-to-be-activated hash from cache, because the user
