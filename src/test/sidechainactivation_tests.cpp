@@ -80,9 +80,9 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
     proposal2.nSidechain = 1;
     proposal2.title = "test2";
     proposal2.description = "description";
-    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.sidechainKeyID = "3542f8d0c4e68ec88220c035055176be5bd72be6";
+    proposal2.sidechainHex = "76a9143542f8d0c4e68ec88220c035055176be5bd72be688ac";
+    proposal2.sidechainPriv = "5KTVDGCDPMvbZocXiTVdjFv7ZSZdYnEJps5ebkRxfzP8JCTVeqe";
     proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -211,14 +211,11 @@ BOOST_AUTO_TEST_CASE(activate_multiple)
     proposal2.nVersion = 0;
     proposal2.title = "sidechain2";
     proposal2.description = "test";
-    proposal2.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac"; // TODO
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
     proposal2.hashID1 = GetRandHash();
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
 
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 2);
 
     // Copy sidechain 2
@@ -228,7 +225,7 @@ BOOST_AUTO_TEST_CASE(activate_multiple)
 
     // TODO
     // This should fail because we cannot have sidechains that share params
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal3, 0));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal3, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 }
 
@@ -242,9 +239,6 @@ BOOST_AUTO_TEST_CASE(activate_max)
     proposal.nVersion = 0;
     proposal.title = "sidechain";
     proposal.description = "test";
-    proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac"; // TODO
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
     proposal.hashID1 = GetRandHash();
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -253,7 +247,7 @@ BOOST_AUTO_TEST_CASE(activate_max)
         proposal.nSidechain = i;
         proposal.title = "sidechain" + std::to_string(i);
 
-        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0, true));
 
         nSidechains++;
 
@@ -385,10 +379,74 @@ BOOST_AUTO_TEST_CASE(activate_remove_failed)
     BOOST_CHECK(vSidechain.empty());
 }
 
-BOOST_AUTO_TEST_CASE(activate_duplicate)
+BOOST_AUTO_TEST_CASE(duplicates)
 {
+    // Test that duplicate pending proposals are rejected.
+    // Test that proposals that duplicate an active sidechain are rejected.
+    //
+    // A proposal is duplcate if any of the sidechain parameters are equal to
+    // another sidechain / proposal.
+
+    SidechainDB scdbTest;
+
+    // Test that two exact duplicate proposals are rejected - the first should
+    // be the only one that makes it into the activation cache
+
+    // Create sidechain proposal
+    Sidechain proposal1;
+    proposal1.nSidechain = 0;
+    proposal1.title = "test";
+    proposal1.description = "description";
+    proposal1.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal1.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal1.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Create transaction output with sidechain proposal
+    CTxOut out;
+    out.scriptPubKey = proposal1.GetScript();
+    out.nValue = 50 * CENT;
+
+    BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
+
+    // Update scdbTest to add the proposal
+    uint256 hash1 = GetRandHash();
+    BOOST_CHECK(scdbTest.Update(0, hash1, uint256(), std::vector<CTxOut>{out}));
+
+    // Create sidechain proposal
+    Sidechain proposal2;
+    proposal2.nSidechain = 0;
+    proposal2.title = "test";
+    proposal2.description = "description";
+    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Create transaction output with sidechain proposal
+    CTxOut out2;
+    out2.scriptPubKey = proposal2.GetScript();
+    out2.nValue = 50 * CENT;
+
+    BOOST_CHECK(out2.scriptPubKey.IsSidechainProposalCommit());
+
+    // Update scdbTest to add the duplicate proposal - should fail
+    BOOST_CHECK(!scdbTest.Update(1, GetRandHash(), hash1, std::vector<CTxOut>{out2}));
+
+    std::vector<SidechainActivationStatus> vActivation;
+    vActivation = scdbTest.GetSidechainActivationStatus();
+
+    // Verify scdbTest is tracking only 1 of the 2 proposals
+    BOOST_CHECK((vActivation.size() == 1) && (vActivation.front().proposal.GetHash() == proposal1.GetHash()));
+
+
     // Test proposing a sidechain that is an exact duplicate of a sidechain
     // that has already activated. Should be rejected.
+
+
+
 }
 
 BOOST_AUTO_TEST_CASE(none_active)
@@ -424,9 +482,6 @@ BOOST_AUTO_TEST_CASE(max_active_reverse)
     Sidechain proposal;
     proposal.nVersion = 0;
     proposal.description = "test";
-    proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = GetRandHash();
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -435,7 +490,7 @@ BOOST_AUTO_TEST_CASE(max_active_reverse)
         proposal.nSidechain = i;
         proposal.title = "sidechain" + std::to_string(i);
 
-        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0, true));
 
         nSidechains++;
 
@@ -467,9 +522,6 @@ BOOST_AUTO_TEST_CASE(every_other_active)
     Sidechain proposal;
     proposal.nVersion = 0;
     proposal.description = "test";
-    proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = GetRandHash();
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -481,7 +533,7 @@ BOOST_AUTO_TEST_CASE(every_other_active)
         proposal.nSidechain = i;
         proposal.title = "sidechain" + std::to_string(i);
 
-        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0, true));
 
         nSidechains++;
 
@@ -518,15 +570,12 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
 
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Create replacement sidechain proposal
@@ -601,15 +650,12 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
 
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Create replacement sidechain proposal
@@ -677,6 +723,49 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     // Sidechain 0 should still be "test"
     std::vector<Sidechain> vSidechain = scdbTest.GetSidechains();
     BOOST_CHECK(vSidechain[0].title == "test");
+}
+
+BOOST_AUTO_TEST_CASE(unique)
+{
+    // Test the IsSidechainUnique function
+
+    SidechainDB scdbTest;
+
+    // Activate first sidechain
+
+    // Creat sidechain proposal
+    Sidechain proposal;
+    proposal.nSidechain = 0;
+    proposal.nVersion = 0;
+    proposal.nVersion = 0;
+    proposal.title = "test";
+    proposal.description = "description";
+    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+
+    // Create a duplicate sidechain to test
+
+    Sidechain sidechain;
+    sidechain.nSidechain = 0;
+    sidechain.title = "test";
+    sidechain.description = "description";
+    sidechain.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    sidechain.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
+    sidechain.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    sidechain.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    sidechain.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Duplicate sidechain should not be unique
+    BOOST_CHECK(!scdbTest.IsSidechainUnique(sidechain));
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()

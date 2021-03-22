@@ -1024,14 +1024,11 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     proposal2.nVersion = 0;
     proposal2.title = "sidechain3";
     proposal2.description = "test 3";
-    proposal2.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac"; // TODO
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
     proposal2.hashID1 = GetRandHash();
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
     // Activate second sidechain
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 
     // Add initial WT^s to scdbTest
@@ -1155,14 +1152,11 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     proposal2.nVersion = 0;
     proposal2.title = "sidechain3";
     proposal2.description = "test 3";
-    proposal2.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac"; // TODO
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
     proposal2.hashID1 = GetRandHash();
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
     // Activate third sidechain
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 
     // Add initial WT^s to scdbTest
@@ -1353,9 +1347,6 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     proposal.nVersion = 0;
     proposal.title = "sidechain";
     proposal.description = "test";
-    proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac"; // TODO
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
     proposal.hashID1 = GetRandHash();
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -1365,7 +1356,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
         proposal.nSidechain = i;
         proposal.title = "sidechain" + std::to_string(i);
 
-        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0, true));
 
         nSidechains++;
 
