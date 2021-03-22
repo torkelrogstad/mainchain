@@ -38,7 +38,7 @@ bool ActivateTestSidechain(SidechainDB& scdbTest, int nHeight = 0)
 {
     // Activate a test sidechain as sidechain #0
 
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
     proposal.title = "Test";
@@ -645,7 +645,7 @@ BOOST_AUTO_TEST_CASE(IsSidechainProposalCommit)
     // TODO test invalid
 
     // Create sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nVersion = 0;
     proposal.title = "Test";
     proposal.description = "Description";
@@ -669,7 +669,7 @@ BOOST_AUTO_TEST_CASE(IsSidechainActivationCommit)
     // TODO test invalid
 
     // Create sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nVersion = 0;
     proposal.title = "Test";
     proposal.description = "Description";
@@ -720,7 +720,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // A second sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 1;
     proposal.nVersion = 0;
     proposal.title = "sidechain2";
@@ -1003,7 +1003,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // A second sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 1;
     proposal.nVersion = 0;
     proposal.title = "sidechain2";
@@ -1019,7 +1019,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 2);
 
     // A third sidechain proposal
-    SidechainProposal proposal2;
+    Sidechain proposal2;
     proposal2.nSidechain = 2;
     proposal2.nVersion = 0;
     proposal2.title = "sidechain3";
@@ -1134,7 +1134,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // A second sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 1;
     proposal.nVersion = 0;
     proposal.title = "sidechain2";
@@ -1150,7 +1150,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 2);
 
     // A third sidechain proposal
-    SidechainProposal proposal2;
+    Sidechain proposal2;
     proposal2.nSidechain = 2;
     proposal2.nVersion = 0;
     proposal2.title = "sidechain3";
@@ -1349,7 +1349,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
 
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
 
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nVersion = 0;
     proposal.title = "sidechain";
     proposal.description = "test";

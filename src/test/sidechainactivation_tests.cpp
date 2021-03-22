@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE(proposal_single)
     SidechainDB scdbTest;
 
     // Create sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.title = "test";
     proposal.description = "description";
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
     SidechainDB scdbTest;
 
     // Create sidechain proposal
-    SidechainProposal proposal1;
+    Sidechain proposal1;
     proposal1.nSidechain = 0;
     proposal1.title = "test1";
     proposal1.description = "description";
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
     scdbTest.Update(0, hash1, uint256(), std::vector<CTxOut>{out});
 
     // Create sidechain proposal
-    SidechainProposal proposal2;
+    Sidechain proposal2;
     proposal2.nSidechain = 1;
     proposal2.title = "test2";
     proposal2.description = "description";
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(proposal_perblock_limit)
     SidechainDB scdbTest;
 
     // Creat sidechain proposal
-    SidechainProposal proposal1;
+    Sidechain proposal1;
     proposal1.nSidechain = 0;
     proposal1.title = "test1";
     proposal1.description = "description";
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(proposal_perblock_limit)
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
 
     // Create sidechain proposal
-    SidechainProposal proposal2;
+    Sidechain proposal2;
     proposal2.nSidechain = 1;
     proposal2.title = "test2";
     proposal2.description = "description";
@@ -167,7 +167,7 @@ BOOST_AUTO_TEST_CASE(activate_single)
     SidechainDB scdbTest;
 
     // Creat sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
     proposal.nVersion = 0;
@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE(activate_multiple)
 {
     SidechainDB scdbTest;
 
-    SidechainProposal proposal1;
+    Sidechain proposal1;
     proposal1.nSidechain = 0;
     proposal1.nVersion = 0;
     proposal1.title = "sidechain1";
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(activate_multiple)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Proposal for a second sidechain
-    SidechainProposal proposal2;
+    Sidechain proposal2;
     proposal2.nSidechain = 1;
     proposal2.nVersion = 0;
     proposal2.title = "sidechain2";
@@ -222,7 +222,7 @@ BOOST_AUTO_TEST_CASE(activate_multiple)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 2);
 
     // Copy sidechain 2
-    SidechainProposal proposal3 = proposal2;
+    Sidechain proposal3 = proposal2;
     proposal3.nSidechain = 2;
     proposal3.title = "abc";
 
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(activate_max)
 
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
 
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nVersion = 0;
     proposal.title = "sidechain";
     proposal.description = "test";
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE(activate_fail)
     SidechainDB scdbTest;
 
     // Creat sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
     proposal.title = "test";
@@ -336,7 +336,7 @@ BOOST_AUTO_TEST_CASE(activate_remove_failed)
     SidechainDB scdbTest;
 
     // Creat sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
     proposal.title = "test";
@@ -421,8 +421,7 @@ BOOST_AUTO_TEST_CASE(max_active_reverse)
 
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
 
-    // TODO sidechains with the same key and IDs should be rejected
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nVersion = 0;
     proposal.description = "test";
     proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
@@ -465,7 +464,7 @@ BOOST_AUTO_TEST_CASE(every_other_active)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
 
     // TODO sidechains with the same key and IDs should be rejected
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nVersion = 0;
     proposal.description = "test";
     proposal.sidechainKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
@@ -513,7 +512,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     // Activate first sidechain
 
     // Creat sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
     proposal.nVersion = 0;
@@ -533,7 +532,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     // Create replacement sidechain proposal
 
     // Creat sidechain proposal
-    SidechainProposal proposal2;
+    Sidechain proposal2;
     proposal2.nSidechain = 0;
     proposal2.nVersion = 0;
     proposal2.nVersion = 0;
@@ -596,7 +595,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     // Activate first sidechain
 
     // Creat sidechain proposal
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
     proposal.nVersion = 0;
@@ -616,7 +615,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     // Create replacement sidechain proposal
 
     // Creat sidechain proposal
-    SidechainProposal proposal2;
+    Sidechain proposal2;
     proposal2.nSidechain = 0;
     proposal2.nVersion = 0;
     proposal2.nVersion = 0;
