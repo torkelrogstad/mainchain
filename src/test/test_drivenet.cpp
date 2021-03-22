@@ -4,6 +4,7 @@
 
 #include <test/test_drivenet.h>
 
+#include <base58.h>
 #include <chainparams.h>
 #include <consensus/consensus.h>
 #include <consensus/validation.h>
@@ -184,8 +185,27 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn) {
                            sigOpCost, lp);
 }
 
-bool ActivateSidechain(SidechainDB& scdbTest, const SidechainProposal& proposal, int nHeight)
+bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, bool fGenerateKey)
 {
+    // Generate new KeyID, deposit script, private key if asked
+    if (fGenerateKey) {
+        uint256 hash = GetRandHash();
+
+        CKey key;
+        key.Set(hash.begin(), hash.end(), false);
+
+        CBitcoinSecret vchSecret(key);
+
+        CPubKey pubkey = key.GetPubKey();
+        CKeyID vchAddress = pubkey.GetID();
+
+        CScript script = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+        proposal.sidechainKeyID = HexStr(vchAddress);
+        proposal.sidechainHex = HexStr(script);
+        proposal.sidechainPriv = vchSecret.ToString();
+    }
+
     /* Activate a sidechain for testing purposes */
     unsigned int nActive = scdbTest.GetActiveSidechainCount();
 
