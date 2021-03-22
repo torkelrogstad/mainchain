@@ -1441,66 +1441,49 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
      */
 
     // Scan for sidechain proposal commitments
-    std::vector<SidechainProposal> vProposal;
-    if (!fJustCheck) {
-        for (const CTxOut& out : vout) {
-            const CScript& scriptPubKey = out.scriptPubKey;
+    std::vector<Sidechain> vProposal;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
 
-            if (!scriptPubKey.IsSidechainProposalCommit())
-                continue;
+        if (!scriptPubKey.IsSidechainProposalCommit())
+            continue;
 
-            SidechainProposal proposal;
-            if (!proposal.DeserializeFromScript(scriptPubKey))
-                continue;
+        Sidechain proposal;
+        if (!proposal.DeserializeFromScript(scriptPubKey))
+            continue;
 
-            // Check for duplicate
-            bool fDuplicate = false;
-            for (const SidechainActivationStatus& s : vActivationStatus) {
-                if (s.proposal == proposal) {
-                    fDuplicate = true;
-                    break;
-                }
-            }
-            if (fDuplicate)
-                continue;
-
-            vProposal.push_back(proposal);
-        }
+        vProposal.push_back(proposal);
     }
+    // Maximum of 1 sidechain proposal per block
+    if (vProposal.size() > 1) {
+        if (fDebug)
+            LogPrintf("SCDB %s: Invalid: block with multiple sidechain proposals at height: %u\n",
+                    __func__,
+                    nHeight);
+        return false;
+    }
+    // Check if proposal is unique
+    if (vProposal.size() == 1 && !IsSidechainUnique(vProposal.front())) {
+        if (fDebug)
+            LogPrintf("SCDB %s: Invalid: block with duplicate sidechain proposal at height: %u\n",
+                    __func__,
+                    nHeight);
+        return false;
+    }
+    // Update SCDB
     if (!fJustCheck && vProposal.size() == 1) {
         SidechainActivationStatus status;
         status.nFail = 0;
         status.nAge = 0;
         status.proposal = vProposal.front();
 
-        // Make sure that the proposal is unique,
-        bool fUnique = true;
+        // Start tracking the new sidechain proposal
+        vActivationStatus.push_back(status);
 
-        // check the activation status cache
-        for (const SidechainActivationStatus& s : vActivationStatus) {
-            if (s.proposal == status.proposal) {
-                fUnique = false;
-                break;
-            }
-        }
-        // check the active sidechain list
-        for (const Sidechain& s : vSidechain) {
-            // Note that we are comparing a Sidechain to a SidechainProposal.
-            // There is a custom operator== for this purpose.
-            if (s == status.proposal) {
-                fUnique = false;
-                break;
-            }
-        }
+        LogPrintf("SCDB %s: Tracking new sidechain proposal:\n%s\n",
+                __func__,
+                status.proposal.ToString());
 
-        if (fUnique) {
-            LogPrintf("SCDB %s: Tracking new sidechain proposal:\n%s\n",
-                    __func__,
-                    status.proposal.ToString());
-
-            // Start tracking the new sidechain proposal
-            vActivationStatus.push_back(status);
-        }
     }
 
     // Scan for sidechain activation commitments
@@ -1738,7 +1721,7 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
         if (!scriptPubKey.IsSidechainProposalCommit())
             continue;
 
-        SidechainProposal proposal;
+        Sidechain proposal;
         if (!proposal.DeserializeFromScript(scriptPubKey))
             continue;
 
