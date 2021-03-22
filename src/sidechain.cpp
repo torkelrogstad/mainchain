@@ -12,16 +12,17 @@
 
 #include <sstream>
 
-bool Sidechain::operator==(const SidechainProposal& a) const
+bool Sidechain::operator==(const Sidechain& s) const
 {
-    return (sidechainPriv == a.sidechainPriv &&
-            sidechainHex == a.sidechainHex &&
-            sidechainKeyID == a.sidechainKeyID &&
-            title == a.title &&
-            description == a.description &&
-            hashID1 == a.hashID1 &&
-            hashID2 == a.hashID2 &&
-            nVersion == a.nVersion);
+    return (sidechainPriv == s.sidechainPriv &&
+            sidechainHex == s.sidechainHex &&
+            sidechainKeyID == s.sidechainKeyID &&
+            title == s.title &&
+            description == s.description &&
+            hashID1 == s.hashID1 &&
+            hashID2 == s.hashID2 &&
+            nVersion == s.nVersion &&
+            nSidechain == s.nSidechain);
 }
 
 std::string Sidechain::GetSidechainName() const
@@ -45,21 +46,6 @@ std::string Sidechain::ToString() const
     return ss.str();
 }
 
-std::string SidechainProposal::ToString() const
-{
-    std::stringstream ss;
-    ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
-    ss << "nVersion=" << nVersion << std::endl;
-    ss << "sidechainPriv=" << sidechainPriv << std::endl;
-    ss << "sidechainHex=" << sidechainHex << std::endl;
-    ss << "sidechainKeyID=" << sidechainKeyID << std::endl;
-    ss << "title=" << title << std::endl;
-    ss << "description=" << description << std::endl;
-    ss << "hashID1=" << hashID1.ToString() << std::endl;
-    ss << "hashID2=" << hashID2.ToString() << std::endl;
-    return ss.str();
-}
-
 bool SidechainDeposit::operator==(const SidechainDeposit& a) const
 {
     return (a.nSidechain == nSidechain &&
@@ -67,19 +53,6 @@ bool SidechainDeposit::operator==(const SidechainDeposit& a) const
             a.tx == tx &&
             a.n == n &&
             a.hashBlock == hashBlock);
-}
-
-bool SidechainProposal::operator==(const SidechainProposal& proposal) const
-{
-    return (proposal.title == title &&
-            proposal.description == description &&
-            proposal.sidechainKeyID == sidechainKeyID &&
-            proposal.sidechainHex == sidechainHex &&
-            proposal.sidechainPriv == sidechainPriv &&
-            proposal.hashID1 == hashID1 &&
-            proposal.hashID2 == hashID2 &&
-            proposal.nVersion == nVersion &&
-            proposal.nSidechain == nSidechain);
 }
 
 std::string SidechainDeposit::ToString() const
@@ -123,7 +96,7 @@ std::string SidechainWTPrimeState::ToString() const
     return ss.str();
 }
 
-bool SidechainProposal::DeserializeFromScript(const CScript& script)
+bool Sidechain::DeserializeFromScript(const CScript& script)
 {
     if (!script.IsSidechainProposalCommit())
         return false;
@@ -140,18 +113,21 @@ bool SidechainProposal::DeserializeFromScript(const CScript& script)
     const char *vch0 = (const char *) &vch.begin()[0];
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
-    SidechainProposal proposal;
-    proposal.Unserialize(ds);
+    Sidechain sidechain;
+    sidechain.Unserialize(ds);
 
-    nSidechain = proposal.nSidechain;
-    nVersion = proposal.nVersion;
-    title = proposal.title;
-    description = proposal.description;
-    sidechainKeyID = proposal.sidechainKeyID;
-    sidechainHex = proposal.sidechainHex;
-    sidechainPriv = proposal.sidechainPriv;
-    hashID1 = proposal.hashID1;
-    hashID2 = proposal.hashID2;
+    // TODO ignore fActive for sidechain proposal script
+
+    fActive = sidechain.fActive;
+    nSidechain = sidechain.nSidechain;
+    nVersion = sidechain.nVersion;
+    title = sidechain.title;
+    description = sidechain.description;
+    sidechainKeyID = sidechain.sidechainKeyID;
+    sidechainHex = sidechain.sidechainHex;
+    sidechainPriv = sidechain.sidechainPriv;
+    hashID1 = sidechain.hashID1;
+    hashID2 = sidechain.hashID2;
 
     return true;
 }
@@ -171,11 +147,6 @@ uint256 Sidechain::GetHash() const
     return SerializeHash(*this);
 }
 
-uint256 SidechainProposal::GetHash() const
-{
-    return SerializeHash(*this);
-}
-
 uint256 SidechainWTPrimeState::GetHash() const
 {
     return SerializeHash(*this);
@@ -186,14 +157,14 @@ uint256 SidechainCTIP::GetHash() const
     return SerializeHash(*this);
 }
 
-std::vector<unsigned char> SidechainProposal::GetBytes() const
+std::vector<unsigned char> Sidechain::GetBytes() const
 {
     CDataStream ds(SER_DISK, CLIENT_VERSION);
-    ((SidechainProposal *) this)->Serialize(ds);
+    ((Sidechain *) this)->Serialize(ds);
     return std::vector<unsigned char>(ds.begin(), ds.end());
 }
 
-CScript SidechainProposal::GetScript() const
+CScript Sidechain::GetScript() const
 {
     CScript script;
     script.resize(5);

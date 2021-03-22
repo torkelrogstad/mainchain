@@ -193,7 +193,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     // Generate script hex
     CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
 
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = nSidechain;
     proposal.title = strTitle;
     proposal.description = strDescription;
@@ -207,7 +207,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     proposal.nVersion = nVersion;
 
     // Cache proposal so that it can be added to the next block we mine
-    scdb.CacheSidechainProposals(std::vector<SidechainProposal>{proposal});
+    scdb.CacheSidechainProposals(std::vector<Sidechain>{proposal});
 
     QString message = QString("Sidechain proposal created!\n\n");
     message += QString("Sidechain Number:\n%1\n\n").arg(nSidechain);

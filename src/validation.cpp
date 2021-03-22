@@ -3629,7 +3629,7 @@ void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, co
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-void GenerateSidechainProposalCommitment(CBlock& block, const SidechainProposal& sidechain, const Consensus::Params& consensusParams)
+void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams)
 {
     // Check for activation of Drivechains
     if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
@@ -5852,7 +5852,7 @@ bool LoadSidechainProposalCache()
         return true;
     }
 
-    std::vector<SidechainProposal> vProposal;
+    std::vector<Sidechain> vProposal;
     try {
         uint64_t nVersion;
         filein >> nVersion;
@@ -5863,7 +5863,7 @@ bool LoadSidechainProposalCache()
         int count = 0;
         filein >> count;
         for (int i = 0; i < count; i++) {
-            SidechainProposal proposal;
+            Sidechain proposal;
             filein >> proposal;
             vProposal.push_back(proposal);
         }
@@ -5881,7 +5881,7 @@ bool LoadSidechainProposalCache()
 
 void DumpSidechainProposalCache()
 {
-    std::vector<SidechainProposal> vProposal = scdb.GetSidechainProposals();
+    std::vector<Sidechain> vProposal = scdb.GetSidechainProposals();
 
     int count = vProposal.size();
 
@@ -5896,7 +5896,7 @@ void DumpSidechainProposalCache()
         fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of proposals in file
 
-        for (const SidechainProposal& s : vProposal) {
+        for (const Sidechain& s : vProposal) {
             fileout << s;
         }
     }

@@ -250,9 +250,9 @@ void SidechainDB::CacheSidechainActivationStatus(const std::vector<SidechainActi
     vActivationStatus = vActivationStatusIn;
 }
 
-void SidechainDB::CacheSidechainProposals(const std::vector<SidechainProposal>& vSidechainProposalIn)
+void SidechainDB::CacheSidechainProposals(const std::vector<Sidechain>& vSidechainProposalIn)
 {
-    for (const SidechainProposal& s : vSidechainProposalIn)
+    for (const Sidechain& s : vSidechainProposalIn)
         vSidechainProposal.push_back(s);
 }
 
@@ -337,7 +337,7 @@ bool SidechainDB::GetActivateSidechain(const uint256& u) const
         }
     }
     // Also check if we created the sidechain proposal, and ACK it
-    for (const SidechainProposal& s : vSidechainProposal) {
+    for (const Sidechain& s : vSidechainProposal) {
         if (s.GetHash() == u) {
             return true;
         }
@@ -503,8 +503,8 @@ uint256 SidechainDB::GetTotalSCDBHash() const
     LogPrintf("%s: Hash with vSidechainHashActivate data: %s\n", __func__, hash.ToString());
 
     // Add vSidechainProposal
-    for (const SidechainProposal& p : vSidechainProposal) {
-        vLeaf.push_back(p.GetHash());
+    for (const Sidechain& s : vSidechainProposal) {
+        vLeaf.push_back(s.GetHash());
     }
 
     hash = ComputeMerkleRoot(vLeaf);
@@ -584,7 +584,7 @@ std::string SidechainDB::GetSidechainName(uint8_t nSidechain) const
     return str;
 }
 
-std::vector<SidechainProposal> SidechainDB::GetSidechainProposals() const
+std::vector<Sidechain> SidechainDB::GetSidechainProposals() const
 {
     return vSidechainProposal;
 }
@@ -893,7 +893,7 @@ void SidechainDB::Reset()
     // Clear out list of sidechain (hashes) we want to ACK
     vSidechainHashActivate.clear();
 
-    // Clear out our cache of sidechain proposals
+    // Clear out our cache of proposed sidechains
     vSidechainProposal.clear();
 
     // Clear out cached WT^ serializations

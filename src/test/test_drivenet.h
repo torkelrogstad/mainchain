@@ -93,7 +93,7 @@ struct TestChain100Setup : public TestingSetup {
 
 class CTxMemPoolEntry;
 class SidechainDB;
-class SidechainProposal;
+class Sidechain;
 
 struct TestMemPoolEntryHelper
 {
@@ -122,7 +122,7 @@ struct TestMemPoolEntryHelper
     TestMemPoolEntryHelper &SigOpsCost(unsigned int _sigopsCost) { sigOpCost = _sigopsCost; return *this; }
 };
 
-bool ActivateSidechain(SidechainDB& scdbTest, const SidechainProposal& proposal, int nHeight);
+bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, bool fGenerateKey = false);
 
 CBlock getBlock13b8a();
 

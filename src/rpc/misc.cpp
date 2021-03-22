@@ -1249,9 +1249,9 @@ UniValue listsidechainproposals(const JSONRPCRequest& request)
             + HelpExampleRpc("listsidechainproposals", "")
             );
 
-    std::vector<SidechainProposal> vProposal = scdb.GetSidechainProposals();
+    std::vector<Sidechain> vProposal = scdb.GetSidechainProposals();
     UniValue ret(UniValue::VARR);
-    for (const SidechainProposal& s : vProposal) {
+    for (const Sidechain& s : vProposal) {
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("title", s.title));
         obj.push_back(Pair("description", s.description));
@@ -1379,7 +1379,7 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     // Generate script hex
     CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
 
-    SidechainProposal proposal;
+    Sidechain proposal;
     proposal.nSidechain = nSidechain;
     proposal.title = strTitle;
     proposal.description = strDescription;
@@ -1396,7 +1396,7 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
         proposal.hashID2 = uint160S(strHashID2);
 
     // Cache proposal so that it can be added to the next block we mine
-    scdb.CacheSidechainProposals(std::vector<SidechainProposal>{proposal});
+    scdb.CacheSidechainProposals(std::vector<Sidechain>{proposal});
 
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("nSidechain", proposal.nVersion));

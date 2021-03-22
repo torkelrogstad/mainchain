@@ -46,59 +46,6 @@ static const char DB_SIDECHAIN_BLOCK_OP = 'S';
 //! The destination string for the change of a WT^
 static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
 
-struct SidechainProposal {
-    uint8_t nSidechain;
-    int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
-    std::string title;
-    std::string description;
-    std::string sidechainKeyID;
-    std::string sidechainHex;
-    std::string sidechainPriv;
-    uint256 hashID1;
-    uint160 hashID2;
-
-    bool DeserializeFromScript(const CScript& script);
-
-    std::vector<unsigned char> GetBytes() const;
-    CScript GetScript() const;
-    uint256 GetHash() const;
-    bool operator==(const SidechainProposal& proposal) const;
-    std::string ToString() const;
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(nSidechain);
-        READWRITE(nVersion);
-        READWRITE(title);
-        READWRITE(description);
-        READWRITE(sidechainKeyID);
-        READWRITE(sidechainHex);
-        READWRITE(sidechainPriv);
-        READWRITE(hashID1);
-        READWRITE(hashID2);
-    }
-};
-
-struct SidechainActivationStatus
-{
-    int nAge;
-    int nFail;
-    SidechainProposal proposal;
-
-    uint256 GetHash() const;
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(nAge);
-        READWRITE(nFail);
-        READWRITE(proposal);
-    }
-};
-
 struct Sidechain {
     bool fActive;
     uint8_t nSidechain;
@@ -125,10 +72,15 @@ struct Sidechain {
         hashID2.SetNull();
     }
 
+    bool operator==(const Sidechain& s) const;
     std::string GetSidechainName() const;
-    bool operator==(const SidechainProposal& a) const;
     std::string ToString() const;
     uint256 GetHash() const;
+
+    // Sidechain proposal script functions
+    bool DeserializeFromScript(const CScript& script);
+    std::vector<unsigned char> GetBytes() const;
+    CScript GetScript() const;
 
     ADD_SERIALIZE_METHODS
 
@@ -144,6 +96,24 @@ struct Sidechain {
         READWRITE(description);
         READWRITE(hashID1);
         READWRITE(hashID2);
+    }
+};
+
+struct SidechainActivationStatus
+{
+    int nAge;
+    int nFail;
+    Sidechain proposal;
+
+    uint256 GetHash() const;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(nAge);
+        READWRITE(nFail);
+        READWRITE(proposal);
     }
 };
 

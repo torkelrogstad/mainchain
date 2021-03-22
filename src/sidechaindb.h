@@ -28,7 +28,6 @@ struct SidechainBlockData;
 struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
-struct SidechainProposal;
 struct SidechainWTPrimeState;
 struct SidechainSpentWTPrime;
 struct SidechainFailedWTPrime;
@@ -73,8 +72,8 @@ public:
     /** Add SidechainActivationStatus to the in-memory cache */
     void CacheSidechainActivationStatus(const std::vector<SidechainActivationStatus>& vActivationStatusIn);
 
-    /** Add SidechainProposal to the in-memory cache */
-    void CacheSidechainProposals(const std::vector<SidechainProposal>& vSidechainProposalIn);
+    /** Add proposed sidechain to the in-memory cache */
+    void CacheSidechainProposals(const std::vector<Sidechain>& vSidechainProposalIn);
 
     /** Add sidechain-to-be-activated hash to cache */
     void CacheSidechainHashToActivate(const uint256& u);
@@ -150,7 +149,7 @@ public:
     std::string GetSidechainName(uint8_t nSidechain) const;
 
     /** Get list of this node's uncommitted sidechain proposals */
-    std::vector<SidechainProposal> GetSidechainProposals() const;
+    std::vector<Sidechain> GetSidechainProposals() const;
 
     /** Get the scriptPubKey that relates to nSidechain if it exists */
     bool GetSidechainScript(const uint8_t nSidechain, CScript& scriptPubKey) const;
@@ -168,9 +167,6 @@ public:
 
     /** Return cached but uncommitted WT^ transaction's hash(s) for nSidechain */
     std::vector<uint256> GetUncommittedWTPrimeCache(uint8_t nSidechain) const;
-
-    /** Return cached but uncommitted WT^ transaction's hash(s) for nSidechain */
-    std::vector<SidechainProposal> GetUncommittedSidechainProposals() const;
 
     /** Returns SCDB WT^ state with single vote type applied to all of the most
      * recent WT^(s) in the cache */
@@ -295,9 +291,9 @@ private:
      * configured to activate by the user */
     std::vector<uint256> vSidechainHashActivate;
 
-    /** Cache of proposals created by this node, which should be included in the
-     * next block that this node mines. */
-    std::vector<SidechainProposal> vSidechainProposal;
+    /** Cache of proposals for new sidechains created by this node,
+     * which should be included in the next block that this node mines. */
+    std::vector<Sidechain> vSidechainProposal;
 
     /** Cache of potential WT^ transactions
      * TODO consider refactoring to use CTransactionRef */

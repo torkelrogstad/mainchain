@@ -451,7 +451,7 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
 /** Produce WT^ hash coinbase commitment for a block */
 void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, const uint8_t nSidechain, const Consensus::Params& consensusParams);
 
-void GenerateSidechainProposalCommitment(CBlock& block, const SidechainProposal& sidechain, const Consensus::Params& consensusParams);
+void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams);
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams);
 

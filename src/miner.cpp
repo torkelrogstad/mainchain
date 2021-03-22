@@ -437,10 +437,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         //
         // If we commit a proposal, save the hash to easily ACK it later
         uint256 hashProposal;
-        std::vector<SidechainProposal> vProposal = scdb.GetSidechainProposals();
+        std::vector<Sidechain> vProposal = scdb.GetSidechainProposals();
         if (!vProposal.empty()) {
             std::vector<SidechainActivationStatus> vActivation = scdb.GetSidechainActivationStatus();
-            for (const SidechainProposal& p : vProposal) {
+            for (const Sidechain& p : vProposal) {
                 // Check if this proposal is already being tracked by SCDB
                 bool fFound = false;
                 for (const SidechainActivationStatus& s : vActivation) {
