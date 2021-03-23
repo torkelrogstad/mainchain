@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(proposal_single)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal.GetScript();
+    out.scriptPubKey = proposal.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal1.GetScript();
+    out.scriptPubKey = proposal1.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
 
     // Create transaction output with sidechain proposal
     CTxOut out2;
-    out2.scriptPubKey = proposal2.GetScript();
+    out2.scriptPubKey = proposal2.GetProposalScript();
     out2.nValue = 50 * CENT;
 
     BOOST_CHECK(out2.scriptPubKey.IsSidechainProposalCommit());
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(proposal_perblock_limit)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal1.GetScript();
+    out.scriptPubKey = proposal1.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(proposal_perblock_limit)
 
     // Create transaction output with sidechain proposal
     CTxOut out2;
-    out2.scriptPubKey = proposal2.GetScript();
+    out2.scriptPubKey = proposal2.GetProposalScript();
     out2.nValue = 50 * CENT;
 
     BOOST_CHECK(out2.scriptPubKey.IsSidechainProposalCommit());
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE(activate_fail)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal.GetScript();
+    out.scriptPubKey = proposal.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE(activate_remove_failed)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal.GetScript();
+    out.scriptPubKey = proposal.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
@@ -405,7 +405,7 @@ BOOST_AUTO_TEST_CASE(duplicates)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal1.GetScript();
+    out.scriptPubKey = proposal1.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(duplicates)
 
     // Create transaction output with sidechain proposal
     CTxOut out2;
-    out2.scriptPubKey = proposal2.GetScript();
+    out2.scriptPubKey = proposal2.GetProposalScript();
     out2.nValue = 50 * CENT;
 
     BOOST_CHECK(out2.scriptPubKey.IsSidechainProposalCommit());
@@ -595,7 +595,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal2.GetScript();
+    out.scriptPubKey = proposal2.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());
@@ -675,7 +675,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal2.GetScript();
+    out.scriptPubKey = proposal2.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());

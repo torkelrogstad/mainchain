@@ -96,7 +96,7 @@ std::string SidechainWTPrimeState::ToString() const
     return ss.str();
 }
 
-bool Sidechain::DeserializeFromScript(const CScript& script)
+bool Sidechain::DeserializeFromProposalScript(const CScript& script)
 {
     if (!script.IsSidechainProposalCommit())
         return false;
@@ -114,11 +114,9 @@ bool Sidechain::DeserializeFromScript(const CScript& script)
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
     Sidechain sidechain;
-    sidechain.Unserialize(ds);
+    sidechain.DeserializeProposal(ds);
 
-    // TODO ignore fActive for sidechain proposal script
-
-    fActive = sidechain.fActive;
+    fActive = false;
     nSidechain = sidechain.nSidechain;
     nVersion = sidechain.nVersion;
     title = sidechain.title;
@@ -157,15 +155,12 @@ uint256 SidechainCTIP::GetHash() const
     return SerializeHash(*this);
 }
 
-std::vector<unsigned char> Sidechain::GetBytes() const
+CScript Sidechain::GetProposalScript() const
 {
     CDataStream ds(SER_DISK, CLIENT_VERSION);
-    ((Sidechain *) this)->Serialize(ds);
-    return std::vector<unsigned char>(ds.begin(), ds.end());
-}
+    ((Sidechain *) this)->SerializeProposal(ds);
+    std::vector<unsigned char> vch(ds.begin(), ds.end());
 
-CScript Sidechain::GetScript() const
-{
     CScript script;
     script.resize(5);
     script[0] = OP_RETURN;
@@ -173,7 +168,8 @@ CScript Sidechain::GetScript() const
     script[2] = 0xE0;
     script[3] = 0xC4;
     script[4] = 0xAF;
-    script << GetBytes();
+    script << vch;
+
     return script;
 }
 

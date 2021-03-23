@@ -1449,7 +1449,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             continue;
 
         Sidechain proposal;
-        if (!proposal.DeserializeFromScript(scriptPubKey))
+        if (!proposal.DeserializeFromProposalScript(scriptPubKey))
             continue;
 
         vProposal.push_back(proposal);
@@ -1722,7 +1722,7 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
             continue;
 
         Sidechain proposal;
-        if (!proposal.DeserializeFromScript(scriptPubKey))
+        if (!proposal.DeserializeFromProposalScript(scriptPubKey))
             continue;
 
         bool fRemoved = false;

@@ -211,7 +211,7 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal.GetScript();
+    out.scriptPubKey = proposal.GetProposalScript();
     out.nValue = 50 * CENT;
 
     if (!out.scriptPubKey.IsSidechainProposalCommit()) {

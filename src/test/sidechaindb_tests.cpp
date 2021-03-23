@@ -657,7 +657,7 @@ BOOST_AUTO_TEST_CASE(IsSidechainProposalCommit)
 
     // Create transaction output with sidechain proposal
     CTxOut out;
-    out.scriptPubKey = proposal.GetScript();
+    out.scriptPubKey = proposal.GetProposalScript();
     out.nValue = 50 * CENT;
 
     BOOST_CHECK(out.scriptPubKey.IsSidechainProposalCommit());

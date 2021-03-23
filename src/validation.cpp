@@ -3638,14 +3638,8 @@ void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidecha
     CTxOut out;
     out.nValue = 0;
 
-    // Header
-    // 0xD5;
-    // 0xE0;
-    // 0xC4;
-    // 0xAF;
-
-    // Add serialization of sidechain proposal
-    out.scriptPubKey = sidechain.GetScript();
+    // Add serialization of sidechain proposal & Header 0xD5E0C4AF
+    out.scriptPubKey = sidechain.GetProposalScript();
 
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);

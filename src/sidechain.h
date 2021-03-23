@@ -78,9 +78,8 @@ struct Sidechain {
     uint256 GetHash() const;
 
     // Sidechain proposal script functions
-    bool DeserializeFromScript(const CScript& script);
-    std::vector<unsigned char> GetBytes() const;
-    CScript GetScript() const;
+    bool DeserializeFromProposalScript(const CScript& script);
+    CScript GetProposalScript() const;
 
     ADD_SERIALIZE_METHODS
 
@@ -97,6 +96,35 @@ struct Sidechain {
         READWRITE(hashID1);
         READWRITE(hashID2);
     }
+
+    // This is the same as normal serialization but without fActive
+    template <typename Stream>
+    inline void SerializeProposal(Stream& s) {
+        s << nSidechain;
+        s << nVersion;
+        s << sidechainKeyID;
+        s << sidechainPriv;
+        s << sidechainHex;
+        s << title;
+        s << description;
+        s << hashID1;
+        s << hashID2;
+    }
+
+    // This is the same as normal serialization but without fActive
+    template <typename Stream>
+    inline void DeserializeProposal(Stream& s) {
+        s >> nSidechain;
+        s >> nVersion;
+        s >> sidechainKeyID;
+        s >> sidechainPriv;
+        s >> sidechainHex;
+        s >> title;
+        s >> description;
+        s >> hashID1;
+        s >> hashID2;
+    }
+
 };
 
 struct SidechainActivationStatus
