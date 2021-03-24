@@ -1595,6 +1595,33 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     BOOST_CHECK(vVoteOut.empty());
 }
 
+BOOST_AUTO_TEST_CASE(has_sidechain_script)
+{
+    // Test checking if a script is an active sidechain deposit script
+    SidechainDB scdbTest;
+
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
+    BOOST_CHECK(ActivateTestSidechain(scdbTest, 0));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+
+    Sidechain sidechain;
+    BOOST_CHECK(scdbTest.GetSidechain(0, sidechain));
+
+    CScript scriptPubKey = sidechain.scriptPubKey;
+
+    CScript scriptFromDB;
+    BOOST_CHECK(scdbTest.GetSidechainScript(0, scriptFromDB));
+    BOOST_CHECK(scriptFromDB == scriptPubKey);
+
+    uint8_t nSidechain;
+    BOOST_CHECK(scdbTest.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain));
+    BOOST_CHECK(nSidechain == 0);
+    BOOST_CHECK(nSidechain == sidechain.nSidechain);
+
+    CScript scriptInvalid = CScript() << 0x01 << 0x02 << 0x03 << 0x04;
+    BOOST_CHECK(!scdbTest.HasSidechainScript(std::vector<CScript>{scriptInvalid}, nSidechain));
+}
+
 BOOST_AUTO_TEST_CASE(txn_to_deposit)
 {
     // Test of the TxnToDeposit function. This is used by the memory pool and
