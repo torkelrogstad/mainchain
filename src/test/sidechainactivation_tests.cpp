@@ -24,9 +24,12 @@ BOOST_AUTO_TEST_CASE(proposal_single)
     proposal.nSidechain = 0;
     proposal.title = "test";
     proposal.description = "description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -58,9 +61,12 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
     proposal1.nSidechain = 0;
     proposal1.title = "test1";
     proposal1.description = "description";
-    proposal1.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal1.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal1.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal1.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    proposal1.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal1.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
     proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -80,9 +86,12 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
     proposal2.nSidechain = 1;
     proposal2.title = "test2";
     proposal2.description = "description";
-    proposal2.sidechainKeyID = "3542f8d0c4e68ec88220c035055176be5bd72be6";
-    proposal2.sidechainHex = "76a9143542f8d0c4e68ec88220c035055176be5bd72be688ac";
-    proposal2.sidechainPriv = "5KTVDGCDPMvbZocXiTVdjFv7ZSZdYnEJps5ebkRxfzP8JCTVeqe";
+    proposal2.strKeyID = "3542f8d0c4e68ec88220c035055176be5bd72be6";
+
+    std::vector<unsigned char> vchPubKey2 = ParseHex("76a9143542f8d0c4e68ec88220c035055176be5bd72be688ac");
+    proposal2.scriptPubKey = CScript(vchPubKey2.begin(), vchPubKey2.end());
+
+    proposal2.strPrivKey = "5KTVDGCDPMvbZocXiTVdjFv7ZSZdYnEJps5ebkRxfzP8JCTVeqe";
     proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -121,9 +130,12 @@ BOOST_AUTO_TEST_CASE(proposal_perblock_limit)
     proposal1.nSidechain = 0;
     proposal1.title = "test1";
     proposal1.description = "description";
-    proposal1.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal1.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal1.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal1.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal1.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal1.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -139,9 +151,12 @@ BOOST_AUTO_TEST_CASE(proposal_perblock_limit)
     proposal2.nSidechain = 1;
     proposal2.title = "test2";
     proposal2.description = "description";
-    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey2 = ParseHex("76a9143542f8d0c4e68ec88220c035055176be5bd72be688ac");
+    proposal2.scriptPubKey = CScript(vchPubKey2.begin(), vchPubKey2.end());
+
+    proposal2.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -173,9 +188,12 @@ BOOST_AUTO_TEST_CASE(activate_single)
     proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -194,15 +212,12 @@ BOOST_AUTO_TEST_CASE(activate_multiple)
     proposal1.nVersion = 0;
     proposal1.title = "sidechain1";
     proposal1.description = "description";
-    proposal1.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal1.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal1.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
 
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 0);
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal1, 0));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal1, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
     // Proposal for a second sidechain
@@ -278,9 +293,12 @@ BOOST_AUTO_TEST_CASE(activate_fail)
     proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -335,9 +353,12 @@ BOOST_AUTO_TEST_CASE(activate_remove_failed)
     proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -397,9 +418,12 @@ BOOST_AUTO_TEST_CASE(duplicates)
     proposal1.nSidechain = 0;
     proposal1.title = "test";
     proposal1.description = "description";
-    proposal1.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal1.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal1.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal1.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal1.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal1.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -419,9 +443,12 @@ BOOST_AUTO_TEST_CASE(duplicates)
     proposal2.nSidechain = 0;
     proposal2.title = "test";
     proposal2.description = "description";
-    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey2 = ParseHex("76a9143542f8d0c4e68ec88220c035055176be5bd72be688ac");
+    proposal2.scriptPubKey = CScript(vchPubKey2.begin(), vchPubKey2.end());
+
+    proposal2.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -587,9 +614,12 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     proposal2.nVersion = 0;
     proposal2.title = "replacement";
     proposal2.description = "description";
-    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal2.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal2.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -667,9 +697,12 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     proposal2.nVersion = 0;
     proposal2.title = "replacement";
     proposal2.description = "description";
-    proposal2.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal2.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal2.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal2.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal2.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal2.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal2.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -737,12 +770,14 @@ BOOST_AUTO_TEST_CASE(unique)
     Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
-    proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
-    proposal.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    proposal.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    proposal.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    proposal.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
@@ -755,11 +790,12 @@ BOOST_AUTO_TEST_CASE(unique)
 
     Sidechain sidechain;
     sidechain.nSidechain = 0;
+    sidechain.nVersion = 0;
     sidechain.title = "test";
     sidechain.description = "description";
-    sidechain.sidechainKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
-    sidechain.sidechainHex = "76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac";
-    sidechain.sidechainPriv = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
+    sidechain.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
+    sidechain.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+    sidechain.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r";
     sidechain.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
     sidechain.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 

@@ -700,10 +700,8 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     // Calculate the amount to be withdrawn by WT^
     CAmount amountWithdrawn = CAmount(0);
     for (const CTxOut& out : mtx.vout) {
-        const CScript scriptPubKey = out.scriptPubKey;
-        if (HexStr(scriptPubKey) != sidechain.sidechainHex) {
+        if (out.scriptPubKey != sidechain.scriptPubKey)
             amountWithdrawn += out.nValue;
-        }
     }
 
     // Add mainchain fees from WT(s)
@@ -744,7 +742,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
         return false;
 
     CBitcoinSecret vchSecret;
-    bool fGood = vchSecret.SetString(sidechain.sidechainPriv);
+    bool fGood = vchSecret.SetString(sidechain.strPrivKey);
     if (!fGood)
         return false;
 

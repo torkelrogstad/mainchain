@@ -18,7 +18,6 @@ struct SidechainActivationTableObject
     QString title;
     QString description;
     QString sidechainKeyID;
-    QString sidechainHex;
     QString sidechainPriv;
     int nAge;
     int nFail;

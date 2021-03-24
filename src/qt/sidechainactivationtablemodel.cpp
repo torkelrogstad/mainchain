@@ -34,7 +34,7 @@ int SidechainActivationTableModel::rowCount(const QModelIndex & /*parent*/) cons
 
 int SidechainActivationTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 11;
+    return 10;
 }
 
 QVariant SidechainActivationTableModel::data(const QModelIndex &index, int role) const
@@ -93,16 +93,12 @@ QVariant SidechainActivationTableModel::data(const QModelIndex &index, int role)
         if (col == 7) {
             return object.sidechainKeyID;
         }
-        // Hex
-        if (col == 8) {
-            return object.sidechainHex;
-        }
         // Private key
-        if (col == 9) {
+        if (col == 8) {
             return object.sidechainPriv;
         }
         // Hash
-        if (col == 10) {
+        if (col == 9) {
             return object.hash;
         }
     }
@@ -132,10 +128,8 @@ QVariant SidechainActivationTableModel::headerData(int section, Qt::Orientation 
             case 7:
                 return QString("Key");
             case 8:
-                return QString("Script Hex");
-            case 9:
                 return QString("Private Key");
-            case 10:
+            case 9:
                 return QString("Hash");
             }
         }
@@ -241,9 +235,8 @@ void SidechainActivationTableModel::updateModel()
         object.fReplacement = scdb.IsSidechainActive(s.proposal.nSidechain);
         object.title = QString::fromStdString(s.proposal.title);
         object.description = QString::fromStdString(s.proposal.description);
-        object.sidechainKeyID = QString::fromStdString(s.proposal.sidechainKeyID);
-        object.sidechainHex = QString::fromStdString(s.proposal.sidechainHex);
-        object.sidechainPriv = QString::fromStdString(s.proposal.sidechainPriv);
+        object.sidechainKeyID = QString::fromStdString(s.proposal.strKeyID);
+        object.sidechainPriv = QString::fromStdString(s.proposal.strPrivKey);
         object.nAge = s.nAge;
         object.nFail = s.nFail;
         object.hash = QString::fromStdString(s.proposal.GetHash().ToString());

@@ -5,6 +5,7 @@
 #include <sidechain.h>
 
 #include <clientversion.h>
+#include <core_io.h>
 #include <hash.h>
 #include <script/script.h>
 #include <streams.h>
@@ -14,9 +15,9 @@
 
 bool Sidechain::operator==(const Sidechain& s) const
 {
-    return (sidechainPriv == s.sidechainPriv &&
-            sidechainHex == s.sidechainHex &&
-            sidechainKeyID == s.sidechainKeyID &&
+    return (strPrivKey == s.strPrivKey &&
+            scriptPubKey == s.scriptPubKey &&
+            strKeyID == s.strKeyID &&
             title == s.title &&
             description == s.description &&
             hashID1 == s.hashID1 &&
@@ -36,9 +37,9 @@ std::string Sidechain::ToString() const
     ss << "fActive=" << fActive << std::endl;
     ss << "nSidechain=" << (unsigned int)nSidechain << std::endl;
     ss << "nVersion=" << nVersion << std::endl;
-    ss << "sidechainPriv=" << sidechainPriv << std::endl;
-    ss << "sidechainHex=" << sidechainHex << std::endl;
-    ss << "sidechainKeyID=" << sidechainKeyID << std::endl;
+    ss << "strPrivKey=" << strPrivKey << std::endl;
+    ss << "scriptPubKey=" << ScriptToAsmStr(scriptPubKey) << std::endl;
+    ss << "strKeyID=" << strKeyID << std::endl;
     ss << "title=" << title << std::endl;
     ss << "description=" << description << std::endl;
     ss << "hashID1=" << hashID1.ToString() << std::endl;
@@ -121,9 +122,9 @@ bool Sidechain::DeserializeFromProposalScript(const CScript& script)
     nVersion = sidechain.nVersion;
     title = sidechain.title;
     description = sidechain.description;
-    sidechainKeyID = sidechain.sidechainKeyID;
-    sidechainHex = sidechain.sidechainHex;
-    sidechainPriv = sidechain.sidechainPriv;
+    strKeyID = sidechain.strKeyID;
+    scriptPubKey = sidechain.scriptPubKey;
+    strPrivKey = sidechain.strPrivKey;
     hashID1 = sidechain.hashID1;
     hashID2 = sidechain.hashID2;
 

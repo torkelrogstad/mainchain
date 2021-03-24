@@ -42,14 +42,6 @@ bool SidechainDB::AddDepositsFromBlock(const std::vector<CTransaction>& vtx, con
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
     // be done after verifying all of the deposits.
-    //
-    // TODO: we are removing the validation of deposit destinations. WT^(s) also
-    // happen to use "invalid" deposit destinations for their change. The new
-    // deposit validation code detects those WT^(s) as invalid deposits. So for
-    // now we skip deposits that are seen as invalid. In the future we will make
-    // deposit validation ignore the destination script and instead check for
-    // WT^(s) here and skip them, and return false if any other deposit is
-    // invalid.
     std::vector<SidechainDeposit> vDeposit;
     for (const CTransaction& tx : vtx) {
         SidechainDeposit deposit;
@@ -416,7 +408,7 @@ std::vector<SidechainDeposit> SidechainDB::GetDeposits(uint8_t nSidechain) const
     return vDepositCache[nSidechain];
 }
 
-std::vector<SidechainDeposit> SidechainDB::GetDeposits(const std::string& sidechainPriv) const
+std::vector<SidechainDeposit> SidechainDB::GetDeposits(const std::string& strPrivKey) const
 {
     // TODO refactor: only one GetDeposits function in SCDB
     // TODO put deposits into a different container where the sidechain private
@@ -427,7 +419,7 @@ std::vector<SidechainDeposit> SidechainDB::GetDeposits(const std::string& sidech
     uint8_t nSidechain = 0;
     bool fFound = false;
     for (const Sidechain& s : vSidechain) {
-        if (s.sidechainPriv == sidechainPriv) {
+        if (s.strPrivKey == strPrivKey) {
             nSidechain = s.nSidechain;
             fFound = true;
             break;
@@ -595,8 +587,7 @@ bool SidechainDB::GetSidechainScript(const uint8_t nSidechain, CScript& scriptPu
     if (!GetSidechain(nSidechain, sidechain))
         return false;
 
-    std::vector<unsigned char> vch(ParseHex(sidechain.sidechainHex));
-    scriptPubKey = CScript(vch.begin(), vch.end());
+    scriptPubKey = sidechain.scriptPubKey;
 
     return true;
 }
@@ -722,7 +713,7 @@ bool SidechainDB::HasSidechainScript(const std::vector<CScript>& vScript, uint8_
     // Check if scriptPubKey is the deposit script of any active sidechains
     for (const CScript& scriptPubKey : vScript) {
         for (const Sidechain& s : vSidechain) {
-            if (HexStr(scriptPubKey) == s.sidechainHex) {
+            if (scriptPubKey == s.scriptPubKey) {
                 nSidechain = s.nSidechain;
                 return true;
             }
@@ -812,9 +803,9 @@ bool SidechainDB::IsSidechainUnique(const Sidechain& sidechain) const
     std::vector<Sidechain> vActive = GetActiveSidechains();
     for (const Sidechain& s : vActive) {
         if (sidechain.title == s.title ||
-                sidechain.sidechainKeyID == s.sidechainKeyID ||
-                sidechain.sidechainHex == s.sidechainHex ||
-                sidechain.sidechainPriv == s.sidechainPriv)
+                sidechain.strKeyID == s.strKeyID ||
+                sidechain.scriptPubKey == s.scriptPubKey ||
+                sidechain.strPrivKey == s.strPrivKey)
         {
             return false;
         }
@@ -824,9 +815,9 @@ bool SidechainDB::IsSidechainUnique(const Sidechain& sidechain) const
     for (const SidechainActivationStatus& s : vActivationStatus) {
         Sidechain proposal = s.proposal;
         if (sidechain.title == proposal.title ||
-                sidechain.sidechainKeyID == proposal.sidechainKeyID ||
-                sidechain.sidechainHex == proposal.sidechainHex ||
-                sidechain.sidechainPriv == proposal.sidechainPriv)
+                sidechain.strKeyID == proposal.strKeyID ||
+                sidechain.scriptPubKey == proposal.scriptPubKey ||
+                sidechain.strPrivKey == proposal.strPrivKey)
         {
             return false;
         }
@@ -1225,7 +1216,6 @@ bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock,
 {
     // Note that the first OP_RETURN output found in a deposit transaction will
     // be used as the destination. Others are ignored.
-
     bool fBurnFound = false;
     bool fDestFound = false;
     for (size_t i = 0; i < tx.vout.size(); i++) {
@@ -2073,9 +2063,9 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
             sidechain.nVersion = vActivationStatus[i].proposal.nVersion;
             sidechain.hashID1 = vActivationStatus[i].proposal.hashID1;
             sidechain.hashID2 = vActivationStatus[i].proposal.hashID2;
-            sidechain.sidechainPriv = vActivationStatus[i].proposal.sidechainPriv;
-            sidechain.sidechainHex = vActivationStatus[i].proposal.sidechainHex;
-            sidechain.sidechainKeyID = vActivationStatus[i].proposal.sidechainKeyID;
+            sidechain.strPrivKey = vActivationStatus[i].proposal.strPrivKey;
+            sidechain.scriptPubKey = vActivationStatus[i].proposal.scriptPubKey;
+            sidechain.strKeyID = vActivationStatus[i].proposal.strKeyID;
             sidechain.title = vActivationStatus[i].proposal.title;
             sidechain.description = vActivationStatus[i].proposal.description;
 

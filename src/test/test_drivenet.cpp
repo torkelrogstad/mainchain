@@ -201,9 +201,9 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
 
         CScript script = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
 
-        proposal.sidechainKeyID = HexStr(vchAddress);
-        proposal.sidechainHex = HexStr(script);
-        proposal.sidechainPriv = vchSecret.ToString();
+        proposal.strKeyID = HexStr(vchAddress);
+        proposal.scriptPubKey = script;
+        proposal.strPrivKey = vchSecret.ToString();
     }
 
     /* Activate a sidechain for testing purposes */

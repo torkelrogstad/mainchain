@@ -1192,9 +1192,8 @@ UniValue listactivesidechains(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("title", s.title));
         obj.push_back(Pair("description", s.description));
-        obj.push_back(Pair("privatekey", s.sidechainPriv));
-        obj.push_back(Pair("keyid", s.sidechainKeyID));
-        obj.push_back(Pair("hex", s.sidechainHex));
+        obj.push_back(Pair("privatekey", s.strPrivKey));
+        obj.push_back(Pair("keyid", s.strKeyID));
         obj.push_back(Pair("nversion", s.nVersion));
         obj.push_back(Pair("hashid1", s.hashID1.ToString()));
         obj.push_back(Pair("hashid2", s.hashID2.ToString()));
@@ -1225,9 +1224,8 @@ UniValue listsidechainactivationstatus(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("title", s.proposal.title));
         obj.push_back(Pair("description", s.proposal.description));
-        obj.push_back(Pair("privatekey", s.proposal.sidechainPriv));
-        obj.push_back(Pair("keyid", s.proposal.sidechainKeyID));
-        obj.push_back(Pair("hex", s.proposal.sidechainHex));
+        obj.push_back(Pair("privatekey", s.proposal.strPrivKey));
+        obj.push_back(Pair("keyid", s.proposal.strKeyID));
         obj.push_back(Pair("nage", s.nAge));
         obj.push_back(Pair("nfail", s.nFail));
 
@@ -1255,9 +1253,8 @@ UniValue listsidechainproposals(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("title", s.title));
         obj.push_back(Pair("description", s.description));
-        obj.push_back(Pair("privatekey", s.sidechainPriv));
-        obj.push_back(Pair("keyid", s.sidechainKeyID));
-        obj.push_back(Pair("hex", s.sidechainHex));
+        obj.push_back(Pair("privatekey", s.strPrivKey));
+        obj.push_back(Pair("keyid", s.strKeyID));
         obj.push_back(Pair("nversion", s.nVersion));
         obj.push_back(Pair("hashid1", s.hashID1.ToString()));
         obj.push_back(Pair("hashid2", s.hashID2.ToString()));
@@ -1289,9 +1286,8 @@ UniValue getsidechainactivationstatus(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("title", s.proposal.title));
         obj.push_back(Pair("description", s.proposal.description));
-        obj.push_back(Pair("privatekey", s.proposal.sidechainPriv));
-        obj.push_back(Pair("keyid", s.proposal.sidechainKeyID));
-        obj.push_back(Pair("scripthex", s.proposal.sidechainHex));
+        obj.push_back(Pair("privatekey", s.proposal.strPrivKey));
+        obj.push_back(Pair("keyid", s.proposal.strKeyID));
         obj.push_back(Pair("nage", s.nAge));
         obj.push_back(Pair("nfail", s.nFail));
         obj.push_back(Pair("proposalhash", s.proposal.GetHash().ToString()));
@@ -1376,16 +1372,16 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     assert(key.VerifyPubKey(pubkey));
     CKeyID vchAddress = pubkey.GetID();
 
-    // Generate script hex
+    // Generate deposit script
     CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
 
     Sidechain proposal;
     proposal.nSidechain = nSidechain;
     proposal.title = strTitle;
     proposal.description = strDescription;
-    proposal.sidechainPriv = vchSecret.ToString();
-    proposal.sidechainKeyID = HexStr(vchAddress);
-    proposal.sidechainHex = HexStr(sidechainScript);
+    proposal.strPrivKey = vchSecret.ToString();
+    proposal.strKeyID = HexStr(vchAddress);
+    proposal.scriptPubKey = sidechainScript;
     if (nVersion >= 0)
         proposal.nVersion = nVersion;
     else
@@ -1402,9 +1398,8 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     obj.push_back(Pair("nSidechain", proposal.nVersion));
     obj.push_back(Pair("title", proposal.title));
     obj.push_back(Pair("description", proposal.description));
-    obj.push_back(Pair("privatekey", proposal.sidechainPriv));
-    obj.push_back(Pair("keyid", proposal.sidechainKeyID));
-    obj.push_back(Pair("hex", proposal.sidechainHex));
+    obj.push_back(Pair("privatekey", proposal.strPrivKey));
+    obj.push_back(Pair("keyid", proposal.strKeyID));
     obj.push_back(Pair("version", proposal.nVersion));
     obj.push_back(Pair("hashID1", proposal.hashID1.ToString()));
     obj.push_back(Pair("hashID2", proposal.hashID2.ToString()));

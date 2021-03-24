@@ -50,9 +50,9 @@ struct Sidechain {
     bool fActive;
     uint8_t nSidechain;
     int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
-    std::string sidechainKeyID;
-    std::string sidechainPriv;
-    std::string sidechainHex;
+    std::string strKeyID;
+    std::string strPrivKey;
+    CScript scriptPubKey;
     std::string title;
     std::string description;
     uint256 hashID1;
@@ -63,9 +63,9 @@ struct Sidechain {
         fActive = false;
         nSidechain = 0;
         nVersion = SIDECHAIN_VERSION_CURRENT;
-        sidechainKeyID = "";
-        sidechainPriv = "";
-        sidechainHex = "";
+        strKeyID = "";
+        strPrivKey = "";
+        scriptPubKey.clear();
         title = "";
         description = "";
         hashID1.SetNull();
@@ -88,9 +88,9 @@ struct Sidechain {
         READWRITE(fActive);
         READWRITE(nSidechain);
         READWRITE(nVersion);
-        READWRITE(sidechainKeyID);
-        READWRITE(sidechainPriv);
-        READWRITE(sidechainHex);
+        READWRITE(strKeyID);
+        READWRITE(strPrivKey);
+        READWRITE(scriptPubKey);
         READWRITE(title);
         READWRITE(description);
         READWRITE(hashID1);
@@ -102,9 +102,9 @@ struct Sidechain {
     inline void SerializeProposal(Stream& s) {
         s << nSidechain;
         s << nVersion;
-        s << sidechainKeyID;
-        s << sidechainPriv;
-        s << sidechainHex;
+        s << strKeyID;
+        s << strPrivKey;
+        s << scriptPubKey;
         s << title;
         s << description;
         s << hashID1;
@@ -116,9 +116,9 @@ struct Sidechain {
     inline void DeserializeProposal(Stream& s) {
         s >> nSidechain;
         s >> nVersion;
-        s >> sidechainKeyID;
-        s >> sidechainPriv;
-        s >> sidechainHex;
+        s >> strKeyID;
+        s >> strPrivKey;
+        s >> scriptPubKey;
         s >> title;
         s >> description;
         s >> hashID1;

@@ -197,9 +197,9 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     proposal.nSidechain = nSidechain;
     proposal.title = strTitle;
     proposal.description = strDescription;
-    proposal.sidechainPriv = vchSecret.ToString();
-    proposal.sidechainKeyID = HexStr(vchAddress);
-    proposal.sidechainHex = HexStr(sidechainScript);
+    proposal.strPrivKey = vchSecret.ToString();
+    proposal.strKeyID = HexStr(vchAddress);
+    proposal.scriptPubKey = sidechainScript;
     if (!strHashID1.empty())
         proposal.hashID1 = uint256S(strHashID1);
     if (!strHashID1.empty())
@@ -214,13 +214,9 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     message += QString("Version:\n%1\n\n").arg(nVersion);
     message += QString("Title:\n%1\n\n").arg(QString::fromStdString(strTitle));
     message += QString("Description:\n%1\n\n").arg(QString::fromStdString(strDescription));
-    message += QString("Private key:\n%1\n\n").arg(QString::fromStdString(proposal.sidechainPriv));
-    message += QString("KeyID:\n%1\n\n").arg(QString::fromStdString(proposal.sidechainKeyID));
-    message += QString("Deposit script:\n%1\n\n").arg(QString::fromStdString(proposal.sidechainHex));
-
-    std::vector<unsigned char> vch(ParseHex(proposal.sidechainHex));
-    CScript scriptPubKey = CScript(vch.begin(), vch.end());
-    message += QString("Deposit script asm:\n%1\n\n").arg(QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
+    message += QString("Private key:\n%1\n\n").arg(QString::fromStdString(proposal.strPrivKey));
+    message += QString("KeyID:\n%1\n\n").arg(QString::fromStdString(proposal.strKeyID));
+    message += QString("Deposit script asm:\n%1\n\n").arg(QString::fromStdString(ScriptToAsmStr(proposal.scriptPubKey)));
 
     if (!strHashID1.empty())
         message += QString("Hash ID 1:\n%1\n\n").arg(QString::fromStdString(strHashID1));
