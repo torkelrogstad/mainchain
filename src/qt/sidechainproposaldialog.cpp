@@ -156,7 +156,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     uint256 uHash = uint256S(strHash);
     if (uHash.IsNull()) {
         QMessageBox::critical(this, tr("DriveNet - error"),
-            tr("Invalid sidechain key hash!"),
+            tr("Invalid sidechain address bytes!"),
             QMessageBox::Ok);
         return;
     }
