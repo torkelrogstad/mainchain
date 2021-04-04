@@ -118,8 +118,9 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
 
     // Check if this sidechain number is already being used and warn them.
     if (scdb.IsSidechainActive(nSidechain)) {
-        QString warning = "This sidechain number is already in use!\n";
-        warning += "Replacing an existing sidechain will take twice as long as activating a new one.\n\n";
+        QString warning = "The sidechain number you have chosen is already in use!\n\n";
+        warning += "This would create a sidechain replacement proposal which ";
+        warning += "is much slower to activate than a new sidechain.\n\n";
         warning += "Are you sure?\n";
         int nRes = QMessageBox::critical(this, tr("DriveNet - warning"),
             warning,
