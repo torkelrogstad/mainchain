@@ -29,7 +29,7 @@ static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 32;
 static const int SIDECHAIN_ACTIVATION_PERIOD = 64;
 
 //! The number of blocks in a sidechain replacement period
-static const int SIDECHAIN_REPLACEMENT_PERIOD = SIDECHAIN_ACTIVATION_PERIOD * 2;
+static const int SIDECHAIN_REPLACEMENT_PERIOD = SIDECHAIN_MIN_WORKSCORE;
 
 //! The number of sidechains which may be active at once
 static const int SIDECHAIN_ACTIVATION_MAX_ACTIVE = 256;
@@ -124,7 +124,6 @@ struct Sidechain {
         s >> hashID1;
         s >> hashID2;
     }
-
 };
 
 struct SidechainActivationStatus
