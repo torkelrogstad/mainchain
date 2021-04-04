@@ -167,6 +167,8 @@ void SidechainActivationTableModel::updateModel()
                 object.nFail = s.nFail;
                 // Update fAck
                 object.fAck = scdb.GetActivateSidechain(s.proposal.GetHash());
+                // Update replacement status
+                object.fReplacement = scdb.IsSidechainActive(s.proposal.nSidechain);
 
                 // Emit signal that model data has changed
                 QModelIndex topLeft = index(i, 0);
