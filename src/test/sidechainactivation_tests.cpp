@@ -2,15 +2,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "chainparams.h"
-#include "sidechain.h"
-#include "sidechaindb.h"
-#include "validation.h"
+#include <base58.h>
+#include <chainparams.h>
+#include <sidechain.h>
+#include <sidechaindb.h>
+#include <validation.h>
 
-#include "test/test_drivenet.h"
+#include <test/test_drivenet.h>
 
 #include <boost/test/unit_test.hpp>
-
 
 BOOST_FIXTURE_TEST_SUITE(sidechainactivation_tests, TestingSetup)
 
@@ -112,12 +112,6 @@ BOOST_AUTO_TEST_CASE(proposal_multiple)
     BOOST_CHECK((vActivation.size() == 2) &&
             (vActivation.front().proposal.GetHash() == proposal1.GetHash()) &&
             (vActivation.back().proposal.GetHash() == proposal2.GetHash()));
-}
-
-BOOST_AUTO_TEST_CASE(proposal_limit)
-{
-    // Test adding the maximum number of sidechain proposals
-    // TODO
 }
 
 BOOST_AUTO_TEST_CASE(proposal_perblock_limit)
@@ -238,8 +232,6 @@ BOOST_AUTO_TEST_CASE(activate_multiple)
     proposal3.nSidechain = 2;
     proposal3.title = "abc";
 
-    // TODO
-    // This should fail because we cannot have sidechains that share params
     BOOST_CHECK(ActivateSidechain(scdbTest, proposal3, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 }
@@ -472,8 +464,7 @@ BOOST_AUTO_TEST_CASE(duplicates)
     // Test proposing a sidechain that is an exact duplicate of a sidechain
     // that has already activated. Should be rejected.
 
-
-
+    // TODO
 }
 
 BOOST_AUTO_TEST_CASE(none_active)
@@ -647,7 +638,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     GenerateSidechainActivationCommitment(block, proposal2.GetHash(), Params().GetConsensus());
 
     // Add the requirement to replace
-    for (int i = 1; i <= SIDECHAIN_REPLACEMENT_PERIOD; i++) {
+    for (int i = 1; i <= SIDECHAIN_REPLACEMENT_PERIOD - 1; i++) {
         uint256 hashNew = GetRandHash();
         BOOST_CHECK(scdbTest.Update(i, hashNew, scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout));
     }
@@ -801,7 +792,201 @@ BOOST_AUTO_TEST_CASE(unique)
 
     // Duplicate sidechain should not be unique
     BOOST_CHECK(!scdbTest.IsSidechainUnique(sidechain));
+}
 
+BOOST_AUTO_TEST_CASE(per_block_activation_limit_pass)
+{
+    // Test that only one sidechain activation commit is allowed for each
+    // sidechain number per block. In this test we will ACK two sidechains that
+    // have different sidechain numbers, which should be allowed.
+    SidechainDB scdbTest;
+
+    Sidechain proposal1;
+    proposal1.nSidechain = 0;
+    proposal1.nVersion = 0;
+    proposal1.title = "sidechain1";
+    proposal1.description = "description";
+    proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Generate new keys for the sidechain proposal
+    uint256 hash1 = GetRandHash();
+    CKey key1;
+    key1.Set(hash1.begin(), hash1.end(), false);
+    CBitcoinSecret vchSecret1(key1);
+    CPubKey pubkey1 = key1.GetPubKey();
+    CKeyID vchAddress1 = pubkey1.GetID();
+    CScript script1 = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress1) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    proposal1.strKeyID = HexStr(vchAddress1);
+    proposal1.scriptPubKey = script1;
+    proposal1.strPrivKey = vchSecret1.ToString();
+
+    // Proposal for a second sidechain
+    Sidechain proposal2;
+    proposal2.nSidechain = 1;
+    proposal2.nVersion = 0;
+    proposal2.title = "sidechain2";
+    proposal2.description = "test";
+    proposal2.hashID1 = GetRandHash();
+    proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Generate new keys for the second sidechain proposal
+    uint256 hash2 = GetRandHash();
+    CKey key2;
+    key2.Set(hash2.begin(), hash2.end(), false);
+    CBitcoinSecret vchSecret2(key2);
+    CPubKey pubkey2 = key2.GetPubKey();
+    CKeyID vchAddress2 = pubkey2.GetID();
+    CScript script2 = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress2) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    proposal2.strKeyID = HexStr(vchAddress2);
+    proposal2.scriptPubKey = script2;
+    proposal2.strPrivKey = vchSecret2.ToString();
+
+    // Create transaction outputs with sidechain proposals
+
+    CTxOut out1;
+    out1.scriptPubKey = proposal1.GetProposalScript();
+    out1.nValue = 50 * CENT;
+    BOOST_CHECK(out1.scriptPubKey.IsSidechainProposalCommit());
+
+    CTxOut out2;
+    out2.scriptPubKey = proposal2.GetProposalScript();
+    out2.nValue = 50 * CENT;
+    BOOST_CHECK(out2.scriptPubKey.IsSidechainProposalCommit());
+
+    // Add both proposals to blocks and get them into SCDB
+    BOOST_CHECK(scdbTest.Update(0, GetRandHash(), scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out1}));
+    BOOST_CHECK(scdbTest.Update(1, GetRandHash(), scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out2}));
+
+    // Check that the proposals were added
+    std::vector<SidechainActivationStatus> vActivation;
+    vActivation = scdbTest.GetSidechainActivationStatus();
+    BOOST_CHECK(vActivation.size() == 2);
+    BOOST_CHECK(vActivation.size() && vActivation.front().proposal == proposal1);
+    BOOST_CHECK(vActivation.size() && vActivation.back().proposal == proposal2);
+
+    // Start ACKing the proposals
+
+    CBlock block;
+    CMutableTransaction mtx;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+    GenerateSidechainActivationCommitment(block, proposal1.GetHash(), Params().GetConsensus());
+    GenerateSidechainActivationCommitment(block, proposal2.GetHash(), Params().GetConsensus());
+
+    // Add votes until the sidechains are activated
+    int nHeight = 2;
+    for (int i = 0; i < SIDECHAIN_ACTIVATION_PERIOD - 1; i++) {
+        if (i == SIDECHAIN_ACTIVATION_PERIOD - 2) {
+            // For the last block we only want to vote on the second proposal
+            // as the first has already activated in the previous block
+            CMutableTransaction mtxFinal = CMutableTransaction(*block.vtx[0]);
+            mtxFinal.vout.clear();
+            block.vtx[0] = MakeTransactionRef(std::move(mtx));
+            GenerateSidechainActivationCommitment(block, proposal2.GetHash(), Params().GetConsensus());
+        }
+        BOOST_CHECK(scdbTest.Update(nHeight, GetRandHash(), scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout));
+        nHeight++;
+    }
+
+    // Proposals should be removed now
+    vActivation = scdbTest.GetSidechainActivationStatus();
+    BOOST_CHECK(vActivation.empty());
+
+    // Both sidechains should be active now
+    std::vector<Sidechain> vSidechain = scdbTest.GetActiveSidechains();
+    BOOST_CHECK(vSidechain.size() == 2);
+}
+
+BOOST_AUTO_TEST_CASE(per_block_activation_limit_fail)
+{
+    // Test that only one sidechain activation commit is allowed for each
+    // sidechain number per block. In this test we will ACK two sidechains that
+    // have the same sidechain numbers, which should be rejected.
+    SidechainDB scdbTest;
+
+    Sidechain proposal1;
+    proposal1.nSidechain = 0;
+    proposal1.nVersion = 0;
+    proposal1.title = "sidechain1";
+    proposal1.description = "description";
+    proposal1.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
+    proposal1.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Generate new keys for the sidechain proposal
+    uint256 hash1 = GetRandHash();
+    CKey key1;
+    key1.Set(hash1.begin(), hash1.end(), false);
+    CBitcoinSecret vchSecret1(key1);
+    CPubKey pubkey1 = key1.GetPubKey();
+    CKeyID vchAddress1 = pubkey1.GetID();
+    CScript script1 = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress1) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    proposal1.strKeyID = HexStr(vchAddress1);
+    proposal1.scriptPubKey = script1;
+    proposal1.strPrivKey = vchSecret1.ToString();
+
+    // Proposal for a second sidechain
+    Sidechain proposal2;
+    proposal2.nSidechain = 0;
+    proposal2.nVersion = 0;
+    proposal2.title = "sidechain2";
+    proposal2.description = "test";
+    proposal2.hashID1 = GetRandHash();
+    proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Generate new keys for the second sidechain proposal
+    uint256 hash2 = GetRandHash();
+    CKey key2;
+    key2.Set(hash2.begin(), hash2.end(), false);
+    CBitcoinSecret vchSecret2(key2);
+    CPubKey pubkey2 = key2.GetPubKey();
+    CKeyID vchAddress2 = pubkey2.GetID();
+    CScript script2 = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress2) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    proposal2.strKeyID = HexStr(vchAddress2);
+    proposal2.scriptPubKey = script2;
+    proposal2.strPrivKey = vchSecret2.ToString();
+
+    // Create transaction outputs with sidechain proposals
+
+    CTxOut out1;
+    out1.scriptPubKey = proposal1.GetProposalScript();
+    out1.nValue = 50 * CENT;
+    BOOST_CHECK(out1.scriptPubKey.IsSidechainProposalCommit());
+
+    CTxOut out2;
+    out2.scriptPubKey = proposal2.GetProposalScript();
+    out2.nValue = 50 * CENT;
+    BOOST_CHECK(out2.scriptPubKey.IsSidechainProposalCommit());
+
+    // Add both proposals to blocks and get them into SCDB
+    BOOST_CHECK(scdbTest.Update(0, GetRandHash(), scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out1}));
+    BOOST_CHECK(scdbTest.Update(1, GetRandHash(), scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out2}));
+
+    // Check that the proposals were added
+    std::vector<SidechainActivationStatus> vActivation;
+    vActivation = scdbTest.GetSidechainActivationStatus();
+    BOOST_CHECK(vActivation.size() == 2);
+    BOOST_CHECK(vActivation.size() && vActivation.front().proposal == proposal1);
+    BOOST_CHECK(vActivation.size() && vActivation.back().proposal == proposal2);
+
+    // Start ACKing the proposals
+
+    CBlock block;
+    CMutableTransaction mtx;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+    GenerateSidechainActivationCommitment(block, proposal1.GetHash(), Params().GetConsensus());
+    GenerateSidechainActivationCommitment(block, proposal2.GetHash(), Params().GetConsensus());
+
+    // Acking two sidechains in one block with the same sidechain number should
+    // fail
+    BOOST_CHECK(!scdbTest.Update(2, GetRandHash(), scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -242,15 +242,12 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
     GenerateSidechainActivationCommitment(block, proposal.GetHash(), Params().GetConsensus());
 
     // Add votes until the sidechain is activated
-    int nHeightUpdate = nHeight + 1;
-    uint256 hashPrev = hashBlock1;
-    for (int i = 0; i <= SIDECHAIN_ACTIVATION_PERIOD; i++) {
-        uint256 hashNew = GetRandHash();
-        if (!scdbTest.Update(nHeightUpdate, hashNew, hashPrev, block.vtx.front()->vout)) {
+    nHeight++;
+    for (int i = 0; i < SIDECHAIN_ACTIVATION_PERIOD - 1; i++) {
+        if (!scdbTest.Update(nHeight, GetRandHash(), scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout)) {
             return false;
         }
-        hashPrev = hashNew;
-        nHeightUpdate++;
+        nHeight++;
     }
 
     // Check activation status

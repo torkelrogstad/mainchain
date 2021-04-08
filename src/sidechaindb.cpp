@@ -1477,6 +1477,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     }
 
     // Scan for sidechain activation commitments
+    std::map<uint8_t, uint256> mapActivation;
     std::vector<uint256> vActivationHash;
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
@@ -1485,6 +1486,39 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             continue;
         if (hashSidechain.IsNull())
             continue;
+
+        // Look up the sidechain number for this activation commitment
+        bool fFound = false;
+        uint8_t nSidechain = 0;
+        for (const SidechainActivationStatus& s : vActivationStatus) {
+            if (s.proposal.GetHash() == hashSidechain) {
+                fFound = true;
+                nSidechain = s.proposal.nSidechain;
+                break;
+            }
+        }
+        if (!fFound) {
+            if (fDebug)
+                LogPrintf("SCDB %s: Invalid: Sidechain activation commit for unknown proposal.\nProposal hash: %s\n",
+                        __func__,
+                        hashSidechain.ToString());
+            return false;
+        }
+
+        // Check that there is only 1 sidechain activation commit per
+        // sidechain slot number per block
+        std::map<uint8_t, uint256>::const_iterator it = mapActivation.find(nSidechain);
+        if (it == mapActivation.end()) {
+            mapActivation[nSidechain] = hashSidechain;
+        } else {
+            if (fDebug) {
+                LogPrintf("SCDB %s: Multiple activation commitments for sidechain number: %u at height: %u\n",
+                        __func__,
+                        nSidechain,
+                        nHeight);
+            }
+            return false;
+        }
 
         vActivationHash.push_back(hashSidechain);
     }
