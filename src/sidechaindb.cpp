@@ -859,6 +859,7 @@ void SidechainDB::RemoveExpiredWTPrimes()
                                 if (vWTPrimeCache[i].second.GetHash() == state.hashWTPrime) {
                                     vWTPrimeCache[i] = vWTPrimeCache.back();
                                     vWTPrimeCache.pop_back();
+                                    break;
                                 }
                             }
                             return true;
@@ -877,6 +878,7 @@ void SidechainDB::RemoveSidechainHashToActivate(const uint256& u)
         if (vSidechainHashActivate[i] == u) {
             vSidechainHashActivate[i] = vSidechainHashActivate.back();
             vSidechainHashActivate.pop_back();
+            break;
         }
     }
 }
@@ -1193,6 +1195,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
         if (vWTPrimeCache[i].second.GetHash() == hashBlind) {
             vWTPrimeCache[i] = vWTPrimeCache.back();
             vWTPrimeCache.pop_back();
+            break;
         }
     }
 
@@ -1473,7 +1476,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         LogPrintf("SCDB %s: Tracking new sidechain proposal:\n%s\n",
                 __func__,
                 status.proposal.ToString());
-
     }
 
     // Scan for sidechain activation commitments
@@ -1663,7 +1665,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                 // Remove the spent WT^
                 vWTPrimeStatus[s.nSidechain][i] = vWTPrimeStatus[s.nSidechain].back();
                 vWTPrimeStatus[s.nSidechain].pop_back();
-
                 break;
             }
         }
@@ -1678,7 +1679,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             return false;
         }
     }
-
 
     if (fDebug && !fJustCheck) {
         LogPrintf("SCDB: %s: Updated from block %s to block %s.\n",
@@ -1716,11 +1716,13 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
     bool fDepositRemoved = false;
     for (const CTransactionRef& tx : vtx) {
         for (size_t x = 0; x < vDepositCache.size(); x++) {
-            for (size_t y = 0; y < vDepositCache[x].size(); y++) {
-                if (*tx == CTransaction(vDepositCache[x][y].tx)) {
-                    vDepositCache[x][y] = vDepositCache[x].back();
-                    vDepositCache[x].pop_back();
+            std::vector<SidechainDeposit>::iterator it;
+            for (it = vDepositCache[x].begin(); it != vDepositCache[x].end();) {
+                if (*tx == CTransaction(it->tx)) {
                     fDepositRemoved = true;
+                    it = vDepositCache[x].erase(it);
+                } else {
+                    it++;
                 }
             }
         }
@@ -1757,6 +1759,7 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
                 vActivationStatus[i] = vActivationStatus.back();
                 vActivationStatus.pop_back();
                 fRemoved = true;
+                break;
             }
         }
 
@@ -2023,23 +2026,27 @@ void SidechainDB::ApplyDefaultUpdate()
 
 void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
 {
-    // Increment the age of all sidechain proposals, remove expired.
-    for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        vActivationStatus[i].nAge++;
+    // TODO change containers
+
+    // Increment the age of all sidechain proposals and remove expired.
+    std::vector<SidechainActivationStatus>::iterator it;
+    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+        it->nAge++;
 
         int nPeriod = 0;
-        if (IsSidechainActive(vActivationStatus[i].proposal.nSidechain))
+        if (IsSidechainActive(it->proposal.nSidechain))
             nPeriod = SIDECHAIN_REPLACEMENT_PERIOD;
         else
             nPeriod = SIDECHAIN_ACTIVATION_PERIOD;
 
-        if (vActivationStatus[i].nAge > nPeriod) {
+        if (it->nAge > nPeriod) {
             LogPrintf("SCDB %s: Sidechain proposal expired:\n%s\n",
                     __func__,
-                    vActivationStatus[i].proposal.ToString());
+                    it->proposal.ToString());
 
-            vActivationStatus[i] = vActivationStatus.back();
-            vActivationStatus.pop_back();
+            it = vActivationStatus.erase(it);
+        } else {
+            it++;
         }
     }
 
@@ -2059,64 +2066,58 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
     }
 
     // Remove sidechain proposals with too many failures to activate
-    std::vector<std::vector<SidechainActivationStatus>::const_iterator> vFail;
-    for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        if (vActivationStatus[i].nFail >= SIDECHAIN_ACTIVATION_MAX_FAILURES) {
+    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+        if (it->nFail >= SIDECHAIN_ACTIVATION_MAX_FAILURES) {
             LogPrintf("SCDB %s: Sidechain proposal rejected:\n%s\n",
                     __func__,
-                    vActivationStatus[i].proposal.ToString());
+                    it->proposal.ToString());
 
-            vActivationStatus[i] = vActivationStatus.back();
-            vActivationStatus.pop_back();
+            it = vActivationStatus.erase(it);
+        } else {
+            it++;
         }
     }
 
-    //
-    // TODO special rules for a sidechain proposal that replaces an existing
-    // active sidechain.
-    //
-
-    // Move activated sidechains to vActivatedSidechain
-    for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        // The required period to activated is either the normal sidechain
-        // activation period for a new sidechain, or double (sidechain
-        // replacement period) for a proposal that replaces an active sidechain.
+    // Search for sidechains that have passed the test and should be activated.
+    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+        // The required period to be activated is either the normal sidechain
+        // activation period for a new sidechain, or the same as the WT^
+        // minimum workscore for a proposal that replaces an active sidechain.
         int nPeriodRequired = 0;
-        if (IsSidechainActive(vActivationStatus[i].proposal.nSidechain))
+        if (IsSidechainActive(it->proposal.nSidechain))
             nPeriodRequired = SIDECHAIN_REPLACEMENT_PERIOD;
         else
             nPeriodRequired = SIDECHAIN_ACTIVATION_PERIOD;
 
         // If a proposal makes it to the required age without being killed off
         // by failures then it will be activated.
-        if (vActivationStatus[i].nAge == nPeriodRequired) {
+        if (it->nAge == nPeriodRequired) {
             // Create sidechain object from proposal
             Sidechain sidechain;
             sidechain.fActive = true;
-            sidechain.nSidechain = vActivationStatus[i].proposal.nSidechain;
-            sidechain.nVersion = vActivationStatus[i].proposal.nVersion;
-            sidechain.hashID1 = vActivationStatus[i].proposal.hashID1;
-            sidechain.hashID2 = vActivationStatus[i].proposal.hashID2;
-            sidechain.strPrivKey = vActivationStatus[i].proposal.strPrivKey;
-            sidechain.scriptPubKey = vActivationStatus[i].proposal.scriptPubKey;
-            sidechain.strKeyID = vActivationStatus[i].proposal.strKeyID;
-            sidechain.title = vActivationStatus[i].proposal.title;
-            sidechain.description = vActivationStatus[i].proposal.description;
+            sidechain.nSidechain    = it->proposal.nSidechain;
+            sidechain.nVersion      = it->proposal.nVersion;
+            sidechain.hashID1       = it->proposal.hashID1;
+            sidechain.hashID2       = it->proposal.hashID2;
+            sidechain.strPrivKey    = it->proposal.strPrivKey;
+            sidechain.scriptPubKey  = it->proposal.scriptPubKey;
+            sidechain.strKeyID      = it->proposal.strKeyID;
+            sidechain.title         = it->proposal.title;
+            sidechain.description   = it->proposal.description;
 
             // Update nSidechain slot with new sidechain params
             vSidechain[sidechain.nSidechain] = sidechain;
 
             // Remove from cache of our own proposals
             for (size_t j = 0; j < vSidechainProposal.size(); j++) {
-                if (vActivationStatus[i].proposal == vSidechainProposal[j]) {
+                if (it->proposal == vSidechainProposal[j]) {
                     vSidechainProposal[j] = vSidechainProposal.back();
                     vSidechainProposal.pop_back();
+                    break;
                 }
             }
-
             // Remove SCDB proposal activation status
-            vActivationStatus[i] = vActivationStatus.back();
-            vActivationStatus.pop_back();
+            it = vActivationStatus.erase(it);
 
             // Reset WT^ status for new sidechain
             vWTPrimeStatus[sidechain.nSidechain].clear();
@@ -2127,6 +2128,8 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
             LogPrintf("SCDB %s: Sidechain activated:\n%s\n",
                     __func__,
                     sidechain.ToString());
+        } else {
+            it++;
         }
     }
 }
