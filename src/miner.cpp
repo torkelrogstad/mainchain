@@ -471,10 +471,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             if (fAnySidechain || scdb.GetActivateSidechain(s.proposal.GetHash()))
                 GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash(), chainparams.GetConsensus());
         }
-        // If we've proposed a sidechain in this block, ACK it
-        if (!hashProposal.IsNull()) {
-            GenerateSidechainActivationCommitment(*pblock, hashProposal, chainparams.GetConsensus());
-        }
     }
 
     // TODO reserve room when selecting txns so that there's always space for

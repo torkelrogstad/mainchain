@@ -2052,8 +2052,14 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
 
     // Calculate failures. Sidechain proposals with activation status will have
     // their activation failure count increased by 1 if a activation commitment
-    // for them is not found in the block.
+    // for them is not found in the block. New sidechain proposals (age = 1)
+    // count as an activation commitment.
     for (size_t i = 0; i < vActivationStatus.size(); i++) {
+        // Skip new sidechain proposals
+        if (vActivationStatus[i].nAge == 1)
+            continue;
+
+        // Search for sidechain activation commitments
         bool fFound = false;
         for (const uint256& u : vHash) {
             if (u == vActivationStatus[i].proposal.GetHash()) {
