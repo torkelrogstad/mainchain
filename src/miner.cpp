@@ -467,9 +467,15 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         // which we have configured to ACK
         std::vector<SidechainActivationStatus> vActivationStatus;
         vActivationStatus = scdb.GetSidechainActivationStatus();
+        std::map<uint8_t, bool> mapCommit;
         for (const SidechainActivationStatus& s : vActivationStatus) {
-            if (fAnySidechain || scdb.GetActivateSidechain(s.proposal.GetHash()))
-                GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash(), chainparams.GetConsensus());
+            if (fAnySidechain || scdb.GetActivateSidechain(s.proposal.GetHash())) {
+                // Don't generate more than one commit for the same SC #
+                if (mapCommit.find(s.proposal.nSidechain) == mapCommit.end()) {
+                    GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash(), chainparams.GetConsensus());
+                    mapCommit[s.proposal.nSidechain] = true;
+                }
+            }
         }
     }
 
