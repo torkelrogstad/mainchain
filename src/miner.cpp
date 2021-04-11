@@ -441,10 +441,13 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         if (!vProposal.empty()) {
             std::vector<SidechainActivationStatus> vActivation = scdb.GetSidechainActivationStatus();
             for (const Sidechain& p : vProposal) {
-                // Check if this proposal is already being tracked by SCDB
+                // Check if this proposal is unique
                 bool fFound = false;
                 for (const SidechainActivationStatus& s : vActivation) {
-                    if (s.proposal == p) {
+                    if (s.proposal.title == p.title ||
+                            s.proposal.strKeyID == p.strKeyID ||
+                            s.proposal.scriptPubKey == p.scriptPubKey ||
+                            s.proposal.strPrivKey == p.strPrivKey) {
                         fFound = true;
                         break;
                     }

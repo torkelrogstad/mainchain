@@ -244,8 +244,26 @@ void SidechainDB::CacheSidechainActivationStatus(const std::vector<SidechainActi
 
 void SidechainDB::CacheSidechainProposals(const std::vector<Sidechain>& vSidechainProposalIn)
 {
-    for (const Sidechain& s : vSidechainProposalIn)
-        vSidechainProposal.push_back(s);
+    // TODO change container improve performance
+    for (const Sidechain& s : vSidechainProposalIn) {
+        // Make sure the proposal isn't known yet
+        if (!IsSidechainUnique(s))
+            continue;
+        // Make sure this proposal isn't already cached
+        bool fFound = false;
+        for (const Sidechain& p : vSidechainProposal) {
+            if (p.title == s.title ||
+                    p.strKeyID == s.strKeyID ||
+                    p.scriptPubKey == s.scriptPubKey ||
+                    p.strPrivKey == s.strPrivKey)
+            {
+                fFound = true;
+                break;
+            }
+        }
+        if (!fFound)
+            vSidechainProposal.push_back(s);
+    }
 }
 
 void SidechainDB::CacheSidechainHashToActivate(const uint256& u)
@@ -1458,7 +1476,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     // Check if proposal is unique
     if (vProposal.size() == 1 && !IsSidechainUnique(vProposal.front())) {
         if (fDebug)
-            LogPrintf("SCDB %s: Invalid: block with duplicate sidechain proposal at height: %u\n",
+            LogPrintf("SCDB %s: Invalid: block with non-unique sidechain proposal at height: %u\n",
                     __func__,
                     nHeight);
         return false;
