@@ -512,14 +512,6 @@ uint256 SidechainDB::GetTotalSCDBHash() const
     hash = ComputeMerkleRoot(vLeaf);
     LogPrintf("%s: Hash with vSidechainHashActivate data: %s\n", __func__, hash.ToString());
 
-    // Add vSidechainProposal
-    for (const Sidechain& s : vSidechainProposal) {
-        vLeaf.push_back(s.GetHash());
-    }
-
-    hash = ComputeMerkleRoot(vLeaf);
-    LogPrintf("%s: Hash with vSidechainProposal data: %s\n", __func__, hash.ToString());
-
     // Add vWTPrimeCache
     for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrimeCache) {
         vLeaf.push_back(pair.second.GetHash());
