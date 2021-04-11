@@ -89,7 +89,7 @@ void SidechainActivationDialog::on_pushButtonActivate_clicked()
     for (int i = 0; i < selected.size(); i++) {
         uint256 hash;
         if (activationModel->GetHashAtRow(selected[i].row(), hash))
-            scdb.CacheSidechainHashToActivate(hash);
+            scdb.CacheSidechainHashToAck(hash);
     }
 }
 
@@ -100,7 +100,7 @@ void SidechainActivationDialog::on_pushButtonReject_clicked()
     for (int i = 0; i < selected.size(); i++) {
         uint256 hash;
         if (activationModel->GetHashAtRow(selected[i].row(), hash))
-            scdb.RemoveSidechainHashToActivate(hash);
+            scdb.RemoveSidechainHashToAck(hash);
     }
 }
 

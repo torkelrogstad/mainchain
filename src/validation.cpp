@@ -5936,7 +5936,7 @@ bool LoadSidechainActivationHashCache()
 
     // Add to SCDB
     for (const uint256& u : vHash)
-        scdb.CacheSidechainHashToActivate(u);
+        scdb.CacheSidechainHashToAck(u);
 
     return true;
 }

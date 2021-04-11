@@ -166,7 +166,7 @@ void SidechainActivationTableModel::updateModel()
                 // Update nFail
                 object.nFail = s.nFail;
                 // Update fAck
-                object.fAck = scdb.GetActivateSidechain(s.proposal.GetHash());
+                object.fAck = scdb.GetAckSidechain(s.proposal.GetHash());
                 // Update replacement status
                 object.fReplacement = scdb.IsSidechainActive(s.proposal.nSidechain);
 
@@ -232,7 +232,7 @@ void SidechainActivationTableModel::updateModel()
     for (const SidechainActivationStatus& s : vNew) {
         SidechainActivationTableObject object;
 
-        object.fAck = scdb.GetActivateSidechain(s.proposal.GetHash());
+        object.fAck = scdb.GetAckSidechain(s.proposal.GetHash());
         object.nSidechain = s.proposal.nSidechain;
         object.fReplacement = scdb.IsSidechainActive(s.proposal.nSidechain);
         object.title = QString::fromStdString(s.proposal.title);

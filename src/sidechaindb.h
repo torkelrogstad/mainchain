@@ -76,7 +76,7 @@ public:
     void CacheSidechainProposals(const std::vector<Sidechain>& vSidechainProposalIn);
 
     /** Add sidechain-to-be-activated hash to cache */
-    void CacheSidechainHashToActivate(const uint256& u);
+    void CacheSidechainHashToAck(const uint256& u);
 
     /** Add WT^ to the in-memory cache */
     bool CacheWTPrime(const CTransaction& tx, const uint8_t nSidechain);
@@ -92,7 +92,7 @@ public:
 
     /** Check if the hash of the sidechain is in our hashes of sidechains to
      * activate cache. Return true if it is, or false if not. */
-    bool GetActivateSidechain(const uint256& u) const;
+    bool GetAckSidechain(const uint256& u) const;
 
     /** Get list of currently active sidechains */
     std::vector<Sidechain> GetActiveSidechains() const;
@@ -215,7 +215,7 @@ public:
 
     /** Remove sidechain-to-be-activated hash from cache, because the user
      * changed their mind */
-    void RemoveSidechainHashToActivate(const uint256& u);
+    void RemoveSidechainHashToAck(const uint256& u);
 
     /** Reset SCDB and clear out all data tracked by SidechainDB */
     void ResetWTPrimeState();
@@ -294,7 +294,7 @@ private:
 
     /** Cache of sidechain hashes, for sidechains which this node has been
      * configured to activate by the user */
-    std::vector<uint256> vSidechainHashActivate;
+    std::vector<uint256> vSidechainHashAck;
 
     /** Cache of proposals for new sidechains created by this node,
      * which should be included in the next block that this node mines. */

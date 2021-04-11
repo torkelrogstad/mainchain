@@ -266,9 +266,9 @@ void SidechainDB::CacheSidechainProposals(const std::vector<Sidechain>& vSidecha
     }
 }
 
-void SidechainDB::CacheSidechainHashToActivate(const uint256& u)
+void SidechainDB::CacheSidechainHashToAck(const uint256& u)
 {
-    vSidechainHashActivate.push_back(u);
+    vSidechainHashAck.push_back(u);
 }
 
 bool SidechainDB::CacheWTPrime(const CTransaction& tx, uint8_t nSidechain)
@@ -336,12 +336,9 @@ unsigned int SidechainDB::GetActiveSidechainCount() const
     return i;
 }
 
-// TODO rename - name is very confusing. This is for getting the users
-// activation vote for the sidechain.
-bool SidechainDB::GetActivateSidechain(const uint256& u) const
+bool SidechainDB::GetAckSidechain(const uint256& u) const
 {
-    // TODO change the container to make this more efficient
-    for (const uint256& hash : vSidechainHashActivate) {
+    for (const uint256& hash : vSidechainHashAck) {
         if (u == hash) {
             return true;
         }
@@ -604,7 +601,7 @@ bool SidechainDB::GetSidechainScript(const uint8_t nSidechain, CScript& scriptPu
 
 std::vector<uint256> SidechainDB::GetSidechainsToActivate() const
 {
-    return vSidechainHashActivate;
+    return vSidechainHashAck;
 }
 
 std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimesForBlock(const uint256& hashBlock) const
@@ -881,13 +878,13 @@ void SidechainDB::RemoveExpiredWTPrimes()
     }
 }
 
-void SidechainDB::RemoveSidechainHashToActivate(const uint256& u)
+void SidechainDB::RemoveSidechainHashToAck(const uint256& u)
 {
     // TODO change container to make this efficient
-    for (size_t i = 0; i < vSidechainHashActivate.size(); i++) {
-        if (vSidechainHashActivate[i] == u) {
-            vSidechainHashActivate[i] = vSidechainHashActivate.back();
-            vSidechainHashActivate.pop_back();
+    for (size_t i = 0; i < vSidechainHashAck.size(); i++) {
+        if (vSidechainHashAck[i] == u) {
+            vSidechainHashAck[i] = vSidechainHashAck.back();
+            vSidechainHashAck.pop_back();
             break;
         }
     }
@@ -923,7 +920,7 @@ void SidechainDB::Reset()
     vDepositCache.clear();
 
     // Clear out list of sidechain (hashes) we want to ACK
-    vSidechainHashActivate.clear();
+    vSidechainHashAck.clear();
 
     // Clear out our cache of proposed sidechains
     vSidechainProposal.clear();
