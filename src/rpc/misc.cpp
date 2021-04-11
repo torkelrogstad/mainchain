@@ -1394,6 +1394,9 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     // Cache proposal so that it can be added to the next block we mine
     scdb.CacheSidechainProposals(std::vector<Sidechain>{proposal});
 
+    // Cache the hash of the sidechain to ACK it
+    scdb.CacheSidechainHashToAck(proposal.GetHash());
+
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("nSidechain", proposal.nVersion));
     obj.push_back(Pair("title", proposal.title));

@@ -249,7 +249,7 @@ void SidechainDB::CacheSidechainProposals(const std::vector<Sidechain>& vSidecha
         // Make sure the proposal isn't known yet
         if (!IsSidechainUnique(s))
             continue;
-        // Make sure this proposal isn't already cached
+        // Make sure this proposal isn't already cached in our proposals
         bool fFound = false;
         for (const Sidechain& p : vSidechainProposal) {
             if (p.title == s.title ||
@@ -340,12 +340,6 @@ bool SidechainDB::GetAckSidechain(const uint256& u) const
 {
     for (const uint256& hash : vSidechainHashAck) {
         if (u == hash) {
-            return true;
-        }
-    }
-    // Also check if we created the sidechain proposal, and ACK it
-    for (const Sidechain& s : vSidechainProposal) {
-        if (s.GetHash() == u) {
             return true;
         }
     }
