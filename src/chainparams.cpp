@@ -68,11 +68,23 @@ public:
         consensus.BIP34Hash = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
         consensus.BIP65Height = 0; // CLTV
         consensus.BIP66Height = 0; // Strict DER signatures
-        consensus.powLimit = uint256S("0000005fffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 10 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = false;
-        consensus.fPowNoRetargeting = false;
+
+
+        // TODO
+        // TODO for testing only
+        // consensus.powLimit = uint256S("0000005fffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.fPowAllowMinDifficultyBlocks = true;
+        consensus.fPowNoRetargeting = true;
+        // TODO
+        // TODO
+
+
+
+
+
         consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
         consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
@@ -95,10 +107,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000002aaaab1");
+        //consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000002aaaab1");
+        // TODO
+        consensus.nMinimumChainWork = uint256S("0x00");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0xb6f3f75f3c32b655ea9ca424f1baf4a4be8ea64645c1554c68db631778a4e5b6");
+        consensus.defaultAssumeValid = uint256S("0x05f21438b3e65aae9f17c864c8bb916de93e8d9c599cafbfad6716207919dd2e");
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -112,11 +126,10 @@ public:
         nDefaultPort = 8551;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1614808929, 7343622, 0x1d5fffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1618185458, 2, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        // PoW: 00000001fa8f06800b1a87ff456baa7c3ef0bab722376d3d8ac6b440d67b1731
-        assert(consensus.hashGenesisBlock == uint256S("0xb6f3f75f3c32b655ea9ca424f1baf4a4be8ea64645c1554c68db631778a4e5b6"));
+        assert(consensus.hashGenesisBlock == uint256S("0x05f21438b3e65aae9f17c864c8bb916de93e8d9c599cafbfad6716207919dd2e"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
         // Note that of those which support the service bits prefix, most only support a subset of
@@ -142,11 +155,12 @@ public:
 
         fDefaultConsistencyChecks = false;
         fRequireStandard = true;
-        fMineBlocksOnDemand = false;
+        // TODO
+        fMineBlocksOnDemand = true;
 
         checkpointData = {
             {
-                { 0, uint256S("0xb6f3f75f3c32b655ea9ca424f1baf4a4be8ea64645c1554c68db631778a4e5b6")},
+                { 0, uint256S("0x05f21438b3e65aae9f17c864c8bb916de93e8d9c599cafbfad6716207919dd2e")},
             }
         };
 
@@ -295,7 +309,7 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x00");
 
-        pchMessageStart[0] = 0xFD; // 3S
+        pchMessageStart[0] = 0xFD;
         pchMessageStart[1] = 0xfc;
         pchMessageStart[2] = 0xfb;
         pchMessageStart[3] = 0xfa;
