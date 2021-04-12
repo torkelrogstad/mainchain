@@ -1492,6 +1492,8 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                 break;
             }
         }
+        // TODO disabled for test
+        /*
         if (!fFound) {
             if (fDebug)
                 LogPrintf("SCDB %s: Invalid: Sidechain activation commit for unknown proposal.\nProposal hash: %s\n",
@@ -1514,6 +1516,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             }
             return false;
         }
+        */
 
         vActivationHash.push_back(hashSidechain);
     }
