@@ -2127,6 +2127,9 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
             // Reset deposits for new sidechain
             vDepositCache[sidechain.nSidechain].clear();
 
+            // Reset CTIP for new sidechain
+            mapCTIP.erase(sidechain.nSidechain);
+
             LogPrintf("SCDB %s: Sidechain activated:\n%s\n",
                     __func__,
                     sidechain.ToString());

@@ -2330,6 +2330,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             LogPrintf("%s: SCDB failed to update with block: %s\n", __func__, block.GetHash().ToString());
             return error("%s: SCDB update failed for block: %s", __func__, block.GetHash().ToString());
         }
+        // After updating SCDB make sure mempool deposits are still valid
+        if (!fJustCheck)
+            mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false);
     }
 
     if (fJustCheck)
