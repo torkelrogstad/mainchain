@@ -10,6 +10,7 @@
 class PlatformStyle;
 class SidechainActivationTableModel;
 class SidechainEscrowTableModel;
+class SidechainProposalDialog;
 
 namespace Ui {
 class SidechainActivationDialog;
@@ -37,6 +38,8 @@ private:
 
     SidechainActivationTableModel *activationModel = nullptr;
     SidechainEscrowTableModel *escrowModel = nullptr;
+
+    SidechainProposalDialog *proposalDialog = nullptr;
 
     const PlatformStyle *platformStyle;
 };
