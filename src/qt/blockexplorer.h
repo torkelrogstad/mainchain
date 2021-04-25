@@ -8,6 +8,7 @@
 #include <QDialog>
 
 class BlockExplorerTableModel;
+class BlockIndexDetailsDialog;
 class ClientModel;
 class PlatformStyle;
 
@@ -41,6 +42,7 @@ private:
     ClientModel *clientModel = nullptr;
 
     BlockExplorerTableModel* blockExplorerModel = nullptr;
+    BlockIndexDetailsDialog* blockIndexDialog = nullptr;
 };
 
 #endif // BLOCKEXPLORER_H

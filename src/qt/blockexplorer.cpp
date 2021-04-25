@@ -10,6 +10,7 @@
 #include <QString>
 
 #include <qt/blockexplorertablemodel.h>
+#include <qt/blockindexdetailsdialog.h>
 #include <qt/clientmodel.h>
 #include <qt/platformstyle.h>
 
@@ -23,6 +24,7 @@ BlockExplorer::BlockExplorer(const PlatformStyle *_platformStyle, QWidget *paren
     ui->setupUi(this);
 
     blockExplorerModel = new BlockExplorerTableModel(this);
+    blockIndexDialog = new BlockIndexDetailsDialog(this);
 
     ui->tableViewBlocks->setModel(blockExplorerModel);
 }
@@ -81,4 +83,7 @@ void BlockExplorer::on_tableViewBlocks_doubleClicked(const QModelIndex& index)
         messageBox.exec();
         return;
     }
+
+    blockIndexDialog->SetBlockIndex(pBlockIndex);
+    blockIndexDialog->show();
 }
