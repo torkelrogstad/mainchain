@@ -355,6 +355,7 @@ RES_ICONS = \
   qt/res/icons/replay_split.png \
   qt/res/icons/replay_replayed.png \
   qt/res/icons/replay_loaded.png \
+  qt/res/icons/search.png \
   qt/res/qdarkstyle/rc/up_arrow_disabled.png \
   qt/res/qdarkstyle/rc/Hmovetoolbar.png \
   qt/res/qdarkstyle/rc/stylesheet-branch-end.png \

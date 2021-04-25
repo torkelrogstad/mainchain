@@ -408,7 +408,7 @@ void BitcoinGUI::createActions()
     showHashCalcDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/calculator"), tr("&Hash Calculator"), this);
     showHashCalcDialogAction->setStatusTip(tr("Show hash calculator window"));
 
-    showBlockExplorerDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/calculator"), tr("&Block Explorer"), this);
+    showBlockExplorerDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/search"), tr("&Block Explorer"), this);
     showBlockExplorerDialogAction->setStatusTip(tr("Show block explorer window"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
