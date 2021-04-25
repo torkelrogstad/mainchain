@@ -97,6 +97,7 @@ QT_TS = \
 QT_FORMS_UI = \
   qt/forms/addressbookpage.ui \
   qt/forms/askpassphrasedialog.ui \
+  qt/forms/blockexplorer.ui \
   qt/forms/coincontroldialog.ui \
   qt/forms/coinsplitconfirmationdialog.ui \
   qt/forms/editaddressdialog.ui \
@@ -130,6 +131,8 @@ QT_MOC_CPP = \
   qt/moc_addresstablemodel.cpp \
   qt/moc_askpassphrasedialog.cpp \
   qt/moc_bantablemodel.cpp \
+  qt/moc_blockexplorer.cpp \
+  qt/moc_blockexplorertablemodel.cpp \
   qt/moc_drivenetaddressvalidator.cpp \
   qt/moc_drivenetamountfield.cpp \
   qt/moc_drivenetgui.cpp \
@@ -215,6 +218,8 @@ DRIVENET_QT_H = \
   qt/addresstablemodel.h \
   qt/askpassphrasedialog.h \
   qt/bantablemodel.h \
+  qt/blockexplorer.h \
+  qt/blockexplorertablemodel.h \
   qt/drivenetaddressvalidator.h \
   qt/drivenetamountfield.h \
   qt/drivenetgui.h \
@@ -423,6 +428,8 @@ DRIVENET_QT_WALLET_CPP = \
   qt/addressbookpage.cpp \
   qt/addresstablemodel.cpp \
   qt/askpassphrasedialog.cpp \
+  qt/blockexplorer.cpp \
+  qt/blockexplorertablemodel.cpp \
   qt/coincontroldialog.cpp \
   qt/coincontroltreewidget.cpp \
   qt/coinsplitconfirmationdialog.cpp \
