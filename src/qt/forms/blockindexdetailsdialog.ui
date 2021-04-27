@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>569</width>
-    <height>507</height>
+    <width>834</width>
+    <height>558</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -71,17 +71,17 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="0">
-    <widget class="QLabel" name="label_18">
-     <property name="text">
-      <string>Chain Work</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="0">
     <widget class="QLabel" name="label_4">
      <property name="text">
       <string>Hash</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0">
+    <widget class="QLabel" name="label_18">
+     <property name="text">
+      <string>Chain Work</string>
      </property>
     </widget>
    </item>
@@ -137,6 +137,13 @@
      </property>
      <property name="text">
       <string>0x00</string>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="0" colspan="2">
+    <widget class="QPushButton" name="pushButtonLoadTransactions">
+     <property name="text">
+      <string>Load Transactions</string>
      </property>
     </widget>
    </item>
@@ -260,6 +267,9 @@
       <string>Time</string>
      </property>
     </widget>
+   </item>
+   <item row="14" column="0" colspan="2">
+    <widget class="QTableView" name="tableViewTransactions"/>
    </item>
   </layout>
  </widget>

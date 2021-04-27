@@ -7,6 +7,7 @@
 
 #include <QDateTime>
 #include <QMessageBox>
+#include <QScrollBar>
 #include <QString>
 
 #include <qt/blockexplorertablemodel.h>
@@ -27,6 +28,23 @@ BlockExplorer::BlockExplorer(const PlatformStyle *_platformStyle, QWidget *paren
     blockIndexDialog = new BlockIndexDetailsDialog(this);
 
     ui->tableViewBlocks->setModel(blockExplorerModel);
+
+    // Table style
+    ui->tableViewBlocks->horizontalHeader()->setVisible(false);
+
+    ui->tableViewBlocks->setRowHeight(0, 100);
+    ui->tableViewBlocks->setRowHeight(1, 50);
+    ui->tableViewBlocks->setRowHeight(2, 50);
+    ui->tableViewBlocks->setRowHeight(3, 50);
+    ui->tableViewBlocks->setRowHeight(4, 50);
+    ui->tableViewBlocks->setRowHeight(5, 50);
+
+    // Resize cells (in a backwards compatible way)
+#if QT_VERSION < 0x050000
+    ui->tableViewBlocks->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+#else
+    ui->tableViewBlocks->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#endif
 }
 
 BlockExplorer::~BlockExplorer()
@@ -34,9 +52,19 @@ BlockExplorer::~BlockExplorer()
     delete ui;
 }
 
-void BlockExplorer::on_pushButtonRefresh_clicked()
+void BlockExplorer::on_pushButtonSearch_clicked()
 {
+    Search();
+}
 
+void BlockExplorer::on_pushButtonLeft_clicked()
+{
+    ui->tableViewBlocks->horizontalScrollBar()->setValue(0);
+}
+
+void BlockExplorer::on_pushButtonRight_clicked()
+{
+    scrollRight();
 }
 
 void BlockExplorer::numBlocksChanged(int nHeight, const QDateTime& time)
@@ -54,6 +82,18 @@ void BlockExplorer::setClientModel(ClientModel *model)
                 this, SLOT(numBlocksChanged(int, QDateTime)));
 
         blockExplorerModel->setClientModel(model);
+
+        connect(blockExplorerModel, SIGNAL(columnsInserted(QModelIndex, int, int)), this, SLOT(scrollRight()));
+
+        // Display current block time & height
+        CBlockIndex *pindex = blockExplorerModel->GetTip();
+        if (pindex) {
+            int nHeight = pindex->nHeight;
+            QDateTime time = QDateTime::fromTime_t(pindex->GetBlockTime());
+
+            ui->labelNumBlocks->setText(QString::number(nHeight));
+            ui->labelBlockTime->setText(time.toString("dd MMMM d yyyy hh:mm"));
+        }
     }
 }
 
@@ -85,5 +125,48 @@ void BlockExplorer::on_tableViewBlocks_doubleClicked(const QModelIndex& index)
     }
 
     blockIndexDialog->SetBlockIndex(pBlockIndex);
+    blockIndexDialog->show();
+}
+
+void BlockExplorer::scrollRight()
+{
+    int nMax = ui->tableViewBlocks->horizontalScrollBar()->maximum();
+    ui->tableViewBlocks->horizontalScrollBar()->setValue(nMax);
+}
+
+void BlockExplorer::on_lineEditSearch_returnPressed()
+{
+    Search();
+}
+
+void BlockExplorer::Search()
+{
+    QString input = ui->lineEditSearch->text();
+
+    CBlockIndex *pindex = nullptr;
+
+    // Check if the input is base 10
+    bool fOk = false;
+    int nValue = input.toInt(&fOk, 10);
+    if (fOk) {
+        // Value was a base 10 number, so look up block index by height
+        pindex = blockExplorerModel->GetBlockIndex(nValue);
+    } else {
+        uint256 hash = uint256S(input.toStdString());
+        if (!hash.IsNull()) {
+            pindex = blockExplorerModel->GetBlockIndex(hash);
+        }
+    }
+
+    if (!pindex) {
+        // Show error message
+        QMessageBox messageBox;
+        messageBox.setWindowTitle("Error - failed to locate block!");
+        messageBox.setText("Block hash or height is invalid!\n");
+        messageBox.exec();
+        return;
+    }
+
+    blockIndexDialog->SetBlockIndex(pindex);
     blockIndexDialog->show();
 }

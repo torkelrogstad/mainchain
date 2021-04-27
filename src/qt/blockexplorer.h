@@ -30,10 +30,16 @@ public:
 
     void setClientModel(ClientModel *model);
 
+public Q_SLOTS:
+    void scrollRight();
+
 private Q_SLOTS:
-    void on_pushButtonRefresh_clicked();
+    void on_pushButtonSearch_clicked();
+    void on_pushButtonLeft_clicked();
+    void on_pushButtonRight_clicked();
     void numBlocksChanged(int nHeight, const QDateTime& time);
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
+    void on_lineEditSearch_returnPressed();
 
 private:
     Ui::BlockExplorer *ui;
@@ -43,6 +49,8 @@ private:
 
     BlockExplorerTableModel* blockExplorerModel = nullptr;
     BlockIndexDetailsDialog* blockIndexDialog = nullptr;
+
+    void Search();
 };
 
 #endif // BLOCKEXPLORER_H

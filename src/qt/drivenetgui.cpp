@@ -771,6 +771,7 @@ void BitcoinGUI::showHashCalcDialog()
 void BitcoinGUI::showBlockExplorerDialog()
 {
     blockExplorerDialog->show();
+    blockExplorerDialog->scrollRight();
 }
 
 void BitcoinGUI::openClicked()

@@ -15,10 +15,21 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,0">
+    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,0,0,0">
      <property name="bottomMargin">
       <number>0</number>
      </property>
+     <item>
+      <widget class="QPushButton" name="pushButtonLeft">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../drivenet.qrc">
+         <normaloff>:/qdarkstyle/left_arrow</normaloff>:/qdarkstyle/left_arrow</iconset>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
@@ -81,21 +92,21 @@
        </property>
       </spacer>
      </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="pushButtonLeft">
+      <widget class="QPushButton" name="pushButtonRight">
        <property name="text">
         <string/>
        </property>
        <property name="icon">
         <iconset resource="../drivenet.qrc">
-         <normaloff>:/qdarkstyle/left_arrow</normaloff>:/qdarkstyle/left_arrow</iconset>
+         <normaloff>:/qdarkstyle/right_arrow</normaloff>:/qdarkstyle/right_arrow</iconset>
        </property>
       </widget>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QTableView" name="tableViewBlocks">
        <property name="font">
@@ -103,8 +114,17 @@
          <family>Noto Mono</family>
         </font>
        </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="autoScroll">
+        <bool>false</bool>
+       </property>
        <property name="editTriggers">
         <set>QAbstractItemView::DoubleClicked</set>
+       </property>
+       <property name="tabKeyNavigation">
+        <bool>false</bool>
        </property>
        <property name="showDropIndicator" stdset="0">
         <bool>false</bool>
@@ -122,22 +142,23 @@
         </size>
        </property>
        <property name="gridStyle">
-        <enum>Qt::DashDotLine</enum>
+        <enum>Qt::SolidLine</enum>
+       </property>
+       <property name="wordWrap">
+        <bool>false</bool>
        </property>
        <property name="cornerButtonEnabled">
         <bool>false</bool>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonRight">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="../drivenet.qrc">
-         <normaloff>:/qdarkstyle/right_arrow</normaloff>:/qdarkstyle/right_arrow</iconset>
-       </property>
+       <attribute name="horizontalHeaderVisible">
+        <bool>true</bool>
+       </attribute>
+       <attribute name="horizontalHeaderMinimumSectionSize">
+        <number>200</number>
+       </attribute>
+       <attribute name="horizontalHeaderHighlightSections">
+        <bool>false</bool>
+       </attribute>
       </widget>
      </item>
     </layout>
@@ -145,23 +166,11 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <spacer name="horizontalSpacer_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+      <widget class="QLineEdit" name="lineEditSearch">
+       <property name="placeholderText">
+        <string>Enter a block height or hash</string>
        </property>
-       <property name="sizeType">
-        <enum>QSizePolicy::Maximum</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>80</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="lineEditSearch"/>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonSearch">
