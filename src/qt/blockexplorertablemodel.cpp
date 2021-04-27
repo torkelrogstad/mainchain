@@ -20,7 +20,7 @@ BlockExplorerTableModel::BlockExplorerTableModel(QObject *parent) :
 
 int BlockExplorerTableModel::rowCount(const QModelIndex & /*parent*/) const
 {
-    return 2;
+    return 6;
 }
 
 int BlockExplorerTableModel::columnCount(const QModelIndex & /*parent*/) const
@@ -51,7 +51,23 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         }
         // Hash
         if (row == 1) {
-            return QString::fromStdString(object.hash.ToString());
+            return QString::fromStdString(object.hash.ToString()).left(32) + "...";
+        }
+        // hashPrev
+        if (row == 2) {
+            return QString::fromStdString(object.hashPrev.ToString()).left(32) + "...";
+        }
+        // hashMerkleRoot
+        if (row == 3) {
+            return QString::fromStdString(object.hashMerkleRoot.ToString()).left(32) + "...";
+        }
+        // Version
+        if (row == 4) {
+            return QString::number(object.nVersion);
+        }
+        // Time
+        if (row == 5) {
+            return QString::number(object.nTime);
         }
     }
     case HeightRole:
@@ -66,11 +82,27 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
     {
         // Height
         if (row == 0) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
+            return int(Qt::AlignHCenter | Qt::AlignVCenter);
         }
         // Hash
         if (row == 1) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // hashPrev
+        if (row == 2) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // hashMerkleRoot
+        if (row == 3) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // Version
+        if (row == 4) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Time
+        if (row == 5) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
     }
@@ -86,6 +118,14 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
                 return QString("Height");
             case 1:
                 return QString("Hash");
+            case 2:
+                return QString("Hash Prev");
+            case 3:
+                return QString("Merkle Root");
+            case 4:
+                return QString("Version");
+            case 5:
+                return QString("Time");
             }
         }
     }
@@ -116,13 +156,12 @@ void BlockExplorerTableModel::UpdateModel()
     model.clear();
     endResetModel();
 
-    // TODO figure out range of blocks to display
     int nHeight = chainActive.Height() + 1;
     int nBlocksToDisplay = 10;
     if (nHeight < nBlocksToDisplay)
         nBlocksToDisplay = nHeight;
 
-    beginInsertColumns(QModelIndex(), model.size(), model.size() + nBlocksToDisplay);
+    beginInsertColumns(QModelIndex(), model.size(), model.size() + nBlocksToDisplay - 1);
     for (int i = nBlocksToDisplay; i; i--) {
         CBlockIndex *index = chainActive[nHeight - i];
 
@@ -134,6 +173,15 @@ void BlockExplorerTableModel::UpdateModel()
         BlockExplorerTableObject object;
         object.nHeight = nHeight - i;
         object.hash = index->GetBlockHash();
+        object.hashMerkleRoot = index->hashMerkleRoot;
+
+        uint256 hashPrev = uint256();
+        if (index->pprev)
+            hashPrev = index->pprev->GetBlockHash();
+
+        object.hashPrev = hashPrev;
+        object.nVersion = index->nVersion;
+        object.nTime = index->nTime;
 
         model.append(QVariant::fromValue(object));
     }
