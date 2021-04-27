@@ -33,6 +33,8 @@ public:
     void setClientModel(ClientModel *model);
 
     CBlockIndex* GetBlockIndex(const uint256& hash) const;
+    CBlockIndex* GetBlockIndex(int nHeight) const;
+    CBlockIndex* GetTip() const;
 
     enum RoleIndex {
         HeightRole = Qt::UserRole,

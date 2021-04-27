@@ -148,3 +148,13 @@ CBlockIndex* BlockExplorerTableModel::GetBlockIndex(const uint256& hash) const
 
     return chainActive[mapBlockIndex[hash]->nHeight];
 }
+
+CBlockIndex* BlockExplorerTableModel::GetBlockIndex(int nHeight) const
+{
+    return chainActive[nHeight];
+}
+
+CBlockIndex* BlockExplorerTableModel::GetTip() const
+{
+    return chainActive.Tip();
+}
