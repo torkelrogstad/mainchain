@@ -16,7 +16,7 @@
 #include <qt/sidechaindepositconfirmationdialog.h>
 #include <qt/sidechainwtprimedialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
-#include <qt/sidechainwtprimedetails.h>
+#include <qt/txdetails.h>
 #include <qt/walletmodel.h>
 
 #include <base58.h>
@@ -443,7 +443,7 @@ void SidechainPage::on_tableViewWT_doubleClicked(const QModelIndex& index)
         return;
     }
 
-    SidechainWTPrimeDetails detailsDialog;
+    TxDetails detailsDialog;
     detailsDialog.SetTransaction(mtx);
 
     detailsDialog.exec();

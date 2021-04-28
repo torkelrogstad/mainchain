@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SidechainWTPrimeDetails</class>
- <widget class="QDialog" name="SidechainWTPrimeDetails">
+ <class>TxDetails</class>
+ <widget class="QDialog" name="TxDetails">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -34,7 +34,7 @@
    <item row="0" column="0" colspan="2">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Withdrawal transaction details:</string>
+      <string>Transaction Details:</string>
      </property>
     </widget>
    </item>

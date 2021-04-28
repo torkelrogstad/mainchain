@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_SIDECHAINWTPRIMEDETAILS_H
-#define BITCOIN_SIDECHAINWTPRIMEDETAILS_H
+#ifndef BITCOIN_TXDETAILS_H
+#define BITCOIN_TXDETAILS_H
 
 #include <QDialog>
 
@@ -12,21 +12,21 @@
 class CMutableTransaction;
 
 namespace Ui {
-class SidechainWTPrimeDetails;
+class TxDetails;
 }
 
-class SidechainWTPrimeDetails : public QDialog
+class TxDetails : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit SidechainWTPrimeDetails(QWidget *parent = 0);
-    ~SidechainWTPrimeDetails();
+    explicit TxDetails(QWidget *parent = 0);
+    ~TxDetails();
 
     void SetTransaction(const CMutableTransaction& mtx);
 
 private:
-    Ui::SidechainWTPrimeDetails *ui;
+    Ui::TxDetails *ui;
     std::string strHex;
     std::string strTx;
 
@@ -35,4 +35,4 @@ private Q_SLOTS:
     void on_pushButtonClose_clicked();
 };
 
-#endif // BITCOIN_SIDECHAINWTPRIMEDETAILS_H
+#endif // BITCOIN_TXDETAILS_H

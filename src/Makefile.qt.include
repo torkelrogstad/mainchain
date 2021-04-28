@@ -122,10 +122,10 @@ QT_FORMS_UI = \
   qt/forms/sidechainpage.ui \
   qt/forms/sidechainproposaldialog.ui \
   qt/forms/sidechainwtprimedialog.ui \
-  qt/forms/sidechainwtprimedetails.ui \
   qt/forms/signverifymessagedialog.ui \
   qt/forms/transactiondescdialog.ui \
-  qt/forms/transactionreplaydialog.ui
+  qt/forms/transactionreplaydialog.ui \
+  qt/forms/txdetails.ui
 
 QT_MOC_CPP = \
   qt/moc_addressbookpage.cpp \
@@ -179,7 +179,6 @@ QT_MOC_CPP = \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainwithdrawaltablemodel.cpp \
   qt/moc_sidechainwtprimedialog.cpp \
-  qt/moc_sidechainwtprimedetails.cpp \
   qt/moc_signverifymessagedialog.cpp \
   qt/moc_splashscreen.cpp \
   qt/moc_trafficgraphwidget.cpp \
@@ -189,6 +188,7 @@ QT_MOC_CPP = \
   qt/moc_transactionreplaydialog.cpp \
   qt/moc_transactiontablemodel.cpp \
   qt/moc_transactionview.cpp \
+  qt/moc_txdetails.cpp \
   qt/moc_utilitydialog.cpp \
   qt/moc_walletframe.cpp \
   qt/moc_walletmodel.cpp \
@@ -271,7 +271,6 @@ DRIVENET_QT_H = \
   qt/sidechainpage.h \
   qt/sidechainwithdrawaltablemodel.h \
   qt/sidechainwtprimedialog.h \
-  qt/sidechainwtprimedetails.h \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
   qt/trafficgraphwidget.h \
@@ -282,6 +281,7 @@ DRIVENET_QT_H = \
   qt/transactionrecord.h \
   qt/transactiontablemodel.h \
   qt/transactionview.h \
+  qt/txdetails.h \
   qt/utilitydialog.h \
   qt/walletframe.h \
   qt/walletmodel.h \
@@ -461,7 +461,6 @@ DRIVENET_QT_WALLET_CPP = \
   qt/sidechainproposaldialog.cpp \
   qt/sidechainwtprimedialog.cpp \
   qt/sidechainwithdrawaltablemodel.cpp \
-  qt/sidechainwtprimedetails.cpp \
   qt/signverifymessagedialog.cpp \
   qt/transactiondesc.cpp \
   qt/transactiondescdialog.cpp \
@@ -470,6 +469,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/transactionrecord.cpp \
   qt/transactiontablemodel.cpp \
   qt/transactionview.cpp \
+  qt/txdetails.cpp \
   qt/walletframe.cpp \
   qt/walletmodel.cpp \
   qt/walletmodeltransaction.cpp \

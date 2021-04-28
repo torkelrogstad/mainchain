@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/sidechainwtprimedetails.h>
-#include <qt/forms/ui_sidechainwtprimedetails.h>
+#include <qt/txdetails.h>
+#include <qt/forms/ui_txdetails.h>
 
 #include <core_io.h>
 #include <primitives/transaction.h>
@@ -12,9 +12,9 @@
 #include <QClipboard>
 #include <QMessageBox>
 
-SidechainWTPrimeDetails::SidechainWTPrimeDetails(QWidget *parent) :
+TxDetails::TxDetails(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::SidechainWTPrimeDetails)
+    ui(new Ui::TxDetails)
 {
     ui->setupUi(this);
 
@@ -22,22 +22,22 @@ SidechainWTPrimeDetails::SidechainWTPrimeDetails(QWidget *parent) :
     strTx = "";
 }
 
-SidechainWTPrimeDetails::~SidechainWTPrimeDetails()
+TxDetails::~TxDetails()
 {
     delete ui;
 }
 
-void SidechainWTPrimeDetails::on_pushButtonCopyHex_clicked()
+void TxDetails::on_pushButtonCopyHex_clicked()
 {
     QApplication::clipboard()->setText(QString::fromStdString(strHex));
 }
 
-void SidechainWTPrimeDetails::on_pushButtonClose_clicked()
+void TxDetails::on_pushButtonClose_clicked()
 {
     this->close();
 }
 
-void  SidechainWTPrimeDetails::SetTransaction(const CMutableTransaction& mtx)
+void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
 {
     // Get & set the hex
     strHex = EncodeHexTx(mtx);
