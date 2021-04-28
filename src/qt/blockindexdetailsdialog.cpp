@@ -5,7 +5,11 @@
 #include <qt/blockindexdetailsdialog.h>
 #include <qt/forms/ui_blockindexdetailsdialog.h>
 
+#include <QMessageBox>
+
 #include <chain.h>
+#include <chainparams.h>
+#include <primitives/block.h>
 #include <validation.h>
 
 BlockIndexDetailsDialog::BlockIndexDetailsDialog(QWidget *parent) :
@@ -16,6 +20,22 @@ BlockIndexDetailsDialog::BlockIndexDetailsDialog(QWidget *parent) :
 
     nHeight = 0;
     hashBlock = uint256();
+
+    ui->tableWidgetTransactions->setColumnCount(2);
+    ui->tableWidgetTransactions->setHorizontalHeaderLabels(QStringList() << "n" << "txid");
+    ui->tableWidgetTransactions->verticalHeader()->setVisible(false);
+
+        // Resize cells (in a backwards compatible way)
+#if QT_VERSION < 0x050000
+    ui->tableWidgetTransactions->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+#else
+    ui->tableWidgetTransactions->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#endif
+
+    // Highlight entire row
+    ui->tableWidgetTransactions->setSelectionBehavior(QAbstractItemView::SelectRows);
+    // Select only one row
+    ui->tableWidgetTransactions->setSelectionMode(QAbstractItemView::SingleSelection);
 }
 
 BlockIndexDetailsDialog::~BlockIndexDetailsDialog()
@@ -87,4 +107,68 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
         hashNext = chainActive.Next(index)->GetBlockHash();
 
     ui->labelNextBlockHash->setText(QString::fromStdString(hashNext.ToString()));
+
+    pBlockIndex = index;
+
+    ui->tableWidgetTransactions->setRowCount(0);
+    vtx.clear();
+}
+
+void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
+{
+    if (!pBlockIndex) {
+        // TODO error message
+        return;
+    }
+
+    if (fHavePruned) {
+        // TODO display error
+        return;
+    }
+
+    // Double check that the block is in the chain and should be on disk
+    if (!mapBlockIndex.count(pBlockIndex->GetBlockHash())) {
+        // TODO display error
+        return;
+    }
+
+    // Load block from disk
+
+    CBlock block;
+    if (!ReadBlockFromDisk(block, pBlockIndex, Params().GetConsensus())) {
+        // TODO display error
+        return;
+    }
+
+    vtx = block.vtx;
+
+    ui->tableWidgetTransactions->setRowCount(0);
+
+    // Add block's transactions to the table
+    int nRow = 0;
+    for (const CTransactionRef& tx : vtx) {
+        ui->tableWidgetTransactions->insertRow(nRow);
+
+        // txn number
+        QTableWidgetItem *itemN = new QTableWidgetItem();
+        itemN->setText(QString::number(nRow));
+        itemN->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        itemN->setFlags(itemN->flags() & ~Qt::ItemIsEditable);
+        ui->tableWidgetTransactions->setItem(nRow, 0, itemN);
+
+        // tx hash
+        QTableWidgetItem *itemHash = new QTableWidgetItem();
+        itemHash->setText(QString::fromStdString(tx->GetHash().ToString()));
+        itemHash->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        itemHash->setFlags(itemHash->flags() & ~Qt::ItemIsEditable);
+        ui->tableWidgetTransactions->setItem(nRow, 1, itemHash);
+
+        nRow++;
+    }
+}
+
+void BlockIndexDetailsDialog::on_tableWidgetTransactions_doubleClicked(const QModelIndex& i)
+{
+    if ((unsigned int)i.row() >= vtx.size())
+        return;
 }

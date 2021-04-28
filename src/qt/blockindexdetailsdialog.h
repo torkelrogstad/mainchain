@@ -7,7 +7,10 @@
 
 #include <QDialog>
 
+#include <primitives/transaction.h>
 #include <uint256.h>
+
+#include <vector>
 
 class CBlockIndex;
 
@@ -25,11 +28,18 @@ public:
 
     void SetBlockIndex(const CBlockIndex* index);
 
+private Q_SLOTS:
+    void on_pushButtonLoadTransactions_clicked();
+    void on_tableWidgetTransactions_doubleClicked(const QModelIndex& i);
+
 private:
     Ui::BlockIndexDetailsDialog *ui;
 
     uint256 hashBlock;
     int nHeight;
+
+    const CBlockIndex* pBlockIndex = nullptr;
+    std::vector<CTransactionRef> vtx;
 };
 
 #endif // BLOCKINDEXDETAILSDIALOG_H

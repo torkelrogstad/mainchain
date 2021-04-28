@@ -14,6 +14,72 @@
    <string>Block Index Details</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_12">
+     <property name="text">
+      <string>Merkle Root</string>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="0" colspan="2">
+    <widget class="QPushButton" name="pushButtonLoadTransactions">
+     <property name="text">
+      <string>Load Transactions</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_8">
+     <property name="text">
+      <string>Version</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Hash</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QLabel" name="labelVersionHex">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="text">
+      <string>0x00</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <widget class="QLabel" name="label_15">
+     <property name="text">
+      <string>Nonce</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_14">
+     <property name="text">
+      <string>Median time</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QLabel" name="labelTime">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="text">
+      <string>00:00</string>
+     </property>
+    </widget>
+   </item>
    <item row="1" column="1">
     <widget class="QLabel" name="labelHash">
      <property name="font">
@@ -26,17 +92,10 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="0">
-    <widget class="QLabel" name="label_16">
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_10">
      <property name="text">
-      <string>Bits</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="label_14">
-     <property name="text">
-      <string>Median time</string>
+      <string>Version Hex</string>
      </property>
     </widget>
    </item>
@@ -47,48 +106,10 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="QLabel" name="labelHeight">
-     <property name="font">
-      <font>
-       <family>Noto Mono</family>
-      </font>
-     </property>
+   <item row="9" column="0">
+    <widget class="QLabel" name="label_16">
      <property name="text">
-      <string>0</string>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="1">
-    <widget class="QLabel" name="labelBits">
-     <property name="font">
-      <font>
-       <family>Noto Mono</family>
-      </font>
-     </property>
-     <property name="text">
-      <string>00000000000000000000000000000000</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Hash</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="0">
-    <widget class="QLabel" name="label_18">
-     <property name="text">
-      <string>Chain Work</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Height</string>
+      <string>Bits</string>
      </property>
     </widget>
    </item>
@@ -104,8 +125,60 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="1">
-    <widget class="QLabel" name="labelPrevBlockHash">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Height</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0">
+    <widget class="QLabel" name="label_18">
+     <property name="text">
+      <string>Chain Work</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_6">
+     <property name="text">
+      <string>Confirmations</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLabel" name="labelHeight">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="0">
+    <widget class="QLabel" name="label_20">
+     <property name="text">
+      <string>Next Block Hash</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="1">
+    <widget class="QLabel" name="labelBits">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
+     </property>
+     <property name="text">
+      <string>00000000000000000000000000000000</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="1">
+    <widget class="QLabel" name="labelChainWork">
      <property name="font">
       <font>
        <family>Noto Mono</family>
@@ -128,48 +201,34 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
-    <widget class="QLabel" name="labelVersionHex">
+   <item row="5" column="1">
+    <widget class="QLabel" name="labelMerkleRoot">
      <property name="font">
       <font>
        <family>Noto Mono</family>
       </font>
      </property>
      <property name="text">
-      <string>0x00</string>
+      <string>00000000000000000000000000000000</string>
      </property>
     </widget>
    </item>
-   <item row="13" column="0" colspan="2">
-    <widget class="QPushButton" name="pushButtonLoadTransactions">
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_13">
      <property name="text">
-      <string>Load Transactions</string>
+      <string>Time</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_6">
-     <property name="text">
-      <string>Confirmations</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0">
-    <widget class="QLabel" name="label_15">
-     <property name="text">
-      <string>Nonce</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QLabel" name="labelTime">
+   <item row="11" column="1">
+    <widget class="QLabel" name="labelPrevBlockHash">
      <property name="font">
       <font>
        <family>Noto Mono</family>
       </font>
      </property>
      <property name="text">
-      <string>00:00</string>
+      <string>00000000000000000000000000000000</string>
      </property>
     </widget>
    </item>
@@ -185,20 +244,6 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="label_12">
-     <property name="text">
-      <string>Merkle Root</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_10">
-     <property name="text">
-      <string>Version Hex</string>
-     </property>
-    </widget>
-   </item>
    <item row="8" column="1">
     <widget class="QLabel" name="labelNonce">
      <property name="font">
@@ -208,44 +253,6 @@
      </property>
      <property name="text">
       <string>0</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="1">
-    <widget class="QLabel" name="labelChainWork">
-     <property name="font">
-      <font>
-       <family>Noto Mono</family>
-      </font>
-     </property>
-     <property name="text">
-      <string>00000000000000000000000000000000</string>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="0">
-    <widget class="QLabel" name="label_20">
-     <property name="text">
-      <string>Next Block Hash</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QLabel" name="labelMerkleRoot">
-     <property name="font">
-      <font>
-       <family>Noto Mono</family>
-      </font>
-     </property>
-     <property name="text">
-      <string>00000000000000000000000000000000</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_8">
-     <property name="text">
-      <string>Version</string>
      </property>
     </widget>
    </item>
@@ -261,15 +268,14 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <widget class="QLabel" name="label_13">
-     <property name="text">
-      <string>Time</string>
+   <item row="14" column="0" colspan="2">
+    <widget class="QTableWidget" name="tableWidgetTransactions">
+     <property name="font">
+      <font>
+       <family>Noto Mono</family>
+      </font>
      </property>
     </widget>
-   </item>
-   <item row="14" column="0" colspan="2">
-    <widget class="QTableView" name="tableViewTransactions"/>
    </item>
   </layout>
  </widget>
