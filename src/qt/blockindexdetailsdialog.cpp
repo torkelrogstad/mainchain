@@ -5,6 +5,8 @@
 #include <qt/blockindexdetailsdialog.h>
 #include <qt/forms/ui_blockindexdetailsdialog.h>
 
+#include <qt/txdetails.h>
+
 #include <QMessageBox>
 
 #include <chain.h>
@@ -169,6 +171,11 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
 
 void BlockIndexDetailsDialog::on_tableWidgetTransactions_doubleClicked(const QModelIndex& i)
 {
-    if ((unsigned int)i.row() >= vtx.size())
+    unsigned int nTx = i.row();
+    if (nTx >= vtx.size())
         return;
+
+    TxDetails txDetailsDialog;
+    txDetailsDialog.SetTransaction(CMutableTransaction(*vtx[nTx]));
+    txDetailsDialog.exec();
 }
