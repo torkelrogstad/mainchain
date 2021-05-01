@@ -27,7 +27,7 @@ BlockIndexDetailsDialog::BlockIndexDetailsDialog(QWidget *parent) :
     ui->tableWidgetTransactions->setHorizontalHeaderLabels(QStringList() << "n" << "txid");
     ui->tableWidgetTransactions->verticalHeader()->setVisible(false);
 
-        // Resize cells (in a backwards compatible way)
+    // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000
     ui->tableWidgetTransactions->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
 #else

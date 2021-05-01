@@ -11,6 +11,10 @@
 
 class CMutableTransaction;
 
+QT_BEGIN_NAMESPACE
+class QTreeWidgetItem;
+QT_END_NAMESPACE
+
 namespace Ui {
 class TxDetails;
 }
@@ -30,9 +34,7 @@ private:
     std::string strHex;
     std::string strTx;
 
-private Q_SLOTS:
-    void on_pushButtonCopyHex_clicked();
-    void on_pushButtonClose_clicked();
+    void AddTreeItem(int index, QTreeWidgetItem *item);
 };
 
 #endif // BITCOIN_TXDETAILS_H

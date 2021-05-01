@@ -15,21 +15,10 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,0,0,0">
+    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,0">
      <property name="bottomMargin">
       <number>0</number>
      </property>
-     <item>
-      <widget class="QPushButton" name="pushButtonLeft">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="../drivenet.qrc">
-         <normaloff>:/qdarkstyle/left_arrow</normaloff>:/qdarkstyle/left_arrow</iconset>
-       </property>
-      </widget>
-     </item>
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
@@ -92,17 +81,6 @@
        </property>
       </spacer>
      </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonRight">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="../drivenet.qrc">
-         <normaloff>:/qdarkstyle/right_arrow</normaloff>:/qdarkstyle/right_arrow</iconset>
-       </property>
-      </widget>
-     </item>
     </layout>
    </item>
    <item>
@@ -141,8 +119,14 @@
          <height>32</height>
         </size>
        </property>
+       <property name="horizontalScrollMode">
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
+       </property>
+       <property name="showGrid">
+        <bool>false</bool>
+       </property>
        <property name="gridStyle">
-        <enum>Qt::SolidLine</enum>
+        <enum>Qt::NoPen</enum>
        </property>
        <property name="wordWrap">
         <bool>false</bool>
@@ -151,10 +135,10 @@
         <bool>false</bool>
        </property>
        <attribute name="horizontalHeaderVisible">
-        <bool>true</bool>
+        <bool>false</bool>
        </attribute>
        <attribute name="horizontalHeaderMinimumSectionSize">
-        <number>200</number>
+        <number>50</number>
        </attribute>
        <attribute name="horizontalHeaderHighlightSections">
         <bool>false</bool>
@@ -183,8 +167,6 @@
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../drivenet.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

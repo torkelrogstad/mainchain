@@ -35,8 +35,6 @@ public Q_SLOTS:
 
 private Q_SLOTS:
     void on_pushButtonSearch_clicked();
-    void on_pushButtonLeft_clicked();
-    void on_pushButtonRight_clicked();
     void numBlocksChanged(int nHeight, const QDateTime& time);
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
     void on_lineEditSearch_returnPressed();

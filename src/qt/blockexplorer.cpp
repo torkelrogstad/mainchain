@@ -45,6 +45,17 @@ BlockExplorer::BlockExplorer(const PlatformStyle *_platformStyle, QWidget *paren
 #else
     ui->tableViewBlocks->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #endif
+
+    // Change scrolling speed
+    ui->tableViewBlocks->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewBlocks->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+
+    QString style;
+    style += "QTableView::item { border-left: 2px solid black; ";
+    style += "border-right: 2px solid black;}\n";
+    style += "QTableView::item::selected { background-color: rgb(0, 139, 139, 180); }";
+
+    ui->tableViewBlocks->setStyleSheet(style);
 }
 
 BlockExplorer::~BlockExplorer()
@@ -55,16 +66,6 @@ BlockExplorer::~BlockExplorer()
 void BlockExplorer::on_pushButtonSearch_clicked()
 {
     Search();
-}
-
-void BlockExplorer::on_pushButtonLeft_clicked()
-{
-    ui->tableViewBlocks->horizontalScrollBar()->setValue(0);
-}
-
-void BlockExplorer::on_pushButtonRight_clicked()
-{
-    scrollRight();
 }
 
 void BlockExplorer::numBlocksChanged(int nHeight, const QDateTime& time)
