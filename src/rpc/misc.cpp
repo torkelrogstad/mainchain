@@ -1098,18 +1098,20 @@ UniValue getbmmproof(const JSONRPCRequest& request)
     for (const CTxOut& out : txCoinbase.vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
 
-        if (scriptPubKey.size() < sizeof(uint256) + 6)
+        if (scriptPubKey.size() < sizeof(uint256) + 5)
             continue;
         if (scriptPubKey[0] != OP_RETURN)
             continue;
 
+        // TODO add script function to check for commit & return data
+
         // Get h*
-        std::vector<unsigned char> vch (scriptPubKey.begin() + 6, scriptPubKey.begin() + 38);
+        std::vector<unsigned char> vch (scriptPubKey.begin() + 5, scriptPubKey.begin() + 37);
 
         // TODO return the bytes
         // Get Bytes
-        if (scriptPubKey.size() > 38) {
-            std::vector<unsigned char> vchBytes(scriptPubKey.begin() + 38, scriptPubKey.end());
+        if (scriptPubKey.size() > 37) {
+            std::vector<unsigned char> vchBytes(scriptPubKey.begin() + 37, scriptPubKey.end());
         }
 
         if (hashCritical == uint256(vch))

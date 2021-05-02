@@ -1399,7 +1399,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     if (vMTHashScript.size()) {
         // Get MT hash from script
         const CScript& scriptPubKey = vMTHashScript.front();
-        hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
+        hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 5, scriptPubKey.begin() + 37));
     }
 
     // If there's a MT hash commit in this block, it must be different than

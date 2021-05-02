@@ -3472,7 +3472,7 @@ void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& con
     /*
      * M8 (v1)
      * Critical data / Drivechain BMM commitment request.
-     * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
+     * BIP: 300 & 301
      */
     if (block.vtx.size() < 2)
         return;
@@ -3486,15 +3486,14 @@ void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& con
     for (const CCriticalData& d : vCriticalData) {
         CTxOut out;
         out.nValue = 0;
-        out.scriptPubKey.resize(38);
+        out.scriptPubKey.resize(37);
         out.scriptPubKey[0] = OP_RETURN;
-        out.scriptPubKey[1] = 0x24; // TODO Remove
-        out.scriptPubKey[2] = 0xD1;
-        out.scriptPubKey[3] = 0x61;
-        out.scriptPubKey[4] = 0x73;
-        out.scriptPubKey[5] = 0x68;
+        out.scriptPubKey[1] = 0xD1;
+        out.scriptPubKey[2] = 0x61;
+        out.scriptPubKey[3] = 0x73;
+        out.scriptPubKey[4] = 0x68;
 
-        memcpy(&out.scriptPubKey[6], &d.hashCritical, 32);
+        memcpy(&out.scriptPubKey[5], &d.hashCritical, 32);
 
         // Add bytes (optional)
         if (!d.bytes.empty())
@@ -3517,7 +3516,7 @@ void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& co
     /*
      * M8 (v2)
      * Example Lightning version of Drivechain BMM commitment request.
-     * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
+     * BIP: 300 & 301
      */
 
     // Check for activation of Drivechains
@@ -3530,21 +3529,20 @@ void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& co
     for (const CCriticalData& d : vCriticalData) {
         CTxOut out;
         out.nValue = 0;
-        out.scriptPubKey.resize(70);
+        out.scriptPubKey.resize(69);
         out.scriptPubKey[0] = OP_RETURN;
-        out.scriptPubKey[1] = 0x44; // TODO Remove
-        out.scriptPubKey[2] = 0xD0;
-        out.scriptPubKey[3] = 0x52;
-        out.scriptPubKey[4] = 0x0C;
-        out.scriptPubKey[5] = 0x6E;
+        out.scriptPubKey[1] = 0xD0;
+        out.scriptPubKey[2] = 0x52;
+        out.scriptPubKey[3] = 0x0C;
+        out.scriptPubKey[4] = 0x6E;
 
         // Add side:block hash
-        memcpy(&out.scriptPubKey[6], &d.hashCritical, 32);
+        memcpy(&out.scriptPubKey[5], &d.hashCritical, 32);
 
         // Add previous side:block hash
         // TODO
         uint256 prevBlockHash = uint256(); // d.prevBlockHash
-        memcpy(&out.scriptPubKey[39], &prevBlockHash, 32);
+        memcpy(&out.scriptPubKey[38], &prevBlockHash, 32);
 
         // Add bytes (optional)
         if (!d.bytes.empty())
@@ -3567,7 +3565,7 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
     /*
      * "M1, M2, M3, M4"
      * Sidechain DB data once per block hashMerkleRoot commitment.
-     * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
+     * BIP: 300 & 301
      */
 
     // Check for activation of Drivechains
@@ -3579,16 +3577,15 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
     out.nValue = 0;
 
     // Add script header
-    out.scriptPubKey.resize(38);
+    out.scriptPubKey.resize(37);
     out.scriptPubKey[0] = OP_RETURN;
-    out.scriptPubKey[1] = 0x24; // TODO Remove
-    out.scriptPubKey[2] = 0xD2;
-    out.scriptPubKey[3] = 0x8E;
-    out.scriptPubKey[4] = 0x50;
-    out.scriptPubKey[5] = 0x8C;
+    out.scriptPubKey[1] = 0xD2;
+    out.scriptPubKey[2] = 0x8E;
+    out.scriptPubKey[3] = 0x50;
+    out.scriptPubKey[4] = 0x8C;
 
     // Add SCDB hashMerkleRoot
-    memcpy(&out.scriptPubKey[6], &hashSCDB, 32);
+    memcpy(&out.scriptPubKey[5], &hashSCDB, 32);
 
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);
@@ -3601,7 +3598,7 @@ void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, co
     /*
      * M3
      * Drivechain WT^ commit message "Propose Withdrawal".
-     * BIP: (INSERT HERE ONCE ASSIGNED) // TODO
+     * BIP: 300 & 301
      */
 
     // Check for activation of Drivechains
@@ -3612,19 +3609,18 @@ void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, co
     out.nValue = 0;
 
     // Add script header
-    out.scriptPubKey.resize(39);
+    out.scriptPubKey.resize(38);
     out.scriptPubKey[0] = OP_RETURN;
-    out.scriptPubKey[1] = 0x24; // TODO Remove
-    out.scriptPubKey[2] = 0xD4;
-    out.scriptPubKey[3] = 0x5A;
-    out.scriptPubKey[4] = 0xA9;
-    out.scriptPubKey[5] = 0x43;
+    out.scriptPubKey[1] = 0xD4;
+    out.scriptPubKey[2] = 0x5A;
+    out.scriptPubKey[3] = 0xA9;
+    out.scriptPubKey[4] = 0x43;
 
     // Add WT^ hash
-    memcpy(&out.scriptPubKey[6], &hashWTPrime, 32);
+    memcpy(&out.scriptPubKey[5], &hashWTPrime, 32);
 
     // Add nSidechain
-    out.scriptPubKey[38] = nSidechain;
+    out.scriptPubKey[37] = nSidechain;
 
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);
@@ -3899,7 +3895,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
                 for (const CTxOut& out : block.vtx[0]->vout) {
                     const CScript &scriptPubKey = out.scriptPubKey;
                     if (scriptPubKey.IsCriticalHashCommit()) {
-                        if (memcmp(tx->criticalData.hashCritical.begin(), &scriptPubKey[6], 32) == 0) {
+                        if (memcmp(tx->criticalData.hashCritical.begin(), &scriptPubKey[5], 32) == 0) {
                             fFound = true;
                             break;
                         }
