@@ -90,16 +90,28 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     uint8_t nSidechain = 0;
     // Sidechain activation commit
     uint256 hashSidechain = uint256();
+    // Critical hash commit
+    uint256 hashCritical = uint256();
+    // SCDB hash merkle root
+    uint256 hashMT = uint256();
 
     ui->treeWidgetDecoded->clear();
     // TODO A lot of these output types can only be in the coinbase so we
     // shouldn't check for them in other transactions.
     for (size_t i = 0; i < tx.vout.size(); i++) {
+        // TODO move these
+
         nWitVersion = -1;
         vWitProgram.clear();
+
         hashWTPrime.SetNull();
+
         nSidechain = 0;
         hashSidechain.SetNull();
+
+        hashCritical.SetNull();
+
+        hashMT.SetNull();
 
         const CScript scriptPubKey = tx.vout[i].scriptPubKey;
         if (scriptPubKey.empty())
@@ -127,23 +139,26 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             // Create a witness program item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "Witness Program");
+            subItem->setText(1, "Witness Program: " +
+                        QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
             AddTreeItem(INDEX_WITNESS_PROGRAM, subItem);
         }
         else
-        if (scriptPubKey.IsCriticalHashCommit()) {
+        if (scriptPubKey.IsCriticalHashCommit(hashCritical)) {
             // Create a critical hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "Critical Hash Commit");
+            subItem->setText(1, "Critical Hash Commit: " +
+                    QString::fromStdString(hashCritical.ToString()));
             AddTreeItem(INDEX_CRITICAL_HASH, subItem);
         }
         else
-        if (scriptPubKey.IsSCDBHashMerkleRootCommit()) {
+        if (scriptPubKey.IsSCDBHashMerkleRootCommit(hashMT)) {
             // Create a SCDB merkle tree hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "SCDB Merkle Tree Hash Commit");
+            subItem->setText(1, "SCDB Merkle Tree Hash Commit: " +
+                    QString::fromStdString(hashMT.ToString()));
             AddTreeItem(INDEX_SCDB_MT_HASH, subItem);
         }
         else
@@ -179,7 +194,8 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             // Create a SCDB update script item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "SCDB Update Script");
+            subItem->setText(1, "SCDB Update Script: " +
+                        QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
             AddTreeItem(INDEX_SCDB_UPDATE, subItem);
         }
         else
