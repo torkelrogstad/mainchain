@@ -3894,8 +3894,9 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
                 bool fFound = false;
                 for (const CTxOut& out : block.vtx[0]->vout) {
                     const CScript &scriptPubKey = out.scriptPubKey;
-                    if (scriptPubKey.IsCriticalHashCommit()) {
-                        if (memcmp(tx->criticalData.hashCritical.begin(), &scriptPubKey[5], 32) == 0) {
+                    uint256 hashCritical = uint256();
+                    if (scriptPubKey.IsCriticalHashCommit(hashCritical)) {
+                        if (tx->criticalData.hashCritical == hashCritical) {
                             fFound = true;
                             break;
                         }

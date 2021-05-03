@@ -237,7 +237,7 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
-bool CScript::IsCriticalHashCommit() const
+bool CScript::IsCriticalHashCommit(uint256& hash) const
 {
     // Check script size
     size_t size = this->size();
@@ -252,10 +252,15 @@ bool CScript::IsCriticalHashCommit() const
             (*this)[4] != 0x68)
         return false;
 
+    hash = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+
+    if (hash.IsNull())
+        return false;
+
     return true;
 }
 
-bool CScript::IsSCDBHashMerkleRootCommit() const
+bool CScript::IsSCDBHashMerkleRootCommit(uint256& hashMerkleRoot) const
 {
     // Check script size
     size_t size = this->size();
@@ -268,6 +273,11 @@ bool CScript::IsSCDBHashMerkleRootCommit() const
             (*this)[2] != 0x8E ||
             (*this)[3] != 0x50 ||
             (*this)[4] != 0x8C)
+        return false;
+
+    hashMerkleRoot = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+
+    if (hashMerkleRoot.IsNull())
         return false;
 
     return true;

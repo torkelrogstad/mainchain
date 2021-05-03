@@ -1376,36 +1376,34 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    // Scan for updated SCDB MT hash commit
-    std::vector<CScript> vMTHashScript;
+    // Scan for SCDB updated merkle root hash commit, the hash of SCDB after
+    // applying the new updates from this block.
+    //
+    // Only one merkle root commit is allowed per block.
+    bool fMTFound = false;
+    uint256 hashMerkleRoot = uint256();
     for (const CTxOut& out : vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-        if (scriptPubKey.IsSCDBHashMerkleRootCommit())
-            vMTHashScript.push_back(scriptPubKey);
-    }
+        uint256 hashMT;
+        if (out.scriptPubKey.IsSCDBHashMerkleRootCommit(hashMT)) {
+            // If we already found a merkle root commit, a second is invalid
+            if (fMTFound) {
+                if (fDebug) {
+                    LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
+                        __func__,
+                        nHeight);
+                }
+                return false;
+            }
 
-    // Verify that there is only one MT hash commit if any
-    if (vMTHashScript.size() > 1) {
-        if (fDebug) {
-            LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
-                __func__,
-                nHeight);
+            fMTFound = true;
+            hashMerkleRoot = hashMT;
         }
-        return false;
-    }
-
-    // TODO IsSCDBHashMerkleRootCommit should return the MT hash
-    uint256 hashMerkleRoot;
-    if (vMTHashScript.size()) {
-        // Get MT hash from script
-        const CScript& scriptPubKey = vMTHashScript.front();
-        hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 5, scriptPubKey.begin() + 37));
     }
 
     // If there's a MT hash commit in this block, it must be different than
     // the current SCDB hash (WT^ blocks remaining should have at least
     // been updated if nothing else)
-    if (!hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
+    if (fMTFound && !hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
         if (fDebug)
             LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
                     __func__,
