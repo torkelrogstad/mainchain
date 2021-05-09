@@ -108,6 +108,7 @@ QT_FORMS_UI = \
   qt/forms/openuridialog.ui \
   qt/forms/optionsdialog.ui \
   qt/forms/paymentrequestdialog.ui \
+  qt/forms/merkletreedialog.ui \
   qt/forms/miningdialog.ui \
   qt/forms/overviewpage.ui \
   qt/forms/receivecoinsdialog.ui \
@@ -152,6 +153,7 @@ QT_MOC_CPP = \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
   qt/moc_miningdialog.cpp \
+  qt/moc_merkletreedialog.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
   qt/moc_optionsdialog.cpp \
@@ -241,6 +243,7 @@ DRIVENET_QT_H = \
   qt/macdockiconhandler.h \
   qt/macnotificationhandler.h \
   qt/miningdialog.h \
+  qt/merkletreedialog.h \
   qt/networkstyle.h \
   qt/notificator.h \
   qt/openuridialog.h \
@@ -439,6 +442,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/coincontroltreewidget.cpp \
   qt/coinsplitconfirmationdialog.cpp \
   qt/editaddressdialog.cpp \
+  qt/merkletreedialog.cpp \
   qt/miningdialog.cpp \
   qt/openuridialog.cpp \
   qt/overviewpage.cpp \

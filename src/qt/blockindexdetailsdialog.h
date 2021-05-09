@@ -7,6 +7,7 @@
 
 #include <QDialog>
 
+#include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <uint256.h>
 
@@ -32,14 +33,21 @@ private Q_SLOTS:
     void on_pushButtonLoadTransactions_clicked();
     void on_tableWidgetTransactions_doubleClicked(const QModelIndex& i);
 
+    void on_pushButtonMerkleTree_clicked();
+
 private:
     Ui::BlockIndexDetailsDialog *ui;
 
     uint256 hashBlock;
     int nHeight;
 
+    CBlock cachedBlock;
+
     const CBlockIndex* pBlockIndex = nullptr;
     std::vector<CTransactionRef> vtx;
+
 };
+
+std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated);
 
 #endif // BLOCKINDEXDETAILSDIALOG_H
