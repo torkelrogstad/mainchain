@@ -71,7 +71,7 @@ void BlockExplorer::on_pushButtonSearch_clicked()
 void BlockExplorer::numBlocksChanged(int nHeight, const QDateTime& time)
 {
     ui->labelNumBlocks->setText(QString::number(nHeight));
-    ui->labelBlockTime->setText(time.toString("dd MMMM d yyyy hh:mm"));
+    ui->labelBlockTime->setText(time.toString("dd MMMM yyyy hh:mm"));
 }
 
 void BlockExplorer::setClientModel(ClientModel *model)
@@ -93,7 +93,7 @@ void BlockExplorer::setClientModel(ClientModel *model)
             QDateTime time = QDateTime::fromTime_t(pindex->GetBlockTime());
 
             ui->labelNumBlocks->setText(QString::number(nHeight));
-            ui->labelBlockTime->setText(time.toString("dd MMMM d yyyy hh:mm"));
+            ui->labelBlockTime->setText(time.toString("dd MMMM yyyy hh:mm"));
         }
     }
 }
