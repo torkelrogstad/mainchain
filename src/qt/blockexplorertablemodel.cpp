@@ -5,6 +5,7 @@
 
 #include <qt/clientmodel.h>
 
+#include <QDateTime>
 #include <QIcon>
 #include <QMetaType>
 #include <QTimer>
@@ -61,13 +62,13 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 3) {
             return QString::fromStdString(object.hashMerkleRoot.ToString()).left(32) + "...";
         }
-        // Version
-        if (row == 4) {
-            return QString::number(object.nVersion);
-        }
         // Time
+        if (row == 4) {
+            return QDateTime::fromTime_t((int64_t)object.nTime).toString("dd MMMM yyyy hh:mm");
+        }
+        // nBits
         if (row == 5) {
-            return QString::number(object.nTime);
+            return QString::fromStdString(strprintf("%08x", object.nBits));
         }
     }
     case HeightRole:
@@ -96,11 +97,11 @@ QVariant BlockExplorerTableModel::data(const QModelIndex &index, int role) const
         if (row == 3) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // Version
+        // Time
         if (row == 4) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Time
+        // nBits
         if (row == 5) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
@@ -123,9 +124,9 @@ QVariant BlockExplorerTableModel::headerData(int section, Qt::Orientation orient
             case 3:
                 return QString("Merkle Root");
             case 4:
-                return QString("Version");
-            case 5:
                 return QString("Time");
+            case 5:
+                return QString("Bits");
             }
         }
     }
@@ -180,8 +181,8 @@ void BlockExplorerTableModel::UpdateModel()
             hashPrev = index->pprev->GetBlockHash();
 
         object.hashPrev = hashPrev;
-        object.nVersion = index->nVersion;
         object.nTime = index->nTime;
+        object.nBits = index->nBits;
 
         model.append(QVariant::fromValue(object));
     }

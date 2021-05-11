@@ -17,10 +17,10 @@ struct BlockExplorerTableObject
 {
     int nHeight;
     uint256 hash;
-    uint256 hashMerkleRoot;
     uint256 hashPrev;
-    int nVersion;
+    uint256 hashMerkleRoot;
     int nTime;
+    int nBits;
 };
 
 class BlockExplorerTableModel : public QAbstractTableModel
