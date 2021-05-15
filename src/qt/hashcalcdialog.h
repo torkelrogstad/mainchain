@@ -34,6 +34,7 @@ public Q_SLOTS:
     void on_pushButtonCopySHA256_clicked();
     void on_pushButtonCopyHex_clicked();
     void on_radioButtonHex_toggled(bool fChecked);
+    void on_pushButtonFlip_clicked();
 
 private:
     Ui::HashCalcDialog *ui;
