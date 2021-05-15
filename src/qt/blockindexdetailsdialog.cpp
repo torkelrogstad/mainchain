@@ -5,6 +5,7 @@
 #include <qt/blockindexdetailsdialog.h>
 #include <qt/forms/ui_blockindexdetailsdialog.h>
 
+#include <qt/guiutil.h>
 #include <qt/merkletreedialog.h>
 #include <qt/txdetails.h>
 
@@ -14,6 +15,8 @@
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <primitives/block.h>
+#include <streams.h>
+#include <utilstrencodings.h>
 #include <validation.h>
 
 #include <sstream>
@@ -60,6 +63,8 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     cachedBlock.SetNull();
     ui->labelBlockInfo->setText("#Tx: ? Block Size: ? (click \"Load Transactions\")");
     ui->pushButtonMerkleTree->setEnabled(false);
+    ui->pushButtonCopyHex->setEnabled(false);
+    ui->pushButtonCopyHeaderHex->setEnabled(false);
 
     // Show details on dialog
 
@@ -192,6 +197,8 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
     ui->labelBlockInfo->setText(strInfo);
 
     ui->pushButtonMerkleTree->setEnabled(true);
+    ui->pushButtonCopyHex->setEnabled(true);
+    ui->pushButtonCopyHeaderHex->setEnabled(true);
 }
 
 void BlockIndexDetailsDialog::on_tableWidgetTransactions_doubleClicked(const QModelIndex& i)
@@ -221,6 +228,30 @@ void BlockIndexDetailsDialog::on_pushButtonMerkleTree_clicked()
     MerkleTreeDialog dialog;
     dialog.SetTreeString(strTree);
     dialog.exec();
+}
+
+void BlockIndexDetailsDialog::on_pushButtonCopyHex_clicked()
+{
+    if (cachedBlock.IsNull())
+        return;
+
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << cachedBlock;
+
+    GUIUtil::setClipboard(QString::fromStdString(HexStr(ss.str())));
+}
+
+void BlockIndexDetailsDialog::on_pushButtonCopyHeaderHex_clicked()
+{
+    if (cachedBlock.IsNull())
+        return;
+
+    CBlockHeader header = cachedBlock.GetBlockHeader();
+
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << header;
+
+    GUIUtil::setClipboard(QString::fromStdString(HexStr(ss.str())));
 }
 
 // TODO move

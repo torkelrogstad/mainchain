@@ -32,8 +32,9 @@ public:
 private Q_SLOTS:
     void on_pushButtonLoadTransactions_clicked();
     void on_tableWidgetTransactions_doubleClicked(const QModelIndex& i);
-
     void on_pushButtonMerkleTree_clicked();
+    void on_pushButtonCopyHex_clicked();
+    void on_pushButtonCopyHeaderHex_clicked();
 
 private:
     Ui::BlockIndexDetailsDialog *ui;
