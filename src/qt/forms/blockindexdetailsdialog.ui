@@ -24,6 +24,9 @@
      <property name="text">
       <string>00:00</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="5" column="0">
@@ -43,6 +46,9 @@
      <property name="text">
       <string>00:00</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="0" column="2">
@@ -54,6 +60,9 @@
      </property>
      <property name="text">
       <string>0</string>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>
@@ -88,6 +97,9 @@
      <property name="text">
       <string>0</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="3" column="0">
@@ -107,6 +119,9 @@
      <property name="text">
       <string>0</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="8" column="2">
@@ -119,6 +134,9 @@
      <property name="text">
       <string>0</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="12" column="2">
@@ -130,6 +148,9 @@
      </property>
      <property name="text">
       <string>00000000000000000000000000000000</string>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>
@@ -149,6 +170,9 @@
      </property>
      <property name="text">
       <string>00000000000000000000000000000000</string>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>
@@ -182,6 +206,9 @@
      </property>
      <property name="text">
       <string>00000000000000000000000000000000</string>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>
@@ -222,6 +249,9 @@
      <property name="text">
       <string>00000000000000000000000000000000</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="16" column="0" colspan="3">
@@ -250,6 +280,9 @@
      <property name="text">
       <string>0x00</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="11" column="0">
@@ -269,6 +302,9 @@
      <property name="text">
       <string>00000000000000000000000000000000</string>
      </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+     </property>
     </widget>
    </item>
    <item row="10" column="2">
@@ -280,6 +316,9 @@
      </property>
      <property name="text">
       <string>00000000000000000000000000000000</string>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>
@@ -293,6 +332,16 @@
      </property>
      <property name="text">
       <string>Show Merkle Tree</string>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="2">
+    <widget class="QLabel" name="labelBlockInfo">
+     <property name="text">
+      <string>#Tx: ? Block Size: ? (click &quot;Load Transactions&quot;)</string>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>

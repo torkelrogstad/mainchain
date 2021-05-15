@@ -58,6 +58,8 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     nHeight = index->nHeight;
     hashBlock = index->GetBlockHash();
     cachedBlock.SetNull();
+    ui->labelBlockInfo->setText("#Tx: ? Block Size: ? (click \"Load Transactions\")");
+    ui->pushButtonMerkleTree->setEnabled(false);
 
     // Show details on dialog
 
@@ -175,6 +177,21 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
     }
 
     cachedBlock = block;
+
+    size_t nTx = cachedBlock.vtx.size();
+    size_t nSize = GetSerializeSize(cachedBlock, SER_NETWORK, PROTOCOL_VERSION);
+
+    QString strSize = "";
+    if (nSize < 1000000)
+        strSize = QString::number(nSize / 1000.0, 'f', 2) + " KB";
+    else
+        strSize = QString::number(nSize / 1000000.0, 'f', 2) + " MB";
+
+    QString strInfo = "#Tx: " + QString::number(nTx);
+    strInfo += " Block size: " + strSize;
+    ui->labelBlockInfo->setText(strInfo);
+
+    ui->pushButtonMerkleTree->setEnabled(true);
 }
 
 void BlockIndexDetailsDialog::on_tableWidgetTransactions_doubleClicked(const QModelIndex& i)
