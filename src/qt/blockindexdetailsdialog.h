@@ -14,6 +14,7 @@
 #include <vector>
 
 class CBlockIndex;
+class MerkleTreeDialog;
 
 namespace Ui {
 class BlockIndexDetailsDialog;
@@ -47,6 +48,7 @@ private:
     const CBlockIndex* pBlockIndex = nullptr;
     std::vector<CTransactionRef> vtx;
 
+    MerkleTreeDialog* merkleTreeDialog = nullptr;
 };
 
 std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated);

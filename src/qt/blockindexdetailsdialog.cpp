@@ -46,6 +46,8 @@ BlockIndexDetailsDialog::BlockIndexDetailsDialog(QWidget *parent) :
     ui->tableWidgetTransactions->setSelectionBehavior(QAbstractItemView::SelectRows);
     // Select only one row
     ui->tableWidgetTransactions->setSelectionMode(QAbstractItemView::SingleSelection);
+
+    merkleTreeDialog = new MerkleTreeDialog(this);
 }
 
 BlockIndexDetailsDialog::~BlockIndexDetailsDialog()
@@ -127,6 +129,8 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
 
     ui->tableWidgetTransactions->setRowCount(0);
     vtx.clear();
+
+    merkleTreeDialog->close();
 }
 
 void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
@@ -225,9 +229,8 @@ void BlockIndexDetailsDialog::on_pushButtonMerkleTree_clicked()
     bool fMutated = false;
     std::string strTree = MerkleTreeString(vLeaf, fMutated);
 
-    MerkleTreeDialog dialog;
-    dialog.SetTreeString(strTree);
-    dialog.exec();
+    merkleTreeDialog->SetTreeString(strTree);
+    merkleTreeDialog->show();
 }
 
 void BlockIndexDetailsDialog::on_pushButtonCopyHex_clicked()
