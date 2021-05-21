@@ -17,6 +17,7 @@
 class CBlock;
 class PlatformStyle;
 class SidechainDepositConfirmationDialog;
+class SidechainListDelegate;
 class SidechainWithdrawalTableModel;
 class SidechainActivationDialog;
 class SidechainWTPrimeDialog;
@@ -60,6 +61,11 @@ public:
     void setWalletModel(WalletModel *model);
     void setWithdrawalModel(SidechainWithdrawalTableModel *model);
 
+    QString GetSidechainTitle(unsigned int nSidechain) const;
+    QString GetSidechainBalance(unsigned int nSidechain) const;
+    uint8_t GetSelectedSidechain() const;
+    int GetHoveredSidechain() const;
+
 public Q_SLOTS:
     void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance,
                     const CAmount& immatureBalance, const CAmount& watchOnlyBalance,
@@ -82,6 +88,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
     void AnimateAddRemoveIcon();
+    void SidechainListHovered(const QModelIndex& index);
 
 private:
     Ui::SidechainPage *ui;
@@ -110,8 +117,14 @@ private:
 
     // true = +, false = -
     bool fAnimationStatus = false;
+
+    std::vector<Sidechain> vSidechainCache;
+
+    SidechainListDelegate *listdelegate;
+    int nListHover = -1;
 };
 
 QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain);
+
 
 #endif // SIDECHAINPAGE_H

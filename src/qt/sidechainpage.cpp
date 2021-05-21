@@ -33,10 +33,12 @@
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>
 
+#include <QAbstractItemDelegate>
 #include <QApplication>
 #include <QClipboard>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QPainter>
 #include <QScrollBar>
 #include <QStackedWidget>
 #include <QString>
@@ -46,16 +48,101 @@
 
 const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
 
+class SidechainListDelegate : public QAbstractItemDelegate
+{
+    Q_OBJECT
+public:
+    explicit SidechainListDelegate(const PlatformStyle *_platformStyle, const SidechainPage *_sidechainPage,
+                                   QObject *parent=nullptr):
+        QAbstractItemDelegate(parent), unit(BitcoinUnits::BTC),
+        platformStyle(_platformStyle), sidechainPage(_sidechainPage)
+    {
+
+    }
+
+    inline void paint(QPainter *painter, const QStyleOptionViewItem &option,
+                      const QModelIndex &index ) const
+    {
+        painter->save();
+
+        QRect mainRect = option.rect;
+        int xspace = 50 + 8;
+        int ypad = 6;
+        int halfheight = (mainRect.height() - 2*ypad)/2;
+
+        QRect numberRect(mainRect.topLeft(), QSize(50, 80));
+        QRect balanceRect(mainRect.left() + xspace, mainRect.top()+ypad+halfheight, mainRect.width() - xspace, halfheight);
+        QRect titleRect(mainRect.left() + xspace, mainRect.top()+ypad, mainRect.width() - xspace, halfheight);
+
+        QString number = QString::number(index.row());
+        QString title = sidechainPage->GetSidechainTitle(index.row());
+        QString balance = sidechainPage->GetSidechainBalance(index.row());
+
+        // Draw the data
+
+        QRect boundingRect;
+
+        QColor foreground = option.palette.color(QPalette::Text);
+        painter->setPen(foreground);
+        painter->drawText(numberRect, Qt::AlignLeft|Qt::AlignVCenter, number, &boundingRect);
+        painter->drawText(titleRect, Qt::AlignLeft|Qt::AlignVCenter, title);
+
+        painter->setPen(QColor(COLOR_BAREADDRESS));
+        painter->drawText(balanceRect, Qt::AlignLeft|Qt::AlignVCenter, balance);
+
+        // Draw vertical line after sidechain number that isn't the full length
+        // of the rect.
+        QPoint point1 = numberRect.topRight();
+        QPoint point2 = numberRect.bottomRight();
+        point1.ry() += 6;
+        point2.ry() -= 6;
+        painter->setPen(QPen(foreground, 3));
+        painter->drawLine(point1, point2);
+
+        painter->setPen(QPen(COLOR_BAREADDRESS, 1));
+        painter->drawLine(titleRect.bottomLeft(), titleRect.bottomRight());
+
+        painter->setPen(QPen(Qt::black, 2));
+        painter->drawLine(mainRect.bottomLeft(), mainRect.bottomRight());
+
+        // Highlight selected
+        if (index.row() == (int)sidechainPage->GetSelectedSidechain())
+            painter->fillRect(mainRect, QColor(0, 139, 139, 100));
+
+        // Highlight hovered
+        if (index.row() == sidechainPage->GetHoveredSidechain())
+            painter->fillRect(mainRect, QColor(0, 139, 139, 50));
+
+        painter->restore();
+    }
+
+    inline QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+    {
+        return QSize(80, 80);
+    }
+
+    int unit;
+    const PlatformStyle *platformStyle;
+
+    // TODO make a table model for sidechain list and then access model
+    // data using the QModelIndex and roles instead of from the sc page.
+    const SidechainPage *sidechainPage;
+};
+#include <qt/sidechainpage.moc>
+
+
 SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SidechainPage),
-    platformStyle(_platformStyle)
+    platformStyle(_platformStyle),
+    listdelegate(new SidechainListDelegate(platformStyle, this, this))
 {
     ui->setupUi(this);
 
     // Setup sidechain list widget & combo box
-    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
-    SetupSidechainList(vSidechain);
+    ui->listWidgetSidechains->setItemDelegate(listdelegate);
+    vSidechainCache = scdb.GetSidechains();
+    SetupSidechainList(vSidechainCache);
 
     // Initialize deposit confirmation dialog
     depositConfirmationDialog = new SidechainDepositConfirmationDialog(this);
@@ -104,6 +191,12 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     AnimateAddRemoveIcon();
 
     nSelectedSidechain = 0;
+
+    // Track mouse movement so we can highlight hovered sidechain
+    nListHover = false;
+    ui->listWidgetSidechains->setMouseTracking(true);
+    connect(ui->listWidgetSidechains, SIGNAL(entered(const QModelIndex&)), this, SLOT(SidechainListHovered(const QModelIndex&)));
+    connect(ui->listWidgetSidechains, SIGNAL(viewportEntered()), this, SLOT(SidechainListViewportEntered()));
 }
 
 SidechainPage::~SidechainPage()
@@ -116,6 +209,11 @@ void SidechainPage::AnimateAddRemoveIcon()
     QString strIcon = fAnimationStatus ? ":/icons/add" : ":/icons/delete";
     fAnimationStatus = !fAnimationStatus;
     ui->pushButtonAddRemove->setIcon(platformStyle->SingleColorIcon(strIcon));
+}
+
+void SidechainPage::SidechainListHovered(const QModelIndex& index)
+{
+    nListHover = index.row();
 }
 
 void SidechainPage::setClientModel(ClientModel *model)
@@ -203,7 +301,7 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
 
         if (scdb.IsSidechainActive(s.nSidechain)) {
             // Display active sidechain
-            item->setText(FormatSidechainNameWithNumber(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)), s.nSidechain));
+            item->setText(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)));
             QFont font = item->font();
             font.setPointSize(12);
             item->setFont(font);
@@ -214,7 +312,7 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
             item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
 
             // Set text
-            item->setText(FormatSidechainNameWithNumber("Inactive", s.nSidechain));
+            item->setText("Inactive");
             QFont font = item->font();
             font.setPointSize(12);
             item->setFont(font);
@@ -563,8 +661,8 @@ void SidechainPage::numBlocksChanged()
     // deactivated
     //
     // Update sidechain list
-    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
-    SetupSidechainList(vSidechain);
+    vSidechainCache = scdb.GetSidechains();
+    SetupSidechainList(vSidechainCache);
 
     // Update recent deposits table
     UpdateRecentDeposits();
@@ -644,38 +742,43 @@ void SidechainPage::UpdateRecentDeposits()
     ui->tableWidgetRecentDeposits->setUpdatesEnabled(true);
 }
 
-QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain)
+QString SidechainPage::GetSidechainBalance(unsigned int nSidechain) const
 {
-    QString str = "";
+    SidechainCTIP ctip;
+    if (!scdb.GetCTIP(nSidechain, ctip))
+        return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, CAmount(0), false, BitcoinUnits::separatorAlways);
 
-    if (strSidechain.isEmpty() || nSidechain < 0 || nSidechain > SIDECHAIN_ACTIVATION_MAX_ACTIVE)
-        return str;
+    return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, ctip.amount, false, BitcoinUnits::separatorAlways);
+}
 
-    str += QString::number(nSidechain);
+uint8_t SidechainPage::GetSelectedSidechain() const
+{
+    return nSelectedSidechain;
+}
 
-    int nDigits = 1;
-    while (nSidechain /= 10)
-        nDigits++;
+int SidechainPage::GetHoveredSidechain() const
+{
+    return nListHover;
+}
 
-    if (nDigits == 1) {
-        str += ":   ";
+QString SidechainPage::GetSidechainTitle(unsigned int nSidechain) const
+{
+    if (vSidechainCache.empty())
+        return "Inactive";
+    if (nSidechain > SIDECHAIN_ACTIVATION_MAX_ACTIVE)
+        return "Inactive";
+    if (nSidechain >= vSidechainCache.size())
+        return "Inactive";
+
+    QString title = QString::fromStdString(vSidechainCache[nSidechain].title);
+    if (title.isEmpty())
+        title = "Inactive";
+
+    // Cut title down to max 21 characters
+    if (title.size() > 21) {
+        title = title.left(18);
+        title += "...";
     }
-    else
-    if (nDigits == 2) {
-        str += ":  ";
-    }
-    else
-    if (nDigits == 3) {
-        str += ": ";
-    }
 
-    str += strSidechain;
-
-    // Cut number + name down to max 21 characters
-    if (str.size() > 21) {
-        str = str.left(18);
-        str += "...";
-    }
-
-    return str;
+    return title;
 }
