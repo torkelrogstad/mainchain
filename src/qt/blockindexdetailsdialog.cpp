@@ -306,6 +306,7 @@ std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated)
         // Record hash for level
         vTree[level].push_back(h);
     }
+    // Final sweep of right side of tree
     int level = 0;
     while (!(count & (((uint32_t)1) << level))) {
         level++;
@@ -316,18 +317,19 @@ std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated)
         count += (((uint32_t)1) << level);
         level++;
         while (!(count & (((uint32_t)1) << level))) {
-            CHash256().Write(inner[level].begin(), 32).Write(h.begin(), 32).Finalize(h.begin());
-
-            // Add a new level to the tree string vector
             if (level >= (int)vTree.size())
                 vTree.push_back(std::vector<uint256>());
-
-            // Record hash for level
             vTree[level].push_back(h);
 
+            CHash256().Write(inner[level].begin(), 32).Write(h.begin(), 32).Finalize(h.begin());
             level++;
         }
     }
+
+    // If the tree has more than 1 level and the last level has only 1 node,
+    // delete the last level.
+    if (vTree.size() > 1 && vTree.back().size() == 1)
+        vTree.pop_back();
 
     // Add merkle root hash
     vTree.push_back(std::vector<uint256> { h });
