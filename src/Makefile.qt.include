@@ -206,8 +206,7 @@ QT_MOC = \
   qt/callback.moc \
   qt/intro.moc \
   qt/overviewpage.moc \
-  qt/rpcconsole.moc \
-  qt/sidechainpage.moc
+  qt/rpcconsole.moc
 
 QT_QRC_CPP = qt/qrc_drivenet.cpp
 QT_QRC = qt/drivenet.qrc
