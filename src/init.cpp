@@ -1671,6 +1671,7 @@ bool AppInitMain()
                     // We want to read the user's data even if reindexing - this data
                     // was created by the user and is not in any block
                     if (!LoadSidechainProposalCache() ||
+                            !LoadSidechainActivationHashCache() ||
                             !LoadCustomVoteCache() ||
                             !LoadBMMCache())
                     {
