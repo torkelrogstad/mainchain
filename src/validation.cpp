@@ -1837,14 +1837,15 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         }
     }
 
-    // Apply undo to SCDB
-    if (!scdb.Undo(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx, true /* fDebug */)) {
-        error("%s: Failed to undo SCDB data for block: %s!", __func__, block.GetHash().ToString());
+    // Load SCDB undo data from disk
+    if (!ResyncSCDB(pindex->pprev, true /* fDisconnect */)) {
+        error("%s: Failed to re-sync SCDB for disconnected block: %s!", __func__, block.GetHash().ToString());
         return DISCONNECT_FAILED;
     }
 
-    if (!ResyncSCDB(pindex->pprev, true /* fDisconnect */)) {
-        error("%s: Failed to re-sync SCDB for disconnected block: %s!", __func__, block.GetHash().ToString());
+    // Apply undo to SCDB
+    if (!scdb.Undo(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx, true /* fDebug */)) {
+        error("%s: Failed to undo SCDB data for block: %s!", __func__, block.GetHash().ToString());
         return DISCONNECT_FAILED;
     }
 
@@ -2349,8 +2350,22 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     if (!WriteTxIndexDataForBlock(block, state, pindex))
         return false;
 
+    // TODO
+    // Instead of writing the entire vector of sidechains with each block for
+    // undo purposes, store the sidechain only once with LDB and then maintain
+    // only a list of sidechain hashes per block. Then if we need to re-activate
+    // an old sidechain we can look it up by hash.
     SidechainBlockData data;
     data.vWTPrimeStatus = scdb.GetState();
+    data.vActivationStatus = scdb.GetSidechainActivationStatus();
+    data.vSidechain = scdb.GetSidechains();
+
+    if (data.vSidechain.empty()) {
+        // Initialize with blank inactive sidechains
+        data.vSidechain.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+        for (size_t i = 0; i < data.vSidechain.size(); i++)
+            data.vSidechain[i].nSidechain = i;
+    }
 
     if (!psidechaintree->HaveBlockData(block.GetHash()) &&
             !psidechaintree->WriteSidechainBlockData(
@@ -5638,138 +5653,6 @@ void DumpWTPrimeCache()
     LogPrintf("%s: Wrote %u WT^, %u spent, %u failed\n", __func__, nWTPrime, nSpent, nFailed);
 }
 
-bool LoadSidechainActivationStatusCache()
-{
-    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat";
-    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
-    if (filein.IsNull()) {
-        return true;
-    }
-
-    std::vector<SidechainActivationStatus> vActivationStatus;
-    try {
-        uint64_t nVersion;
-        filein >> nVersion;
-        if (nVersion != SCDB_DUMP_VERSION) {
-            return false;
-        }
-
-        int count = 0;
-        filein >> count;
-        for (int i = 0; i < count; i++) {
-            SidechainActivationStatus s;
-            filein >> s;
-            vActivationStatus.push_back(s);
-        }
-    }
-    catch (const std::exception& e) {
-        LogPrintf("%s: Exception: %s\n", __func__, e.what());
-        return false;
-    }
-
-    // Add to SCDB
-    scdb.CacheSidechainActivationStatus(vActivationStatus);
-
-    return true;
-}
-
-void DumpSidechainActivationStatusCache()
-{
-    std::vector<SidechainActivationStatus> vActivationStatus;
-    vActivationStatus = scdb.GetSidechainActivationStatus();
-
-    int count = vActivationStatus.size();
-
-    // Write the sidechain activation status cache
-    fs::path path = GetDataDir() / "drivechain" / "sidechainactivation.dat.new";
-    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
-    if (fileout.IsNull()) {
-        return;
-    }
-
-    try {
-        fileout << SCDB_DUMP_VERSION; // version required to read
-        fileout << count; // Number of sidechains in file
-
-        for (const SidechainActivationStatus& s : vActivationStatus) {
-            fileout << s;
-        }
-    }
-    catch (const std::exception& e) {
-        LogPrintf("%s: Exception: %s\n", __func__, e.what());
-        return;
-    }
-
-    FileCommit(fileout.Get());
-    fileout.fclose();
-    RenameOver(GetDataDir() / "drivechain" / "sidechainactivation.dat.new", GetDataDir() /  "drivechain" / "sidechainactivation.dat");
-
-    LogPrintf("%s: Wrote %u\n", __func__, count);
-}
-
-bool LoadSidechainCache()
-{
-    fs::path path = GetDataDir() / "drivechain" / "sidechains.dat";
-    CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
-    if (filein.IsNull())
-        return true;
-
-    std::vector<Sidechain> vSidechain;
-    try {
-        uint64_t nVersion;
-        filein >> nVersion;
-        if (nVersion != SCDB_DUMP_VERSION)
-            return false;
-
-        int count = 0;
-        filein >> count;
-        for (int i = 0; i < count; i++) {
-            Sidechain sidechain;
-            filein >> sidechain;
-            vSidechain.push_back(sidechain);
-        }
-    }
-    catch (const std::exception& e) {
-        LogPrintf("%s: Exception: %s\n", __func__, e.what());
-        return false;
-    }
-
-    // Add to SCDB
-    scdb.CacheSidechains(vSidechain);
-
-    return true;
-}
-
-void DumpSidechainCache()
-{
-    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
-    int count = vSidechain.size();
-
-    // Write the sidechain cache
-    fs::path path = GetDataDir() / "drivechain" / "sidechains.dat.new";
-    CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
-    if (fileout.IsNull())
-        return;
-
-    try {
-        fileout << SCDB_DUMP_VERSION; // version required to read
-        fileout << count; // Number of sidechains in file
-
-        for (const Sidechain& s : vSidechain) {
-            fileout << s;
-        }
-    }
-    catch (const std::exception& e) {
-        LogPrintf("%s: Exception: %s\n", __func__, e.what());
-    }
-
-    FileCommit(fileout.Get());
-    fileout.fclose();
-    RenameOver(GetDataDir() / "drivechain" / "sidechains.dat.new", GetDataDir() /  "drivechain" / "sidechains.dat");
-
-    LogPrintf("%s: Wrote %u\n", __func__, count);
-}
-
 bool LoadBMMCache()
 {
     fs::path path = GetDataDir() / "drivechain" / "bmm.dat";
@@ -6054,8 +5937,6 @@ void DumpSCDBCache()
     DumpDepositCache();
     DumpCustomVoteCache();
     DumpWTPrimeCache();
-    DumpSidechainActivationStatusCache();
-    DumpSidechainCache();
     DumpSidechainProposalCache();
     DumpSidechainActivationHashCache();
     DumpBMMCache();

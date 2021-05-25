@@ -1425,7 +1425,7 @@ bool AppInitMain()
     if (!fReindex && drivechainsEnabled) {
         uiInterface.InitMessage(_("Loading active sidechain & deposit cache..."));
 
-        if (!LoadSidechainCache() || !LoadDepositCache()) {
+        if (!LoadDepositCache()) {
             // Ask to reindex to fix issue loading DAT
             bool fRet = uiInterface.ThreadSafeQuestion(
                 strFailSCDAT,
@@ -1612,7 +1612,7 @@ bool AppInitMain()
 
                 if (drivechainsEnabled) {
                     scdb.Reset();
-                    if (!fReset && (!LoadSidechainCache() || !LoadWTPrimeCache(fReindex))) {
+                    if (!fReset && (!LoadWTPrimeCache(fReindex))) {
                         // Ask to reindex to fix issue loading DAT
                         bool fRet = uiInterface.ThreadSafeQuestion(
                             strFailSCDAT,
@@ -1647,7 +1647,7 @@ bool AppInitMain()
                 }
 
                 if (drivechainsEnabled && !fReindex) {
-                    if (!LoadSidechainActivationStatusCache() || !LoadDepositCache()) {
+                    if (!LoadDepositCache()) {
                         // Ask to reindex to fix issue loading DAT
                         bool fRet = uiInterface.ThreadSafeQuestion(
                             strFailSCDAT,
@@ -1671,7 +1671,6 @@ bool AppInitMain()
                     // We want to read the user's data even if reindexing - this data
                     // was created by the user and is not in any block
                     if (!LoadSidechainProposalCache() ||
-                            !LoadSidechainActivationHashCache() ||
                             !LoadCustomVoteCache() ||
                             !LoadBMMCache())
                     {

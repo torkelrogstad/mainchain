@@ -188,7 +188,7 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
 {
     // Setup Sidechains list widget
 
-    // If there are no active sidechains, display message
+    // If there are no active sidechains, display message on deposit section
     if (vSidechain.empty())
         ui->stackedWidgetSecondary->setCurrentIndex(1);
     else

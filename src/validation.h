@@ -546,20 +546,9 @@ void DumpDepositCache();
 /** Load the optional WT^ transaction cache from disk. */
 bool LoadWTPrimeCache(bool fReindex = false);
 
-/** Dump the WT^ cache to disk. */
+/** Dump the WT^ cache to disk.
+ * Spent WT^(s), failed WT^(s), WT^ raw transaction cache */
 void DumpWTPrimeCache();
-
-/* Load sidechain activation status cache */
-bool LoadSidechainActivationStatusCache();
-
-/* Dump sidechain activation status cache */
-void DumpSidechainActivationStatusCache();
-
-/* Load sidechain cache */
-bool LoadSidechainCache();
-
-/* Dump sidechain cache */
-void DumpSidechainCache();
 
 /* Load sidechain proposal cache */
 bool LoadSidechainProposalCache();

@@ -1933,6 +1933,9 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
         }
     }
 
+    // TODO print vActivationStatus
+    // TODO print vSidechain
+
     return ret;
 }
 

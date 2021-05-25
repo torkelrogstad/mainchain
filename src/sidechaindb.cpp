@@ -23,6 +23,8 @@ bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockDat
 {
     hashBlockLastSeen = hashBlock;
     vWTPrimeStatus = data.vWTPrimeStatus;
+    vActivationStatus = data.vActivationStatus;
+    vSidechain = data.vSidechain;
 
     // TODO verify SCDB hash matches MT hash commit for block
     return true;
@@ -1490,8 +1492,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                 break;
             }
         }
-        // TODO disabled for test
-        /*
         if (!fFound) {
             if (fDebug)
                 LogPrintf("SCDB %s: Invalid: Sidechain activation commit for unknown proposal.\nProposal hash: %s\n",
@@ -1514,8 +1514,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             }
             return false;
         }
-        */
-
         vActivationHash.push_back(hashSidechain);
     }
     if (!fJustCheck)
@@ -1691,6 +1689,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug)
 {
     // WT^ workscore is recalculated by ResyncSCDB in validation - not here
+    // Sidechain activation is also recalculatied by ResyncSCDB not here.
 
     if (!vtx.size()) {
         LogPrintf("%s: SCDB undo failed for block: %s - vtx is empty!\n", __func__, hashBlock.ToString());
@@ -1727,44 +1726,6 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
         // TODO check return value
         SortSCDBDeposits();
         UpdateCTIP(hashBlock);
-    }
-
-    // TODO
-    // Undo sidechain activation & de-activate a sidechain if it was activated
-    // in the disconnected block. If a sidechain was de-activated then we will
-    // also need to add it back to vActivationStatus and restore it's score
-
-    // Remove sidechain proposals that were committed in the disconnected block
-    for (const CTxOut& out : vtx[0]->vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-
-        if (!scriptPubKey.IsSidechainProposalCommit())
-            continue;
-
-        Sidechain proposal;
-        if (!proposal.DeserializeFromProposalScript(scriptPubKey))
-            continue;
-
-        bool fRemoved = false;
-
-        // Remove from SCDB
-        for (size_t i = 0; i < vActivationStatus.size(); i++) {
-            if (vActivationStatus[i].proposal == proposal) {
-                vActivationStatus[i] = vActivationStatus.back();
-                vActivationStatus.pop_back();
-                fRemoved = true;
-                break;
-            }
-        }
-
-        // TODO If we are disconnecting a block that had a proposal we should
-        // probably actually return an error here if vActivationStatus does
-        // not contain the proposal.
-        if (!fRemoved && vActivationStatus.size()) {
-            LogPrintf("%s: SCDB failed to remove sidechain proposal from block: %s.\n", __func__, hashBlock.ToString());
-            LogPrintf("%s: vActivationStatus size: %u", __func__, vActivationStatus.size());
-            return false;
-        }
     }
 
     // Undo hashBlockLastSeen

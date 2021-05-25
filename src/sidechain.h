@@ -285,6 +285,8 @@ struct SidechainObj {
 struct SidechainBlockData: public SidechainObj {
     std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
     std::vector<SidechainSpentWTPrime> vSpentWTPrime;
+    std::vector<SidechainActivationStatus> vActivationStatus;
+    std::vector<Sidechain> vSidechain;
     uint256 hashMT;
 
     SidechainBlockData(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_BLOCK_OP; }
@@ -297,6 +299,8 @@ struct SidechainBlockData: public SidechainObj {
         READWRITE(sidechainop);
         READWRITE(vWTPrimeStatus);
         READWRITE(vSpentWTPrime);
+        READWRITE(vActivationStatus);
+        READWRITE(vSidechain);
         READWRITE(hashMT);
     }
 
