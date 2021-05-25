@@ -112,6 +112,8 @@ private:
     bool fAnimationStatus = false;
 };
 
-QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain);
+// Format sidechain title for sidechain list.
+// Sidechain number : sidechain title
+QString FormatSidechainTitle(const QString& strSidechain, int nSidechain);
 
 #endif // SIDECHAINPAGE_H

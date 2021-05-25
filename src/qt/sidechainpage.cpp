@@ -203,7 +203,15 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
 
         if (scdb.IsSidechainActive(s.nSidechain)) {
             // Display active sidechain
-            item->setText(FormatSidechainNameWithNumber(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)), s.nSidechain));
+            QString title = FormatSidechainTitle(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)), s.nSidechain);
+
+            SidechainCTIP ctip;
+            if (!scdb.GetCTIP(s.nSidechain, ctip))
+                title += " (" + BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, CAmount(0), false, BitcoinUnits::separatorAlways) + ")";
+            else
+                title += " (" + BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, ctip.amount, false, BitcoinUnits::separatorAlways) + ")";
+
+            item->setText(title);
             QFont font = item->font();
             font.setPointSize(12);
             item->setFont(font);
@@ -214,7 +222,7 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
             item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
 
             // Set text
-            item->setText(FormatSidechainNameWithNumber("Inactive", s.nSidechain));
+            item->setText(FormatSidechainTitle("Inactive", s.nSidechain));
             QFont font = item->font();
             font.setPointSize(12);
             item->setFont(font);
@@ -644,7 +652,7 @@ void SidechainPage::UpdateRecentDeposits()
     ui->tableWidgetRecentDeposits->setUpdatesEnabled(true);
 }
 
-QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain)
+QString FormatSidechainTitle(const QString& strSidechain, int nSidechain)
 {
     QString str = "";
 
@@ -671,11 +679,15 @@ QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechai
 
     str += strSidechain;
 
-    // Cut number + name down to max 21 characters
-    if (str.size() > 21) {
-        str = str.left(18);
+    // Cut number + name down to max 15 characters
+    if (str.size() > 15) {
+        str = str.left(12);
         str += "...";
     }
+
+    // Make all titles the same length before we append the balance
+    while (str.size() < 15)
+        str.append(" ");
 
     return str;
 }
