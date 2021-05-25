@@ -299,7 +299,7 @@ bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime, uint8_t& nSidechain) con
         return false;
 
     hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
-    nSidechain = (*this)[38];
+    nSidechain = (*this)[37];
 
     if (hashWTPrime.IsNull())
         return false;
