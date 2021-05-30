@@ -154,12 +154,12 @@ void SidechainEscrowTableModel::updateModel()
 
         // Sidechain deposit address
         CKeyID sidechainKeyID;
-        sidechainKeyID.SetHex(s.sidechainKeyID);
+        sidechainKeyID.SetHex(s.strKeyID);
         CSidechainAddress address;
         address.Set(sidechainKeyID);
 
         object.address = QString::fromStdString(address.ToString());
-        object.privKey = QString::fromStdString(s.sidechainPriv);
+        object.privKey = QString::fromStdString(s.strPrivKey);
 
         // Get the sidechain CTIP info
         SidechainCTIP ctip;
@@ -199,12 +199,12 @@ void SidechainEscrowTableModel::AddDemoData()
 
         // Sidechain deposit address
         CKeyID sidechainKeyID;
-        sidechainKeyID.SetHex(s.sidechainKeyID);
+        sidechainKeyID.SetHex(s.strKeyID);
         CSidechainAddress address;
         address.Set(sidechainKeyID);
 
         object.address = QString::fromStdString(address.ToString());
-        object.privKey = QString::fromStdString(s.sidechainPriv);
+        object.privKey = QString::fromStdString(s.strPrivKey);
 
         // Add demo CTIP data
         object.CTIPIndex = QString::number(s.nSidechain % 2 == 0 ? 0 : 1);

@@ -3590,7 +3590,7 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
 
     // nSidechain
     unsigned int nSidechain = request.params[0].get_int();
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!scdb.IsSidechainActive(nSidechain)) {
         std::string strError = "Invalid sidechain number";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
@@ -3725,7 +3725,7 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
     // nSidechain
     int nSidechain = request.params[3].get_int();
 
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
     {
         std::string strError = "Invalid Sidechain number";
         LogPrintf("%s: %s\n", __func__, strError);

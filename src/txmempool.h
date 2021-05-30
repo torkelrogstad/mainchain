@@ -522,7 +522,7 @@ public:
 
     void UpdateCTIPFromMempool(const std::map<uint8_t, SidechainCTIP>& mapCTIP);
 
-    void UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fDisconnect, bool fJustCheck = false);
+    void UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& mapCTIP, bool fDisconnect);
 
     bool GetMemPoolCTIP(uint8_t nSidechain, SidechainCTIP& ctip) const;
 
@@ -551,6 +551,7 @@ public:
     std::map<uint256, CAmount> mapDeltas;
 
     std::map<uint8_t, SidechainCTIP> mapLastSidechainDeposit;
+    std::map<uint8_t, uint256> mapActiveSidechain;
 
     /** Create a new CTxMemPool.
      */

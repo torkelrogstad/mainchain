@@ -437,14 +437,17 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         //
         // If we commit a proposal, save the hash to easily ACK it later
         uint256 hashProposal;
-        std::vector<SidechainProposal> vProposal = scdb.GetSidechainProposals();
+        std::vector<Sidechain> vProposal = scdb.GetSidechainProposals();
         if (!vProposal.empty()) {
             std::vector<SidechainActivationStatus> vActivation = scdb.GetSidechainActivationStatus();
-            for (const SidechainProposal& p : vProposal) {
-                // Check if this proposal is already being tracked by SCDB
+            for (const Sidechain& p : vProposal) {
+                // Check if this proposal is unique
                 bool fFound = false;
                 for (const SidechainActivationStatus& s : vActivation) {
-                    if (s.proposal == p) {
+                    if (s.proposal.title == p.title ||
+                            s.proposal.strKeyID == p.strKeyID ||
+                            s.proposal.scriptPubKey == p.scriptPubKey ||
+                            s.proposal.strPrivKey == p.strPrivKey) {
                         fFound = true;
                         break;
                     }
@@ -467,13 +470,15 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         // which we have configured to ACK
         std::vector<SidechainActivationStatus> vActivationStatus;
         vActivationStatus = scdb.GetSidechainActivationStatus();
+        std::map<uint8_t, bool> mapCommit;
         for (const SidechainActivationStatus& s : vActivationStatus) {
-            if (fAnySidechain || scdb.GetActivateSidechain(s.proposal.GetHash()))
-                GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash(), chainparams.GetConsensus());
-        }
-        // If we've proposed a sidechain in this block, ACK it
-        if (!hashProposal.IsNull()) {
-            GenerateSidechainActivationCommitment(*pblock, hashProposal, chainparams.GetConsensus());
+            if (fAnySidechain || scdb.GetAckSidechain(s.proposal.GetHash())) {
+                // Don't generate more than one commit for the same SC #
+                if (mapCommit.find(s.proposal.nSidechain) == mapCommit.end()) {
+                    GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash(), chainparams.GetConsensus());
+                    mapCommit[s.proposal.nSidechain] = true;
+                }
+            }
         }
     }
 
@@ -650,7 +655,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
 #ifdef ENABLE_WALLET
     if (!scdb.HasState())
         return false;
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!scdb.IsSidechainActive(nSidechain))
         return false;
 
     Sidechain sidechain;
@@ -700,10 +705,8 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     // Calculate the amount to be withdrawn by WT^
     CAmount amountWithdrawn = CAmount(0);
     for (const CTxOut& out : mtx.vout) {
-        const CScript scriptPubKey = out.scriptPubKey;
-        if (HexStr(scriptPubKey) != sidechain.sidechainHex) {
+        if (out.scriptPubKey != sidechain.scriptPubKey)
             amountWithdrawn += out.nValue;
-        }
     }
 
     // Add mainchain fees from WT(s)
@@ -744,7 +747,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
         return false;
 
     CBitcoinSecret vchSecret;
-    bool fGood = vchSecret.SetString(sidechain.sidechainPriv);
+    bool fGood = vchSecret.SetString(sidechain.strPrivKey);
     if (!fGood)
         return false;
 

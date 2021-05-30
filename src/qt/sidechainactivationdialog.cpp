@@ -71,6 +71,9 @@ SidechainActivationDialog::SidechainActivationDialog(const PlatformStyle *_platf
     // Disable word wrap
     ui->tableViewEscrow->setWordWrap(false);
 
+    proposalDialog = new SidechainProposalDialog(platformStyle);
+    proposalDialog->setParent(this, Qt::Window);
+
     ui->pushButtonActivate->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
     ui->pushButtonReject->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_conflicted"));
     ui->pushButtonHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
@@ -89,7 +92,7 @@ void SidechainActivationDialog::on_pushButtonActivate_clicked()
     for (int i = 0; i < selected.size(); i++) {
         uint256 hash;
         if (activationModel->GetHashAtRow(selected[i].row(), hash))
-            scdb.CacheSidechainHashToActivate(hash);
+            scdb.CacheSidechainHashToAck(hash);
     }
 }
 
@@ -100,7 +103,7 @@ void SidechainActivationDialog::on_pushButtonReject_clicked()
     for (int i = 0; i < selected.size(); i++) {
         uint256 hash;
         if (activationModel->GetHashAtRow(selected[i].row(), hash))
-            scdb.RemoveSidechainHashToActivate(hash);
+            scdb.RemoveSidechainHashToAck(hash);
     }
 }
 
@@ -120,8 +123,5 @@ void SidechainActivationDialog::on_pushButtonHelp_clicked()
 
 void SidechainActivationDialog::on_pushButtonCreate_clicked()
 {
-    if (platformStyle) {
-        SidechainProposalDialog dialog(platformStyle);
-        dialog.exec();
-    }
+    proposalDialog->show();
 }

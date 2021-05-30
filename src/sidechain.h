@@ -10,28 +10,35 @@
 
 #include <array>
 
-// These are the temporary values to speed things up during testing
-static const int SIDECHAIN_VERIFICATION_PERIOD = 300;
-static const int SIDECHAIN_MIN_WORKSCORE = 140;
-
 // These are the values that will be used in the final release
-//static const int SIDECHAIN_VERIFICATION_PERIOD = 26298;
-//static const int SIDECHAIN_MIN_WORKSCORE = 13140;
+//static const int SIDECHAIN_VERIFICATION_PERIOD = 26300;
+//static const int SIDECHAIN_MIN_WORKSCORE = 13150;
+//static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 201;
+//static const int SIDECHAIN_ACTIVATION_PERIOD = 2016;
 
-//! Sidechain deposit fee (TODO make configurable per sidechain)
-static const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
+// These are temporary WT^ verification values to speed things up during testing
+
+//! The number of blocks that a WT^ has to acheieve minimum work score votes
+static const int SIDECHAIN_VERIFICATION_PERIOD = 263;
+
+//! The minimum workscore votes for a WT^ to be paid out.
+static const int SIDECHAIN_MIN_WORKSCORE = 131;
 
 //! Max number of failures (blocks without commits) for a sidechain to activate
-static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 32;
-//! The amount of time a sidechain has to activate
-static const int SIDECHAIN_ACTIVATION_MAX_AGE = 64;
-//! The number of sidechains which may be signaled for activation at once
-static const int SIDECHAIN_ACTIVATION_MAX_SIGNALS = 32;
+static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 2;
+
+//! The number of blocks in a sidechain activation period
+static const int SIDECHAIN_ACTIVATION_PERIOD = 20;
+
+//! The number of blocks in a sidechain replacement period
+static const int SIDECHAIN_REPLACEMENT_PERIOD = SIDECHAIN_MIN_WORKSCORE;
+
 //! The number of sidechains which may be active at once
 static const int SIDECHAIN_ACTIVATION_MAX_ACTIVE = 256;
 
 //! The current sidechain version
 static const int SIDECHAIN_VERSION_CURRENT = 0;
+
 //! The max supported sidechain version
 static const int SIDECHAIN_VERSION_MAX = 0;
 
@@ -41,36 +48,83 @@ static const char DB_SIDECHAIN_BLOCK_OP = 'S';
 //! The destination string for the change of a WT^
 static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
 
-struct SidechainProposal {
+struct Sidechain {
+    bool fActive;
+    uint8_t nSidechain;
     int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
+    std::string strKeyID;
+    std::string strPrivKey;
+    CScript scriptPubKey;
     std::string title;
     std::string description;
-    std::string sidechainKeyID;
-    std::string sidechainHex;
-    std::string sidechainPriv;
     uint256 hashID1;
     uint160 hashID2;
 
-    bool DeserializeFromScript(const CScript& script);
+    Sidechain()
+    {
+        fActive = false;
+        nSidechain = 0;
+        nVersion = SIDECHAIN_VERSION_CURRENT;
+        strKeyID = "";
+        strPrivKey = "";
+        scriptPubKey.clear();
+        title = "";
+        description = "";
+        hashID1.SetNull();
+        hashID2.SetNull();
+    }
 
-    std::vector<unsigned char> GetBytes() const;
-    CScript GetScript() const;
-    uint256 GetHash() const;
-    bool operator==(const SidechainProposal& proposal) const;
+    bool operator==(const Sidechain& s) const;
+    std::string GetSidechainName() const;
     std::string ToString() const;
+    uint256 GetHash() const;
+
+    // Sidechain proposal script functions
+    bool DeserializeFromProposalScript(const CScript& script);
+    CScript GetProposalScript() const;
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(fActive);
+        READWRITE(nSidechain);
         READWRITE(nVersion);
+        READWRITE(strKeyID);
+        READWRITE(strPrivKey);
+        READWRITE(scriptPubKey);
         READWRITE(title);
         READWRITE(description);
-        READWRITE(sidechainKeyID);
-        READWRITE(sidechainHex);
-        READWRITE(sidechainPriv);
         READWRITE(hashID1);
         READWRITE(hashID2);
+    }
+
+    // This is the same as normal serialization but without fActive
+    template <typename Stream>
+    inline void SerializeProposal(Stream& s) {
+        s << nSidechain;
+        s << nVersion;
+        s << strKeyID;
+        s << strPrivKey;
+        s << scriptPubKey;
+        s << title;
+        s << description;
+        s << hashID1;
+        s << hashID2;
+    }
+
+    // This is the same as normal serialization but without fActive
+    template <typename Stream>
+    inline void DeserializeProposal(Stream& s) {
+        s >> nSidechain;
+        s >> nVersion;
+        s >> strKeyID;
+        s >> strPrivKey;
+        s >> scriptPubKey;
+        s >> title;
+        s >> description;
+        s >> hashID1;
+        s >> hashID2;
     }
 };
 
@@ -78,7 +132,7 @@ struct SidechainActivationStatus
 {
     int nAge;
     int nFail;
-    SidechainProposal proposal;
+    Sidechain proposal;
 
     uint256 GetHash() const;
 
@@ -89,39 +143,6 @@ struct SidechainActivationStatus
         READWRITE(nAge);
         READWRITE(nFail);
         READWRITE(proposal);
-    }
-};
-
-struct Sidechain {
-    int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
-    uint8_t nSidechain;
-    std::string sidechainKeyID;
-    std::string sidechainPriv;
-    std::string sidechainHex;
-    std::string title;
-    std::string description;
-    uint256 hashID1;
-    uint160 hashID2;
-
-    std::string GetSidechainName() const;
-    bool operator==(const Sidechain& a) const;
-    bool operator==(const SidechainProposal& a) const;
-    std::string ToString() const;
-    uint256 GetHash() const;
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(nVersion);
-        READWRITE(nSidechain);
-        READWRITE(sidechainKeyID);
-        READWRITE(sidechainPriv);
-        READWRITE(sidechainHex);
-        READWRITE(title);
-        READWRITE(description);
-        READWRITE(hashID1);
-        READWRITE(hashID2);
     }
 };
 
@@ -264,6 +285,8 @@ struct SidechainObj {
 struct SidechainBlockData: public SidechainObj {
     std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
     std::vector<SidechainSpentWTPrime> vSpentWTPrime;
+    std::vector<SidechainActivationStatus> vActivationStatus;
+    std::vector<Sidechain> vSidechain;
     uint256 hashMT;
 
     SidechainBlockData(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_BLOCK_OP; }
@@ -276,6 +299,8 @@ struct SidechainBlockData: public SidechainObj {
         READWRITE(sidechainop);
         READWRITE(vWTPrimeStatus);
         READWRITE(vSpentWTPrime);
+        READWRITE(vActivationStatus);
+        READWRITE(vSidechain);
         READWRITE(hashMT);
     }
 

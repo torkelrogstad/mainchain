@@ -32,6 +32,7 @@ HashCalcDialog::HashCalcDialog(const PlatformStyle *_platformStyle, QWidget *par
     // Set icons
     ui->pushButtonClear->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
     ui->pushButtonPaste->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
+    ui->pushButtonFlip->setIcon(platformStyle->SingleColorIcon(":/icons/flip"));
 
     ui->pushButtonHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pushButtonHelpInvalidHex->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
@@ -40,6 +41,8 @@ HashCalcDialog::HashCalcDialog(const PlatformStyle *_platformStyle, QWidget *par
 
     // Make text browsers transparent
     ui->textBrowserHex->setStyleSheet("background: rgb(0,0,0,0)");
+
+    ui->pushButtonFlip->setEnabled(false);
 }
 
 HashCalcDialog::~HashCalcDialog()
@@ -128,6 +131,8 @@ void HashCalcDialog::on_radioButtonHex_toggled(bool fChecked)
         ShowInvalidHexWarning(false);
         UpdateOutput();
     }
+
+    ui->pushButtonFlip->setEnabled(fChecked);
 }
 
 void HashCalcDialog::ShowInvalidHexWarning(bool fShow)
@@ -225,4 +230,22 @@ void HashCalcDialog::UpdateOutput()
 
     // Scroll to bottom
     ui->textBrowserHex->verticalScrollBar()->setValue(ui->textBrowserHex->verticalScrollBar()->maximum());
+}
+
+void HashCalcDialog::on_pushButtonFlip_clicked()
+{
+    const std::string str = ui->plainTextEdit->toPlainText().toStdString();
+
+    if (str.empty())
+        return;
+
+    std::vector<unsigned char> vBytes = ParseHex(str);
+
+    if (vBytes.empty())
+        return;
+
+    std::reverse(vBytes.begin(), vBytes.end());
+
+    ui->plainTextEdit->clear();
+    ui->plainTextEdit->insertPlainText(QString::fromStdString(HexStr(vBytes.begin(), vBytes.end())));
 }

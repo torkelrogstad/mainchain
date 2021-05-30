@@ -67,7 +67,9 @@ BOOST_AUTO_TEST_CASE(bmm_commit)
     GenerateCriticalHashCommitments(block, Params().GetConsensus());
 
     // Check that the commit has been generated
-    BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsCriticalHashCommit());
+    uint256 hashCritical;
+    BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsCriticalHashCommit(hashCritical));
+    BOOST_CHECK(hashCritical == criticalData.hashCritical);
 }
 
 

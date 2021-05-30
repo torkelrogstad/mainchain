@@ -3074,7 +3074,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
 {
     strFail = "Unknown error!";
 
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!scdb.IsSidechainActive(nSidechain)) {
         strFail = "Invalid Sidechain number!\n";
         return false;
     }
@@ -3201,7 +3201,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     // Sign the sidechain utxo if we need to
     if (returnAmount > CAmount(0)) {
         CBitcoinSecret vchSecret;
-        bool fGood = vchSecret.SetString(sidechain.sidechainPriv);
+        bool fGood = vchSecret.SetString(sidechain.strPrivKey);
         if (!fGood) {
             strFail = "Invalid sidechain private key encoding!\n";
             return false;

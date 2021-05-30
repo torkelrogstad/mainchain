@@ -16,7 +16,7 @@
 #include <qt/sidechaindepositconfirmationdialog.h>
 #include <qt/sidechainwtprimedialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
-#include <qt/sidechainwtprimedetails.h>
+#include <qt/txdetails.h>
 #include <qt/walletmodel.h>
 
 #include <base58.h>
@@ -44,6 +44,8 @@
 
 #include <sstream>
 
+const CAmount SIDECHAIN_DEPOSIT_FEE = 0.00001 * COIN;
+
 SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SidechainPage),
@@ -52,7 +54,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     ui->setupUi(this);
 
     // Setup sidechain list widget & combo box
-    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
     SetupSidechainList(vSidechain);
 
     // Initialize deposit confirmation dialog
@@ -186,7 +188,7 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
 {
     // Setup Sidechains list widget
 
-    // If there are no active sidechains, display message
+    // If there are no active sidechains, display message on deposit section
     if (vSidechain.empty())
         ui->stackedWidgetSecondary->setCurrentIndex(1);
     else
@@ -199,36 +201,45 @@ void SidechainPage::SetupSidechainList(const std::vector<Sidechain>& vSidechain)
     for (const Sidechain& s : vSidechain) {
         QListWidgetItem *item = new QListWidgetItem(ui->listWidgetSidechains);
 
-        // Set text
-        item->setText(FormatSidechainNameWithNumber(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)), s.nSidechain));
-        QFont font = item->font();
-        font.setPointSize(12);
-        item->setFont(font);
+        if (scdb.IsSidechainActive(s.nSidechain)) {
+            // Display active sidechain
+            QString title = FormatSidechainTitle(QString::fromStdString(scdb.GetSidechainName(s.nSidechain)), s.nSidechain);
 
-        ui->listWidgetSidechains->addItem(item);
+            SidechainCTIP ctip;
+            if (!scdb.GetCTIP(s.nSidechain, ctip))
+                title += " (" + BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, CAmount(0), false, BitcoinUnits::separatorAlways) + ")";
+            else
+                title += " (" + BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, ctip.amount, false, BitcoinUnits::separatorAlways) + ")";
+
+            item->setText(title);
+            QFont font = item->font();
+            font.setPointSize(12);
+            item->setFont(font);
+
+            ui->listWidgetSidechains->addItem(item);
+        } else {
+            // Display inactive sidechain slot
+            item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+
+            // Set text
+            item->setText(FormatSidechainTitle("Inactive", s.nSidechain));
+            QFont font = item->font();
+            font.setPointSize(12);
+            item->setFont(font);
+
+            ui->listWidgetSidechains->addItem(item);
+        }
     }
 
-    // Pad list with disabled items to represent inactive sidechains
-    int nInactive = SIDECHAIN_ACTIVATION_MAX_ACTIVE - vSidechain.size();
-
-    for (int i = 0; i < nInactive; i++) {
-        QListWidgetItem *item = new QListWidgetItem(ui->listWidgetSidechains);
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-
-        // Set text
-        item->setText(FormatSidechainNameWithNumber("Inactive", vSidechain.size() + i));
-        QFont font = item->font();
-        font.setPointSize(12);
-        item->setFont(font);
-
-        ui->listWidgetSidechains->addItem(item);
+    // If the highlighted sidechain number is inactive, highlight the first
+    // active sidechain in the list.
+    if (!scdb.IsSidechainActive(nSelectedSidechain)) {
+        std::vector<Sidechain> vActive = scdb.GetActiveSidechains();
+        if (vActive.size())
+            nSelectedSidechain = vActive.front().nSidechain;
     }
 
-    // If any sidechains are active but no sidechain is highlighted then
-    // highlight sidechain #0. Otherwise re-highlight the selected sidechain.
-    if (vSidechain.size()) {
-        ui->listWidgetSidechains->setCurrentRow(nSelectedSidechain);
-    }
+    ui->listWidgetSidechains->setCurrentRow(nSelectedSidechain);
 }
 
 void SidechainPage::on_pushButtonDeposit_clicked()
@@ -237,7 +248,7 @@ void SidechainPage::on_pushButtonDeposit_clicked()
 
     unsigned int nSidechain = nSelectedSidechain;
 
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!scdb.IsSidechainActive(nSidechain)) {
         // Should never be displayed
         messageBox.setWindowTitle("Invalid sidechain selected");
         messageBox.exec();
@@ -265,8 +276,6 @@ void SidechainPage::on_pushButtonDeposit_clicked()
         messageBox.exec();
         return;
     }
-
-    // TODO work with non keyID addresses
 
     // Get the destination string from the sidechain deposit address
     std::string strDest = "";
@@ -390,7 +399,7 @@ void SidechainPage::on_pushButtonClear_clicked()
 
 void SidechainPage::on_listWidgetSidechains_currentRowChanged(int nRow)
 {
-    if (nRow < 0 || nRow > (int)vSidechainCache.size())
+    if (nRow < 0 || nRow >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return;
 
     nSelectedSidechain = nRow;
@@ -406,12 +415,14 @@ void SidechainPage::on_listWidgetSidechains_currentRowChanged(int nRow)
 void SidechainPage::on_listWidgetSidechains_doubleClicked(const QModelIndex& i)
 {
     // On double click show sidechain details
-    if (i.row() >= (int)vSidechainCache.size())
+    if (i.row() >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return;
 
-    Sidechain s = vSidechainCache[i.row()];
+    Sidechain sidechain;
+    if (!scdb.GetSidechain(i.row(), sidechain))
+        return;
 
-    SidechainDetailsDialog dialog(s);
+    SidechainDetailsDialog dialog(sidechain);
     dialog.exec();
 }
 
@@ -440,7 +451,7 @@ void SidechainPage::on_tableViewWT_doubleClicked(const QModelIndex& index)
         return;
     }
 
-    SidechainWTPrimeDetails detailsDialog;
+    TxDetails detailsDialog;
     detailsDialog.SetTransaction(mtx);
 
     detailsDialog.exec();
@@ -548,17 +559,6 @@ void SidechainPage::on_pushButtonRecentDepositHelp_clicked()
         QMessageBox::Ok);
 }
 
-
-void SidechainPage::CheckForSidechainUpdates()
-{
-    std::vector<Sidechain> vSidechainNew = scdb.GetActiveSidechains();
-    if (vSidechainNew != vSidechainCache) {
-        vSidechainCache = vSidechainNew;
-
-        SetupSidechainList(vSidechainNew);
-    }
-}
-
 void SidechainPage::gotoWTPage()
 {
     // Go to the WT^ table
@@ -567,8 +567,12 @@ void SidechainPage::gotoWTPage()
 
 void SidechainPage::numBlocksChanged()
 {
-    // Check for sidechain activation updates
-    CheckForSidechainUpdates();
+    // TODO only update sidechain list when a sidechain is activated or
+    // deactivated
+    //
+    // Update sidechain list
+    std::vector<Sidechain> vSidechain = scdb.GetSidechains();
+    SetupSidechainList(vSidechain);
 
     // Update recent deposits table
     UpdateRecentDeposits();
@@ -648,7 +652,7 @@ void SidechainPage::UpdateRecentDeposits()
     ui->tableWidgetRecentDeposits->setUpdatesEnabled(true);
 }
 
-QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain)
+QString FormatSidechainTitle(const QString& strSidechain, int nSidechain)
 {
     QString str = "";
 
@@ -675,11 +679,15 @@ QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechai
 
     str += strSidechain;
 
-    // Cut number + name down to max 21 characters
-    if (str.size() > 21) {
-        str = str.left(18);
+    // Cut number + name down to max 15 characters
+    if (str.size() > 15) {
+        str = str.left(12);
         str += "...";
     }
+
+    // Make all titles the same length before we append the balance
+    while (str.size() < 15)
+        str.append(" ");
 
     return str;
 }

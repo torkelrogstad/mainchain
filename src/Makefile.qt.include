@@ -97,6 +97,8 @@ QT_TS = \
 QT_FORMS_UI = \
   qt/forms/addressbookpage.ui \
   qt/forms/askpassphrasedialog.ui \
+  qt/forms/blockexplorer.ui \
+  qt/forms/blockindexdetailsdialog.ui \
   qt/forms/coincontroldialog.ui \
   qt/forms/coinsplitconfirmationdialog.ui \
   qt/forms/editaddressdialog.ui \
@@ -106,6 +108,7 @@ QT_FORMS_UI = \
   qt/forms/openuridialog.ui \
   qt/forms/optionsdialog.ui \
   qt/forms/paymentrequestdialog.ui \
+  qt/forms/merkletreedialog.ui \
   qt/forms/miningdialog.ui \
   qt/forms/overviewpage.ui \
   qt/forms/receivecoinsdialog.ui \
@@ -120,16 +123,19 @@ QT_FORMS_UI = \
   qt/forms/sidechainpage.ui \
   qt/forms/sidechainproposaldialog.ui \
   qt/forms/sidechainwtprimedialog.ui \
-  qt/forms/sidechainwtprimedetails.ui \
   qt/forms/signverifymessagedialog.ui \
   qt/forms/transactiondescdialog.ui \
-  qt/forms/transactionreplaydialog.ui
+  qt/forms/transactionreplaydialog.ui \
+  qt/forms/txdetails.ui
 
 QT_MOC_CPP = \
   qt/moc_addressbookpage.cpp \
   qt/moc_addresstablemodel.cpp \
   qt/moc_askpassphrasedialog.cpp \
   qt/moc_bantablemodel.cpp \
+  qt/moc_blockexplorer.cpp \
+  qt/moc_blockexplorertablemodel.cpp \
+  qt/moc_blockindexdetailsdialog.cpp \
   qt/moc_drivenetaddressvalidator.cpp \
   qt/moc_drivenetamountfield.cpp \
   qt/moc_drivenetgui.cpp \
@@ -147,6 +153,7 @@ QT_MOC_CPP = \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
   qt/moc_miningdialog.cpp \
+  qt/moc_merkletreedialog.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
   qt/moc_optionsdialog.cpp \
@@ -174,7 +181,6 @@ QT_MOC_CPP = \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainwithdrawaltablemodel.cpp \
   qt/moc_sidechainwtprimedialog.cpp \
-  qt/moc_sidechainwtprimedetails.cpp \
   qt/moc_signverifymessagedialog.cpp \
   qt/moc_splashscreen.cpp \
   qt/moc_trafficgraphwidget.cpp \
@@ -184,6 +190,7 @@ QT_MOC_CPP = \
   qt/moc_transactionreplaydialog.cpp \
   qt/moc_transactiontablemodel.cpp \
   qt/moc_transactionview.cpp \
+  qt/moc_txdetails.cpp \
   qt/moc_utilitydialog.cpp \
   qt/moc_walletframe.cpp \
   qt/moc_walletmodel.cpp \
@@ -215,6 +222,9 @@ DRIVENET_QT_H = \
   qt/addresstablemodel.h \
   qt/askpassphrasedialog.h \
   qt/bantablemodel.h \
+  qt/blockexplorer.h \
+  qt/blockexplorertablemodel.h \
+  qt/blockindexdetailsdialog.h \
   qt/drivenetaddressvalidator.h \
   qt/drivenetamountfield.h \
   qt/drivenetgui.h \
@@ -233,6 +243,7 @@ DRIVENET_QT_H = \
   qt/macdockiconhandler.h \
   qt/macnotificationhandler.h \
   qt/miningdialog.h \
+  qt/merkletreedialog.h \
   qt/networkstyle.h \
   qt/notificator.h \
   qt/openuridialog.h \
@@ -263,7 +274,6 @@ DRIVENET_QT_H = \
   qt/sidechainpage.h \
   qt/sidechainwithdrawaltablemodel.h \
   qt/sidechainwtprimedialog.h \
-  qt/sidechainwtprimedetails.h \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
   qt/trafficgraphwidget.h \
@@ -274,6 +284,7 @@ DRIVENET_QT_H = \
   qt/transactionrecord.h \
   qt/transactiontablemodel.h \
   qt/transactionview.h \
+  qt/txdetails.h \
   qt/utilitydialog.h \
   qt/walletframe.h \
   qt/walletmodel.h \
@@ -313,6 +324,7 @@ RES_ICONS = \
   qt/res/icons/eye_minus.png \
   qt/res/icons/eye_plus.png \
   qt/res/icons/filesave.png \
+  qt/res/icons/flip.png \
   qt/res/icons/fontbigger.png \
   qt/res/icons/fontsmaller.png \
   qt/res/icons/hd_disabled.png \
@@ -350,6 +362,7 @@ RES_ICONS = \
   qt/res/icons/replay_split.png \
   qt/res/icons/replay_replayed.png \
   qt/res/icons/replay_loaded.png \
+  qt/res/icons/search.png \
   qt/res/qdarkstyle/rc/up_arrow_disabled.png \
   qt/res/qdarkstyle/rc/Hmovetoolbar.png \
   qt/res/qdarkstyle/rc/stylesheet-branch-end.png \
@@ -423,10 +436,14 @@ DRIVENET_QT_WALLET_CPP = \
   qt/addressbookpage.cpp \
   qt/addresstablemodel.cpp \
   qt/askpassphrasedialog.cpp \
+  qt/blockexplorer.cpp \
+  qt/blockexplorertablemodel.cpp \
+  qt/blockindexdetailsdialog.cpp \
   qt/coincontroldialog.cpp \
   qt/coincontroltreewidget.cpp \
   qt/coinsplitconfirmationdialog.cpp \
   qt/editaddressdialog.cpp \
+  qt/merkletreedialog.cpp \
   qt/miningdialog.cpp \
   qt/openuridialog.cpp \
   qt/overviewpage.cpp \
@@ -449,7 +466,6 @@ DRIVENET_QT_WALLET_CPP = \
   qt/sidechainproposaldialog.cpp \
   qt/sidechainwtprimedialog.cpp \
   qt/sidechainwithdrawaltablemodel.cpp \
-  qt/sidechainwtprimedetails.cpp \
   qt/signverifymessagedialog.cpp \
   qt/transactiondesc.cpp \
   qt/transactiondescdialog.cpp \
@@ -458,6 +474,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/transactionrecord.cpp \
   qt/transactiontablemodel.cpp \
   qt/transactionview.cpp \
+  qt/txdetails.cpp \
   qt/walletframe.cpp \
   qt/walletmodel.cpp \
   qt/walletmodeltransaction.cpp \

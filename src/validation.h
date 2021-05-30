@@ -451,7 +451,7 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
 /** Produce WT^ hash coinbase commitment for a block */
 void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, const uint8_t nSidechain, const Consensus::Params& consensusParams);
 
-void GenerateSidechainProposalCommitment(CBlock& block, const SidechainProposal& sidechain, const Consensus::Params& consensusParams);
+void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams);
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams);
 
@@ -546,20 +546,9 @@ void DumpDepositCache();
 /** Load the optional WT^ transaction cache from disk. */
 bool LoadWTPrimeCache(bool fReindex = false);
 
-/** Dump the WT^ cache to disk. */
+/** Dump the WT^ cache to disk.
+ * Spent WT^(s), failed WT^(s), WT^ raw transaction cache */
 void DumpWTPrimeCache();
-
-/* Load sidechain activation status cache */
-bool LoadSidechainActivationStatusCache();
-
-/* Dump sidechain activation status cache */
-void DumpSidechainActivationStatusCache();
-
-/* Load active sidechain cache */
-bool LoadActiveSidechainCache();
-
-/* Dump active sidechain cache */
-void DumpActiveSidechainCache();
 
 /* Load sidechain proposal cache */
 bool LoadSidechainProposalCache();
@@ -587,9 +576,6 @@ bool GetTxOutProof(const uint256& txid, const uint256& hashBlock, std::string& s
 
 /** Verify txout proof */
 bool VerifyTxOutProof(const std::string& strProof);
-
-/** Verify that nSidechain refers to an active sidechain */
-bool IsSidechainNumberValid(uint8_t nSidechain);
 
 /** Flush SCDB cache data to disk */
 void DumpSCDBCache();

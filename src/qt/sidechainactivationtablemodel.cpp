@@ -19,6 +19,8 @@ Q_DECLARE_METATYPE(SidechainActivationTableObject)
 SidechainActivationTableModel::SidechainActivationTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
+    // TODO update only when block connected or sidechain votes changed.
+
     // This timer will be fired repeatedly to update the model
     pollTimer = new QTimer(this);
     connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateModel()));
@@ -32,7 +34,7 @@ int SidechainActivationTableModel::rowCount(const QModelIndex & /*parent*/) cons
 
 int SidechainActivationTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 9;
+    return 10;
 }
 
 QVariant SidechainActivationTableModel::data(const QModelIndex &index, int role) const
@@ -54,44 +56,49 @@ QVariant SidechainActivationTableModel::data(const QModelIndex &index, int role)
     {
         // Vote / activation choice
         if (col == 0) {
-            return (object.fActivate ? "ACK" : "NACK");
+            return (object.fAck ? "ACK" : "NACK");
+        }
+        // Sidechain slot number
+        if (col == 1) {
+            return QString::number(object.nSidechain);
+        }
+        // Replacement?
+        if (col == 2) {
+            return object.fReplacement;
         }
         // Sidechain title
-        if (col == 1) {
+        if (col == 3) {
             return object.title;
         }
         // Description
-        if (col == 2) {
+        if (col == 4) {
             return object.description;
         }
+        // TODO show replacement period if replacing
         // Age
-        if (col == 3) {
+        if (col == 5) {
             QString str = QString("%1 / %2")
                     .arg(object.nAge)
-                    .arg(SIDECHAIN_ACTIVATION_MAX_AGE);
+                    .arg(object.fReplacement ? SIDECHAIN_REPLACEMENT_PERIOD : SIDECHAIN_ACTIVATION_PERIOD);
             return str;
         }
         // Fails
-        if (col == 4) {
+        if (col == 6) {
             QString str = QString("%1 / %2")
                     .arg(object.nFail)
                     .arg(SIDECHAIN_ACTIVATION_MAX_FAILURES);
             return str;
         }
         // Key
-        if (col == 5) {
+        if (col == 7) {
             return object.sidechainKeyID;
         }
-        // Hex
-        if (col == 6) {
-            return object.sidechainHex;
-        }
         // Private key
-        if (col == 7) {
+        if (col == 8) {
             return object.sidechainPriv;
         }
         // Hash
-        if (col == 8) {
+        if (col == 9) {
             return object.hash;
         }
     }
@@ -107,20 +114,22 @@ QVariant SidechainActivationTableModel::headerData(int section, Qt::Orientation 
             case 0:
                 return QString("Vote");
             case 1:
-                return QString("Title");
+                return QString("SC #");
             case 2:
-                return QString("Description");
+                return QString("Replacement");
             case 3:
-                return QString("Age");
+                return QString("Title");
             case 4:
-                return QString("Fails");
+                return QString("Description");
             case 5:
-                return QString("Key");
+                return QString("Age");
             case 6:
-                return QString("Script Hex");
+                return QString("Fails");
             case 7:
-                return QString("Private Key");
+                return QString("Key");
             case 8:
+                return QString("Private Key");
+            case 9:
                 return QString("Hash");
             }
         }
@@ -142,8 +151,6 @@ void SidechainActivationTableModel::updateModel()
     // and remove them from our model / view.
     std::vector<SidechainActivationTableObject> vRemoved;
     for (int i = 0; i < model.size(); i++) {
-        // TODO don't make this call or the conversion
-        // redundantly while looping
         if (!model[i].canConvert<SidechainActivationTableObject>())
             return;
 
@@ -158,8 +165,10 @@ void SidechainActivationTableModel::updateModel()
                 object.nAge = s.nAge;
                 // Update nFail
                 object.nFail = s.nFail;
-                // Update fActivate
-                object.fActivate = scdb.GetActivateSidechain(s.proposal.GetHash());
+                // Update fAck
+                object.fAck = scdb.GetAckSidechain(s.proposal.GetHash());
+                // Update replacement status
+                object.fReplacement = scdb.IsSidechainActive(s.proposal.nSidechain);
 
                 // Emit signal that model data has changed
                 QModelIndex topLeft = index(i, 0);
@@ -223,12 +232,13 @@ void SidechainActivationTableModel::updateModel()
     for (const SidechainActivationStatus& s : vNew) {
         SidechainActivationTableObject object;
 
-        object.fActivate = scdb.GetActivateSidechain(s.proposal.GetHash());
+        object.fAck = scdb.GetAckSidechain(s.proposal.GetHash());
+        object.nSidechain = s.proposal.nSidechain;
+        object.fReplacement = scdb.IsSidechainActive(s.proposal.nSidechain);
         object.title = QString::fromStdString(s.proposal.title);
         object.description = QString::fromStdString(s.proposal.description);
-        object.sidechainKeyID = QString::fromStdString(s.proposal.sidechainKeyID);
-        object.sidechainHex = QString::fromStdString(s.proposal.sidechainHex);
-        object.sidechainPriv = QString::fromStdString(s.proposal.sidechainPriv);
+        object.sidechainKeyID = QString::fromStdString(s.proposal.strKeyID);
+        object.sidechainPriv = QString::fromStdString(s.proposal.strPrivKey);
         object.nAge = s.nAge;
         object.nFail = s.nFail;
         object.hash = QString::fromStdString(s.proposal.GetHash().ToString());

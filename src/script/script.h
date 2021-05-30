@@ -663,8 +663,8 @@ public:
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
 
     /** Script formats for Drivechains */
-    bool IsCriticalHashCommit() const;
-    bool IsSCDBHashMerkleRootCommit() const;
+    bool IsCriticalHashCommit(uint256& hash) const;
+    bool IsSCDBHashMerkleRootCommit(uint256& hashMerkleRoot) const;
     bool IsWTPrimeHashCommit(uint256& hashWTPrime, uint8_t& nSidechain) const;
     bool IsSidechainProposalCommit() const;
     bool IsSidechainActivationCommit(uint256& hashSidechain) const;

@@ -74,7 +74,6 @@ public Q_SLOTS:
     void on_pushButtonWTPrimeVote_clicked();
     void on_pushButtonWTDoubleClickHelp_clicked();
     void on_pushButtonRecentDepositHelp_clicked();
-    void CheckForSidechainUpdates();
     void gotoWTPage();
     void numBlocksChanged();
     void ShowActivationDialog();
@@ -99,9 +98,6 @@ private:
 
     QTimer *addRemoveAnimationTimer = nullptr;
 
-    // The sidechains that are currently cached for the list widget
-    std::vector<Sidechain> vSidechainCache;
-
     // Deposits created by the user during this session (memory only)
     std::vector<RecentDepositTableObject> vRecentDepositCache;
 
@@ -116,6 +112,8 @@ private:
     bool fAnimationStatus = false;
 };
 
-QString FormatSidechainNameWithNumber(const QString& strSidechain, int nSidechain);
+// Format sidechain title for sidechain list.
+// Sidechain number : sidechain title
+QString FormatSidechainTitle(const QString& strSidechain, int nSidechain);
 
 #endif // SIDECHAINPAGE_H

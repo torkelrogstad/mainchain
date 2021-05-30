@@ -12,11 +12,12 @@ QT_END_NAMESPACE
 
 struct SidechainActivationTableObject
 {
-    bool fActivate;
+    bool fAck;
+    bool fReplacement;
+    int nSidechain;
     QString title;
     QString description;
     QString sidechainKeyID;
-    QString sidechainHex;
     QString sidechainPriv;
     int nAge;
     int nFail;

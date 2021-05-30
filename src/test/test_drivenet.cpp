@@ -1,13 +1,16 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/test_drivenet.h>
 
+#include <base58.h>
 #include <chainparams.h>
 #include <consensus/consensus.h>
 #include <consensus/validation.h>
 #include <crypto/sha256.h>
+#include <sidechain.h>
+#include <sidechaindb.h>
 #include <validation.h>
 #include <miner.h>
 #include <net_processing.h>
@@ -180,6 +183,83 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn) {
     return CTxMemPoolEntry(MakeTransactionRef(txn), nFee, nTime, nHeight,
                            spendsCoinbase, spendsBMMRequest, false, 0,
                            sigOpCost, lp);
+}
+
+bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, bool fGenerateKey)
+{
+    // Generate new KeyID, deposit script, private key if asked
+    if (fGenerateKey) {
+        uint256 hash = GetRandHash();
+
+        CKey key;
+        key.Set(hash.begin(), hash.end(), false);
+
+        CBitcoinSecret vchSecret(key);
+
+        CPubKey pubkey = key.GetPubKey();
+        CKeyID vchAddress = pubkey.GetID();
+
+        CScript script = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+        proposal.strKeyID = HexStr(vchAddress);
+        proposal.scriptPubKey = script;
+        proposal.strPrivKey = vchSecret.ToString();
+    }
+
+    /* Activate a sidechain for testing purposes */
+    unsigned int nActive = scdbTest.GetActiveSidechainCount();
+
+    // Create transaction output with sidechain proposal
+    CTxOut out;
+    out.scriptPubKey = proposal.GetProposalScript();
+    out.nValue = 50 * CENT;
+
+    if (!out.scriptPubKey.IsSidechainProposalCommit()) {
+        return false;
+    }
+
+    uint256 hashBlock1 = GetRandHash();
+    scdbTest.Update(nHeight, hashBlock1, scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out});
+
+    std::vector<SidechainActivationStatus> vActivation;
+    vActivation = scdbTest.GetSidechainActivationStatus();
+
+    if (vActivation.size() != 1) {
+        return false;
+    }
+    if (vActivation.front().proposal.GetHash() != proposal.GetHash())
+    {
+        return false;
+    }
+
+    // Use the function from validation to generate the commit, and then
+    // copy it from the block.
+    CBlock block;
+    CMutableTransaction mtx;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+    GenerateSidechainActivationCommitment(block, proposal.GetHash(), Params().GetConsensus());
+
+    // Add votes until the sidechain is activated
+    nHeight++;
+    for (int i = 0; i < SIDECHAIN_ACTIVATION_PERIOD - 1; i++) {
+        if (!scdbTest.Update(nHeight, GetRandHash(), scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout)) {
+            return false;
+        }
+        nHeight++;
+    }
+
+    // Check activation status
+    // Sidechain should have been removed from activation cache
+    // Sidechain should be in ValidSidechains
+    vActivation = scdbTest.GetSidechainActivationStatus();
+    if (!vActivation.empty()) {
+        return false;
+    }
+
+    std::vector<Sidechain> vSidechain = scdbTest.GetActiveSidechains();
+    return(vSidechain.size() == nActive + 1);
 }
 
 /**

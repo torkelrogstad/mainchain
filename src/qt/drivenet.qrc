@@ -66,6 +66,8 @@
         <file alias="replay_split">res/icons/replay_split.png</file>
         <file alias="replay_replayed">res/icons/replay_replayed.png</file>
         <file alias="replay_loaded">res/icons/replay_loaded.png</file>
+        <file alias="search">res/icons/search.png</file>
+        <file alias="flip">res/icons/flip.png</file>
     </qresource>
     <qresource prefix="/movies">
         <file alias="spinner-000">res/movies/spinner-000.png</file>

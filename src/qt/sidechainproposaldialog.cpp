@@ -105,6 +105,30 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     std::string strHashID1 = ui->lineEditIDHash1->text().toStdString();
     std::string strHashID2 = ui->lineEditIDHash2->text().toStdString();
     int nVersion = ui->spinBoxVersion->value();
+    int nSidechain = ui->spinBoxNSidechain->value();
+
+    if (nSidechain < 0 || nSidechain > 255) {
+        QMessageBox::critical(this, tr("DriveNet - error"),
+            tr("Sidechain number must be 0-255!"),
+            QMessageBox::Ok);
+        return;
+    }
+
+    // TODO also check if sidechain number is the same as an existing proposal
+
+    // Check if this sidechain number is already being used and warn them.
+    if (scdb.IsSidechainActive(nSidechain)) {
+        QString warning = "The sidechain number you have chosen is already in use!\n\n";
+        warning += "This would create a sidechain replacement proposal which ";
+        warning += "is much slower to activate than a new sidechain.\n\n";
+        warning += "Are you sure?\n";
+        int nRes = QMessageBox::critical(this, tr("DriveNet - warning"),
+            warning,
+            QMessageBox::Ok, QMessageBox::Cancel);
+
+        if (nRes == QMessageBox::Cancel)
+            return;
+    }
 
     if (strTitle.empty()) {
         QMessageBox::critical(this, tr("DriveNet - error"),
@@ -132,7 +156,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     uint256 uHash = uint256S(strHash);
     if (uHash.IsNull()) {
         QMessageBox::critical(this, tr("DriveNet - error"),
-            tr("Invalid sidechain key hash!"),
+            tr("Invalid sidechain address bytes!"),
             QMessageBox::Ok);
         return;
     }
@@ -170,12 +194,13 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     // Generate script hex
     CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
 
-    SidechainProposal proposal;
+    Sidechain proposal;
+    proposal.nSidechain = nSidechain;
     proposal.title = strTitle;
     proposal.description = strDescription;
-    proposal.sidechainPriv = vchSecret.ToString();
-    proposal.sidechainKeyID = HexStr(vchAddress);
-    proposal.sidechainHex = HexStr(sidechainScript);
+    proposal.strPrivKey = vchSecret.ToString();
+    proposal.strKeyID = HexStr(vchAddress);
+    proposal.scriptPubKey = sidechainScript;
     if (!strHashID1.empty())
         proposal.hashID1 = uint256S(strHashID1);
     if (!strHashID1.empty())
@@ -183,19 +208,19 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     proposal.nVersion = nVersion;
 
     // Cache proposal so that it can be added to the next block we mine
-    scdb.CacheSidechainProposals(std::vector<SidechainProposal>{proposal});
+    scdb.CacheSidechainProposals(std::vector<Sidechain>{proposal});
+
+    // Cache sidechain hash to ACK it
+    scdb.CacheSidechainHashToAck(proposal.GetHash());
 
     QString message = QString("Sidechain proposal created!\n\n");
+    message += QString("Sidechain Number:\n%1\n\n").arg(nSidechain);
     message += QString("Version:\n%1\n\n").arg(nVersion);
     message += QString("Title:\n%1\n\n").arg(QString::fromStdString(strTitle));
     message += QString("Description:\n%1\n\n").arg(QString::fromStdString(strDescription));
-    message += QString("Private key:\n%1\n\n").arg(QString::fromStdString(proposal.sidechainPriv));
-    message += QString("KeyID:\n%1\n\n").arg(QString::fromStdString(proposal.sidechainKeyID));
-    message += QString("Deposit script:\n%1\n\n").arg(QString::fromStdString(proposal.sidechainHex));
-
-    std::vector<unsigned char> vch(ParseHex(proposal.sidechainHex));
-    CScript scriptPubKey = CScript(vch.begin(), vch.end());
-    message += QString("Deposit script asm:\n%1\n\n").arg(QString::fromStdString(ScriptToAsmStr(scriptPubKey)));
+    message += QString("Private key:\n%1\n\n").arg(QString::fromStdString(proposal.strPrivKey));
+    message += QString("KeyID:\n%1\n\n").arg(QString::fromStdString(proposal.strKeyID));
+    message += QString("Deposit script asm:\n%1\n\n").arg(QString::fromStdString(ScriptToAsmStr(proposal.scriptPubKey)));
 
     if (!strHashID1.empty())
         message += QString("Hash ID 1:\n%1\n\n").arg(QString::fromStdString(strHashID1));

@@ -23,6 +23,8 @@ bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockDat
 {
     hashBlockLastSeen = hashBlock;
     vWTPrimeStatus = data.vWTPrimeStatus;
+    vActivationStatus = data.vActivationStatus;
+    vSidechain = data.vSidechain;
 
     // TODO verify SCDB hash matches MT hash commit for block
     return true;
@@ -42,14 +44,6 @@ bool SidechainDB::AddDepositsFromBlock(const std::vector<CTransaction>& vtx, con
 {
     // Note that we aren't splitting the deposits by nSidechain yet, that will
     // be done after verifying all of the deposits.
-    //
-    // TODO: we are removing the validation of deposit destinations. WT^(s) also
-    // happen to use "invalid" deposit destinations for their change. The new
-    // deposit validation code detects those WT^(s) as invalid deposits. So for
-    // now we skip deposits that are seen as invalid. In the future we will make
-    // deposit validation ignore the destination script and instead check for
-    // WT^(s) here and skip them, and return false if any other deposit is
-    // invalid.
     std::vector<SidechainDeposit> vDeposit;
     for (const CTransaction& tx : vtx) {
         SidechainDeposit deposit;
@@ -80,7 +74,7 @@ void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, con
     std::vector<std::vector<SidechainDeposit>> vDepositSplit;
     vDepositSplit.resize(vDepositCache.size());
     for (const SidechainDeposit& d : vDeposit) {
-        if (!IsSidechainNumberValid(d.nSidechain))
+        if (!IsSidechainActive(d.nSidechain))
             continue;
         if (HaveDepositCached(d))
             continue;
@@ -105,7 +99,7 @@ void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, con
 
 bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int nHeight, bool fDebug)
 {
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!IsSidechainActive(nSidechain)) {
         LogPrintf("SCDB %s: Rejected WT^: %s. Invalid sidechain number: %u\n",
                 __func__,
                 hashWTPrime.ToString());
@@ -185,15 +179,9 @@ void SidechainDB::BMMAbandoned(const uint256& txid)
     setRemovedBMM.erase(txid);
 }
 
-void SidechainDB::CacheActiveSidechains(const std::vector<Sidechain>& vActiveSidechainIn)
+void SidechainDB::CacheSidechains(const std::vector<Sidechain>& vSidechainIn)
 {
-    vActiveSidechain = vActiveSidechainIn;
-
-    // Resize vWTPrimeStatus to keep track of WT^(s)
-    vWTPrimeStatus.resize(vActiveSidechain.size());
-
-    // Resize vDepositCache to keep track of deposit(s)
-    vDepositCache.resize(vActiveSidechain.size());
+    vSidechain = vSidechainIn;
 }
 
 bool SidechainDB::CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote)
@@ -256,27 +244,39 @@ void SidechainDB::CacheSidechainActivationStatus(const std::vector<SidechainActi
     vActivationStatus = vActivationStatusIn;
 }
 
-void SidechainDB::CacheSidechainProposals(const std::vector<SidechainProposal>& vSidechainProposalIn)
+void SidechainDB::CacheSidechainProposals(const std::vector<Sidechain>& vSidechainProposalIn)
 {
-    for (const SidechainProposal& s : vSidechainProposalIn)
-        vSidechainProposal.push_back(s);
+    // TODO change container improve performance
+    for (const Sidechain& s : vSidechainProposalIn) {
+        // Make sure the proposal isn't known yet
+        if (!IsSidechainUnique(s))
+            continue;
+        // Make sure this proposal isn't already cached in our proposals
+        bool fFound = false;
+        for (const Sidechain& p : vSidechainProposal) {
+            if (p.title == s.title ||
+                    p.strKeyID == s.strKeyID ||
+                    p.scriptPubKey == s.scriptPubKey ||
+                    p.strPrivKey == s.strPrivKey)
+            {
+                fFound = true;
+                break;
+            }
+        }
+        if (!fFound)
+            vSidechainProposal.push_back(s);
+    }
 }
 
-void SidechainDB::CacheSidechainHashToActivate(const uint256& u)
+void SidechainDB::CacheSidechainHashToAck(const uint256& u)
 {
-    vSidechainHashActivate.push_back(u);
+    vSidechainHashAck.push_back(u);
 }
 
 bool SidechainDB::CacheWTPrime(const CTransaction& tx, uint8_t nSidechain)
 {
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!IsSidechainActive(nSidechain)) {
         LogPrintf("%s: Rejecting WT^: %s - Invalid sidechain number!\n",
-                __func__, tx.GetHash().ToString());
-        return false;
-    }
-
-    if (vActiveSidechain.empty()) {
-        LogPrintf("%s: Rejecting WT^: %s - No active sidechains!\n",
                 __func__, tx.GetHash().ToString());
         return false;
     }
@@ -295,7 +295,7 @@ bool SidechainDB::CacheWTPrime(const CTransaction& tx, uint8_t nSidechain)
 
 bool SidechainDB::CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime, bool fDebug) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
     std::vector<SidechainWTPrimeState> vState = GetState(nSidechain);
@@ -330,20 +330,18 @@ void SidechainDB::ClearRemovedDeposits()
 
 unsigned int SidechainDB::GetActiveSidechainCount() const
 {
-    return vActiveSidechain.size();
+    unsigned int i = 0;
+    for (const Sidechain& s : vSidechain)  {
+        if (s.fActive)
+            i++;
+    }
+    return i;
 }
 
-bool SidechainDB::GetActivateSidechain(const uint256& u) const
+bool SidechainDB::GetAckSidechain(const uint256& u) const
 {
-    // TODO change the container to make this more efficient
-    for (const uint256& hash : vSidechainHashActivate) {
+    for (const uint256& hash : vSidechainHashAck) {
         if (u == hash) {
-            return true;
-        }
-    }
-    // Also check if we created the sidechain proposal, and ACK it
-    for (const SidechainProposal& s : vSidechainProposal) {
-        if (s.GetHash() == u) {
             return true;
         }
     }
@@ -352,7 +350,18 @@ bool SidechainDB::GetActivateSidechain(const uint256& u) const
 
 std::vector<Sidechain> SidechainDB::GetActiveSidechains() const
 {
-    return vActiveSidechain;
+    std::vector<Sidechain> vActive;
+    for (const Sidechain& s : vSidechain)  {
+        if (s.fActive)
+            vActive.push_back(s);
+    }
+
+    return vActive;
+}
+
+std::vector<Sidechain> SidechainDB::GetSidechains() const
+{
+    return vSidechain;
 }
 
 std::set<uint256> SidechainDB::GetRemovedBMM() const
@@ -367,7 +376,7 @@ std::vector<uint256> SidechainDB::GetRemovedDeposits() const
 
 bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
     std::map<uint8_t, SidechainCTIP>::const_iterator it = mapCTIP.find(nSidechain);
@@ -404,26 +413,28 @@ std::vector<SidechainCustomVote> SidechainDB::GetCustomVoteCache() const
 std::vector<SidechainDeposit> SidechainDB::GetDeposits(uint8_t nSidechain) const
 {
     std::vector<SidechainDeposit> vDeposit;
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return vDeposit;
 
     return vDepositCache[nSidechain];
 }
 
-std::vector<SidechainDeposit> SidechainDB::GetDeposits(const std::string& sidechainPriv) const
+std::vector<SidechainDeposit> SidechainDB::GetDeposits(const std::string& strPrivKey) const
 {
     // TODO refactor: only one GetDeposits function in SCDB
+    // TODO put deposits into a different container where the sidechain private
+    // key can be used to look them up quickly.
 
     // Make sure that the hash is related to an active sidechain,
     // and then return the result of the old function call.
     uint8_t nSidechain = 0;
     bool fFound = false;
-    for (const Sidechain& s : vActiveSidechain) {
-        if (s.sidechainPriv == sidechainPriv) {
+    for (const Sidechain& s : vSidechain) {
+        if (s.strPrivKey == strPrivKey) {
+            nSidechain = s.nSidechain;
             fFound = true;
             break;
         }
-        nSidechain++;
     }
 
     if (!fFound)
@@ -460,13 +471,13 @@ uint256 SidechainDB::GetTotalSCDBHash() const
     hash = ComputeMerkleRoot(vLeaf);
     LogPrintf("%s: Hash with hashBlockLastSeen data: %s\n", __func__, hash.ToString());
 
-    // Add vActiveSidechain
-    for (const Sidechain& s : vActiveSidechain) {
+    // Add vSidechain
+    for (const Sidechain& s : vSidechain) {
         vLeaf.push_back(s.GetHash());
     }
 
     hash = ComputeMerkleRoot(vLeaf);
-    LogPrintf("%s: Hash with vActiveSidechain data: %s\n", __func__, hash.ToString());
+    LogPrintf("%s: Hash with vSidechain data: %s\n", __func__, hash.ToString());
 
     // Add vActivationStatus
     for (const SidechainActivationStatus& s : vActivationStatus) {
@@ -486,22 +497,6 @@ uint256 SidechainDB::GetTotalSCDBHash() const
     hash = ComputeMerkleRoot(vLeaf);
     LogPrintf("%s: Hash with vDepositCache data: %s\n", __func__, hash.ToString());
 
-    // Add vSidechainHashActivate
-    for (const uint256& u : vSidechainHashActivate) {
-        vLeaf.push_back(u);
-    }
-
-    hash = ComputeMerkleRoot(vLeaf);
-    LogPrintf("%s: Hash with vSidechainHashActivate data: %s\n", __func__, hash.ToString());
-
-    // Add vSidechainProposal
-    for (const SidechainProposal& p : vSidechainProposal) {
-        vLeaf.push_back(p.GetHash());
-    }
-
-    hash = ComputeMerkleRoot(vLeaf);
-    LogPrintf("%s: Hash with vSidechainProposal data: %s\n", __func__, hash.ToString());
-
     // Add vWTPrimeCache
     for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrimeCache) {
         vLeaf.push_back(pair.second.GetHash());
@@ -511,8 +506,8 @@ uint256 SidechainDB::GetTotalSCDBHash() const
     LogPrintf("%s: Hash with vWTPrimeCache data: %s\n", __func__, hash.ToString());
 
     // Add vWTPrimeStatus
-    for (const Sidechain& s : vActiveSidechain) {
-        std::vector<SidechainWTPrimeState> vState = GetState(s.nSidechain);
+    for (size_t i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
+        std::vector<SidechainWTPrimeState> vState = GetState(i);
         for (const SidechainWTPrimeState& state : vState) {
             vLeaf.push_back(state.GetHash());
         }
@@ -530,8 +525,8 @@ uint256 SidechainDB::GetSCDBHash() const
         return uint256();
 
     std::vector<uint256> vLeaf;
-    for (const Sidechain& s : vActiveSidechain) {
-        std::vector<SidechainWTPrimeState> vState = GetState(s.nSidechain);
+    for (size_t i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
+        std::vector<SidechainWTPrimeState> vState = GetState(i);
         for (const SidechainWTPrimeState& state : vState) {
             vLeaf.push_back(state.GetHash());
         }
@@ -552,16 +547,12 @@ uint256 SidechainDB::GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState
 
 bool SidechainDB::GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
-    for (const Sidechain& s : vActiveSidechain) {
-        if (s.nSidechain == nSidechain) {
-            sidechain = s;
-            return true;
-        }
-    }
-    return false;
+    sidechain = vSidechain[nSidechain];
+
+    return true;
 }
 
 std::vector<SidechainActivationStatus> SidechainDB::GetSidechainActivationStatus() const
@@ -580,7 +571,7 @@ std::string SidechainDB::GetSidechainName(uint8_t nSidechain) const
     return str;
 }
 
-std::vector<SidechainProposal> SidechainDB::GetSidechainProposals() const
+std::vector<Sidechain> SidechainDB::GetSidechainProposals() const
 {
     return vSidechainProposal;
 }
@@ -591,15 +582,14 @@ bool SidechainDB::GetSidechainScript(const uint8_t nSidechain, CScript& scriptPu
     if (!GetSidechain(nSidechain, sidechain))
         return false;
 
-    std::vector<unsigned char> vch(ParseHex(sidechain.sidechainHex));
-    scriptPubKey = CScript(vch.begin(), vch.end());
+    scriptPubKey = sidechain.scriptPubKey;
 
     return true;
 }
 
 std::vector<uint256> SidechainDB::GetSidechainsToActivate() const
 {
-    return vSidechainHashActivate;
+    return vSidechainHashAck;
 }
 
 std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimesForBlock(const uint256& hashBlock) const
@@ -615,7 +605,7 @@ std::vector<SidechainSpentWTPrime> SidechainDB::GetSpentWTPrimesForBlock(const u
 
 std::vector<SidechainWTPrimeState> SidechainDB::GetState(uint8_t nSidechain) const
 {
-    if (!HasState() || !IsSidechainNumberValid(nSidechain))
+    if (!HasState() || !IsSidechainActive(nSidechain))
         return std::vector<SidechainWTPrimeState>();
 
     // TODO See comment in UpdateSCDBIndex about accessing vector by nSidechain
@@ -645,15 +635,15 @@ std::vector<uint256> SidechainDB::GetUncommittedWTPrimeCache(uint8_t nSidechain)
 std::vector<SidechainWTPrimeState> SidechainDB::GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const
 {
     std::vector<SidechainWTPrimeState> vNew;
-    for (const Sidechain& s : vActiveSidechain) {
-        std::vector<SidechainWTPrimeState> vOld = GetState(s.nSidechain);
+    for (size_t i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
+        std::vector<SidechainWTPrimeState> vOld = GetState(i);
 
         if (!vOld.size())
             continue;
 
         // If there's a new WT^ for this sidechain we don't want to make any
         // votes as adding a new WT^ is a vote (they start with 1 workscore)
-        std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.find(s.nSidechain);
+        std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.find(i);
         if (it != mapNewWTPrime.end())
             continue;
 
@@ -717,8 +707,8 @@ bool SidechainDB::HasSidechainScript(const std::vector<CScript>& vScript, uint8_
 {
     // Check if scriptPubKey is the deposit script of any active sidechains
     for (const CScript& scriptPubKey : vScript) {
-        for (const Sidechain& s : vActiveSidechain) {
-            if (HexStr(scriptPubKey) == s.sidechainHex) {
+        for (const Sidechain& s : vSidechain) {
+            if (scriptPubKey == s.scriptPubKey) {
                 nSidechain = s.nSidechain;
                 return true;
             }
@@ -729,7 +719,7 @@ bool SidechainDB::HasSidechainScript(const std::vector<CScript>& vScript, uint8_
 
 bool SidechainDB::HaveDepositCached(const SidechainDeposit &deposit) const
 {
-    if (!IsSidechainNumberValid(deposit.nSidechain))
+    if (!IsSidechainActive(deposit.nSidechain))
         return false;
 
     for (const SidechainDeposit& d : vDepositCache[deposit.nSidechain]) {
@@ -774,7 +764,7 @@ bool SidechainDB::HaveWTPrimeCached(const uint256& hashWTPrime) const
 
 bool SidechainDB::HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSidechain) const
 {
-    if (!IsSidechainNumberValid(nSidechain))
+    if (!IsSidechainActive(nSidechain))
         return false;
 
     std::vector<SidechainWTPrimeState> vState = GetState(nSidechain);
@@ -785,9 +775,9 @@ bool SidechainDB::HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSide
     return false;
 }
 
-bool SidechainDB::IsSidechainNumberValid(uint8_t nSidechain) const
+bool SidechainDB::IsSidechainActive(uint8_t nSidechain) const
 {
-    if (nSidechain >= vActiveSidechain.size())
+    if (nSidechain >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return false;
 
     if (nSidechain >= vWTPrimeStatus.size())
@@ -796,12 +786,39 @@ bool SidechainDB::IsSidechainNumberValid(uint8_t nSidechain) const
     if (nSidechain >= vDepositCache.size())
         return false;
 
-    for (const Sidechain& s : vActiveSidechain) {
-        if (s.nSidechain == nSidechain)
-            return true;
+    if (nSidechain >= vSidechain.size())
+        return false;
+
+    return vSidechain[nSidechain].fActive;
+}
+
+bool SidechainDB::IsSidechainUnique(const Sidechain& sidechain) const
+{
+    // Check list of active sidechains
+    std::vector<Sidechain> vActive = GetActiveSidechains();
+    for (const Sidechain& s : vActive) {
+        if (sidechain.title == s.title ||
+                sidechain.strKeyID == s.strKeyID ||
+                sidechain.scriptPubKey == s.scriptPubKey ||
+                sidechain.strPrivKey == s.strPrivKey)
+        {
+            return false;
+        }
     }
 
-    return false;
+    // Check list of sidechain proposals
+    for (const SidechainActivationStatus& s : vActivationStatus) {
+        Sidechain proposal = s.proposal;
+        if (sidechain.title == proposal.title ||
+                sidechain.strKeyID == proposal.strKeyID ||
+                sidechain.scriptPubKey == proposal.scriptPubKey ||
+                sidechain.strPrivKey == proposal.strPrivKey)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void SidechainDB::RemoveExpiredWTPrimes()
@@ -837,6 +854,7 @@ void SidechainDB::RemoveExpiredWTPrimes()
                                 if (vWTPrimeCache[i].second.GetHash() == state.hashWTPrime) {
                                     vWTPrimeCache[i] = vWTPrimeCache.back();
                                     vWTPrimeCache.pop_back();
+                                    break;
                                 }
                             }
                             return true;
@@ -848,13 +866,14 @@ void SidechainDB::RemoveExpiredWTPrimes()
     }
 }
 
-void SidechainDB::RemoveSidechainHashToActivate(const uint256& u)
+void SidechainDB::RemoveSidechainHashToAck(const uint256& u)
 {
     // TODO change container to make this efficient
-    for (size_t i = 0; i < vSidechainHashActivate.size(); i++) {
-        if (vSidechainHashActivate[i] == u) {
-            vSidechainHashActivate[i] = vSidechainHashActivate.back();
-            vSidechainHashActivate.pop_back();
+    for (size_t i = 0; i < vSidechainHashAck.size(); i++) {
+        if (vSidechainHashAck[i] == u) {
+            vSidechainHashAck[i] = vSidechainHashAck.back();
+            vSidechainHashAck.pop_back();
+            break;
         }
     }
 }
@@ -863,7 +882,7 @@ void SidechainDB::ResetWTPrimeState()
 {
     // Clear out WT^ state
     vWTPrimeStatus.clear();
-    vWTPrimeStatus.resize(vActiveSidechain.size());
+    vWTPrimeStatus.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
 }
 
 void SidechainDB::ResetWTPrimeVotes()
@@ -879,8 +898,8 @@ void SidechainDB::Reset()
     // Reset hashBlockLastSeen
     hashBlockLastSeen.SetNull();
 
-    // Clear out active sidechains
-    vActiveSidechain.clear();
+    // Clear out sidechains
+    vSidechain.clear();
 
     // Clear out sidechain activation status
     vActivationStatus.clear();
@@ -889,9 +908,9 @@ void SidechainDB::Reset()
     vDepositCache.clear();
 
     // Clear out list of sidechain (hashes) we want to ACK
-    vSidechainHashActivate.clear();
+    vSidechainHashAck.clear();
 
-    // Clear out our cache of sidechain proposals
+    // Clear out our cache of proposed sidechains
     vSidechainProposal.clear();
 
     // Clear out cached WT^ serializations
@@ -911,11 +930,22 @@ void SidechainDB::Reset()
 
     vRemovedDeposit.clear();
     setRemovedBMM.clear();
+
+    // Resize vWTPrimeStatus to keep track of WT^(s)
+    vWTPrimeStatus.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Resize vDepositCache to keep track of deposit(s)
+    vDepositCache.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+
+    // Initialize with blank inactive sidechains
+    vSidechain.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
+    for (size_t i = 0; i < vSidechain.size(); i++)
+        vSidechain[i].nSidechain = i;
 }
 
 bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)
 {
-    if (!IsSidechainNumberValid(nSidechain)) {
+    if (!IsSidechainActive(nSidechain)) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^ (txid): %s for sidechain number: %u.\n Invalid sidechain number.\n",
                 __func__,
@@ -1160,6 +1190,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
         if (vWTPrimeCache[i].second.GetHash() == hashBlind) {
             vWTPrimeCache[i] = vWTPrimeCache.back();
             vWTPrimeCache.pop_back();
+            break;
         }
     }
 
@@ -1183,7 +1214,6 @@ bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock,
 {
     // Note that the first OP_RETURN output found in a deposit transaction will
     // be used as the destination. Others are ignored.
-
     bool fBurnFound = false;
     bool fDestFound = false;
     for (size_t i = 0; i < tx.vout.size(); i++) {
@@ -1254,10 +1284,10 @@ std::string SidechainDB::ToString() const
 
     str += "Hash of block last seen: " + hashBlockLastSeen.ToString() + "\n";
 
-    str += "Active sidechains: ";
-    str += std::to_string(vActiveSidechain.size());
+    str += "Sidechains: ";
+    str += std::to_string(vSidechain.size());
     str += "\n";
-    for (const Sidechain& s : vActiveSidechain) {
+    for (const Sidechain& s : vSidechain) {
         // Print sidechain name
         str += "Sidechain: " + s.GetSidechainName() + "\n";
 
@@ -1348,36 +1378,34 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    // Scan for updated SCDB MT hash commit
-    std::vector<CScript> vMTHashScript;
+    // Scan for SCDB updated merkle root hash commit, the hash of SCDB after
+    // applying the new updates from this block.
+    //
+    // Only one merkle root commit is allowed per block.
+    bool fMTFound = false;
+    uint256 hashMerkleRoot = uint256();
     for (const CTxOut& out : vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-        if (scriptPubKey.IsSCDBHashMerkleRootCommit())
-            vMTHashScript.push_back(scriptPubKey);
-    }
+        uint256 hashMT;
+        if (out.scriptPubKey.IsSCDBHashMerkleRootCommit(hashMT)) {
+            // If we already found a merkle root commit, a second is invalid
+            if (fMTFound) {
+                if (fDebug) {
+                    LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
+                        __func__,
+                        nHeight);
+                }
+                return false;
+            }
 
-    // Verify that there is only one MT hash commit if any
-    if (vMTHashScript.size() > 1) {
-        if (fDebug) {
-            LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
-                __func__,
-                nHeight);
+            fMTFound = true;
+            hashMerkleRoot = hashMT;
         }
-        return false;
-    }
-
-    // TODO IsSCDBHashMerkleRootCommit should return the MT hash
-    uint256 hashMerkleRoot;
-    if (vMTHashScript.size()) {
-        // Get MT hash from script
-        const CScript& scriptPubKey = vMTHashScript.front();
-        hashMerkleRoot = uint256(std::vector<unsigned char>(scriptPubKey.begin() + 6, scriptPubKey.begin() + 38));
     }
 
     // If there's a MT hash commit in this block, it must be different than
     // the current SCDB hash (WT^ blocks remaining should have at least
     // been updated if nothing else)
-    if (!hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
+    if (fMTFound && !hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
         if (fDebug)
             LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
                     __func__,
@@ -1399,69 +1427,52 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
      */
 
     // Scan for sidechain proposal commitments
-    std::vector<SidechainProposal> vProposal;
-    if (!fJustCheck) {
-        for (const CTxOut& out : vout) {
-            const CScript& scriptPubKey = out.scriptPubKey;
+    std::vector<Sidechain> vProposal;
+    for (const CTxOut& out : vout) {
+        const CScript& scriptPubKey = out.scriptPubKey;
 
-            if (!scriptPubKey.IsSidechainProposalCommit())
-                continue;
+        if (!scriptPubKey.IsSidechainProposalCommit())
+            continue;
 
-            SidechainProposal proposal;
-            if (!proposal.DeserializeFromScript(scriptPubKey))
-                continue;
+        Sidechain proposal;
+        if (!proposal.DeserializeFromProposalScript(scriptPubKey))
+            continue;
 
-            // Check for duplicate
-            bool fDuplicate = false;
-            for (const SidechainActivationStatus& s : vActivationStatus) {
-                if (s.proposal == proposal) {
-                    fDuplicate = true;
-                    break;
-                }
-            }
-            if (fDuplicate)
-                continue;
-
-            vProposal.push_back(proposal);
-        }
+        vProposal.push_back(proposal);
     }
+    // Maximum of 1 sidechain proposal per block
+    if (vProposal.size() > 1) {
+        if (fDebug)
+            LogPrintf("SCDB %s: Invalid: block with multiple sidechain proposals at height: %u\n",
+                    __func__,
+                    nHeight);
+        return false;
+    }
+    // Check if proposal is unique
+    if (vProposal.size() == 1 && !IsSidechainUnique(vProposal.front())) {
+        if (fDebug)
+            LogPrintf("SCDB %s: Invalid: block with non-unique sidechain proposal at height: %u\n",
+                    __func__,
+                    nHeight);
+        return false;
+    }
+    // Update SCDB
     if (!fJustCheck && vProposal.size() == 1) {
         SidechainActivationStatus status;
         status.nFail = 0;
         status.nAge = 0;
         status.proposal = vProposal.front();
 
-        // Make sure that the proposal is unique,
-        bool fUnique = true;
+        // Start tracking the new sidechain proposal
+        vActivationStatus.push_back(status);
 
-        // check the activation status cache
-        for (const SidechainActivationStatus& s : vActivationStatus) {
-            if (s.proposal == status.proposal) {
-                fUnique = false;
-                break;
-            }
-        }
-        // check the active sidechain list
-        for (const Sidechain& s : vActiveSidechain) {
-            // Note that we are comparing a Sidechain to a SidechainProposal.
-            // There is a custom operator== for this purpose.
-            if (s == status.proposal) {
-                fUnique = false;
-                break;
-            }
-        }
-
-        if (fUnique) {
-            LogPrintf("SCDB %s: Tracking new sidechain proposal:\n%s\n",
-                    __func__,
-                    status.proposal.ToString());
-
-            // Start tracking the new sidechain proposal
-            vActivationStatus.push_back(status);
-        }
+        LogPrintf("SCDB %s: Tracking new sidechain proposal:\n%s\n",
+                __func__,
+                status.proposal.ToString());
     }
 
     // Scan for sidechain activation commitments
+    std::map<uint8_t, uint256> mapActivation;
     std::vector<uint256> vActivationHash;
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
@@ -1471,6 +1482,38 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         if (hashSidechain.IsNull())
             continue;
 
+        // Look up the sidechain number for this activation commitment
+        bool fFound = false;
+        uint8_t nSidechain = 0;
+        for (const SidechainActivationStatus& s : vActivationStatus) {
+            if (s.proposal.GetHash() == hashSidechain) {
+                fFound = true;
+                nSidechain = s.proposal.nSidechain;
+                break;
+            }
+        }
+        if (!fFound) {
+            if (fDebug)
+                LogPrintf("SCDB %s: Invalid: Sidechain activation commit for unknown proposal.\nProposal hash: %s\n",
+                        __func__,
+                        hashSidechain.ToString());
+            return false;
+        }
+
+        // Check that there is only 1 sidechain activation commit per
+        // sidechain slot number per block
+        std::map<uint8_t, uint256>::const_iterator it = mapActivation.find(nSidechain);
+        if (it == mapActivation.end()) {
+            mapActivation[nSidechain] = hashSidechain;
+        } else {
+            if (fDebug) {
+                LogPrintf("SCDB %s: Multiple activation commitments for sidechain number: %u at height: %u\n",
+                        __func__,
+                        nSidechain,
+                        nHeight);
+            }
+            return false;
+        }
         vActivationHash.push_back(hashSidechain);
     }
     if (!fJustCheck)
@@ -1483,7 +1526,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         uint8_t nSidechain;
         uint256 hashWTPrime;
         if (scriptPubKey.IsWTPrimeHashCommit(hashWTPrime, nSidechain)) {
-            if (!IsSidechainNumberValid(nSidechain)) {
+            if (!IsSidechainActive(nSidechain)) {
                 if (fDebug)
                     LogPrintf("SCDB %s: Skipping new WT^: %s, invalid sidechain number: %u\n",
                             __func__,
@@ -1542,7 +1585,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         if (vUpdateBytes.size()) {
             // Get old (current) state
             std::vector<std::vector<SidechainWTPrimeState>> vOldState;
-            for (const Sidechain& s : vActiveSidechain) {
+            for (const Sidechain& s : vSidechain) {
                 vOldState.push_back(GetState(s.nSidechain));
             }
 
@@ -1584,7 +1627,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     std::vector<SidechainSpentWTPrime> vSpent;
     vSpent = GetSpentWTPrimesForBlock(hashBlock);
     for (const SidechainSpentWTPrime& s : vSpent) {
-        if (!IsSidechainNumberValid(s.nSidechain)) {
+        if (!IsSidechainActive(s.nSidechain)) {
             if (fDebug) {
                 LogPrintf("SCDB %s: Spent WT^ has invalid sidechain number: %u at height: %u\n",
                         __func__,
@@ -1614,7 +1657,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                 // Remove the spent WT^
                 vWTPrimeStatus[s.nSidechain][i] = vWTPrimeStatus[s.nSidechain].back();
                 vWTPrimeStatus[s.nSidechain].pop_back();
-
                 break;
             }
         }
@@ -1629,7 +1671,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             return false;
         }
     }
-
 
     if (fDebug && !fJustCheck) {
         LogPrintf("SCDB: %s: Updated from block %s to block %s.\n",
@@ -1648,6 +1689,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug)
 {
     // WT^ workscore is recalculated by ResyncSCDB in validation - not here
+    // Sidechain activation is also recalculatied by ResyncSCDB not here.
 
     if (!vtx.size()) {
         LogPrintf("%s: SCDB undo failed for block: %s - vtx is empty!\n", __func__, hashBlock.ToString());
@@ -1667,11 +1709,13 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
     bool fDepositRemoved = false;
     for (const CTransactionRef& tx : vtx) {
         for (size_t x = 0; x < vDepositCache.size(); x++) {
-            for (size_t y = 0; y < vDepositCache[x].size(); y++) {
-                if (*tx == CTransaction(vDepositCache[x][y].tx)) {
-                    vDepositCache[x][y] = vDepositCache[x].back();
-                    vDepositCache[x].pop_back();
+            std::vector<SidechainDeposit>::iterator it;
+            for (it = vDepositCache[x].begin(); it != vDepositCache[x].end();) {
+                if (*tx == CTransaction(it->tx)) {
                     fDepositRemoved = true;
+                    it = vDepositCache[x].erase(it);
+                } else {
+                    it++;
                 }
             }
         }
@@ -1682,43 +1726,6 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
         // TODO check return value
         SortSCDBDeposits();
         UpdateCTIP(hashBlock);
-    }
-
-    // TODO
-    // Undo sidechain activation & de-activate a sidechain if it was activated
-    // in the disconnected block. If a sidechain was de-activated then we will
-    // also need to add it back to vActivationStatus and restore it's score
-
-    // Remove sidechain proposals that were committed in the disconnected block
-    for (const CTxOut& out : vtx[0]->vout) {
-        const CScript& scriptPubKey = out.scriptPubKey;
-
-        if (!scriptPubKey.IsSidechainProposalCommit())
-            continue;
-
-        SidechainProposal proposal;
-        if (!proposal.DeserializeFromScript(scriptPubKey))
-            continue;
-
-        bool fRemoved = false;
-
-        // Remove from SCDB
-        for (size_t i = 0; i < vActivationStatus.size(); i++) {
-            if (vActivationStatus[i].proposal == proposal) {
-                vActivationStatus[i] = vActivationStatus.back();
-                vActivationStatus.pop_back();
-                fRemoved = true;
-            }
-        }
-
-        // TODO If we are disconnecting a block that had a proposal we should
-        // probably actually return an error here if vActivationStatus does
-        // not contain the proposal.
-        if (!fRemoved && vActivationStatus.size()) {
-            LogPrintf("%s: SCDB failed to remove sidechain proposal from block: %s.\n", __func__, hashBlock.ToString());
-            LogPrintf("%s: vActivationStatus size: %u", __func__, vActivationStatus.size());
-            return false;
-        }
     }
 
     // Undo hashBlockLastSeen
@@ -1741,7 +1748,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
 
     // First check that sidechain numbers are valid
     for (const SidechainWTPrimeState& s : vNewScores) {
-        if (!IsSidechainNumberValid(s.nSidechain)) {
+        if (!IsSidechainActive(s.nSidechain)) {
             if (fDebug)
                 LogPrintf("SCDB %s: Update failed! Invalid sidechain number: %u\n",
                         __func__,
@@ -1793,7 +1800,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
         size_t x = s.nSidechain;
 
         // Check nSidechain again
-        if (!IsSidechainNumberValid(x)) {
+        if (!IsSidechainActive(x)) {
             if (fDebug)
                 LogPrintf("SCDB %s: Update failed! Invalid sidechain number (double check): %u\n",
                         __func__,
@@ -1871,7 +1878,7 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
             }
 
             // Check a third time...
-            if (!IsSidechainNumberValid(x)) {
+            if (!IsSidechainActive(x)) {
                 if (fDebug)
                     LogPrintf("SCDB %s: Rejected new WT^: %s. Invalid sidechain number: %u\n",
                             __func__,
@@ -1974,23 +1981,40 @@ void SidechainDB::ApplyDefaultUpdate()
 
 void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
 {
-    // Increment the age of all sidechain proposals, remove expired.
-    for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        vActivationStatus[i].nAge++;
-        if (vActivationStatus[i].nAge > SIDECHAIN_ACTIVATION_MAX_AGE) {
+    // TODO change containers
+
+    // Increment the age of all sidechain proposals and remove expired.
+    std::vector<SidechainActivationStatus>::iterator it;
+    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+        it->nAge++;
+
+        int nPeriod = 0;
+        if (IsSidechainActive(it->proposal.nSidechain))
+            nPeriod = SIDECHAIN_REPLACEMENT_PERIOD;
+        else
+            nPeriod = SIDECHAIN_ACTIVATION_PERIOD;
+
+        if (it->nAge > nPeriod) {
             LogPrintf("SCDB %s: Sidechain proposal expired:\n%s\n",
                     __func__,
-                    vActivationStatus[i].proposal.ToString());
+                    it->proposal.ToString());
 
-            vActivationStatus[i] = vActivationStatus.back();
-            vActivationStatus.pop_back();
+            it = vActivationStatus.erase(it);
+        } else {
+            it++;
         }
     }
 
     // Calculate failures. Sidechain proposals with activation status will have
     // their activation failure count increased by 1 if a activation commitment
-    // for them is not found in the block.
+    // for them is not found in the block. New sidechain proposals (age = 1)
+    // count as an activation commitment.
     for (size_t i = 0; i < vActivationStatus.size(); i++) {
+        // Skip new sidechain proposals
+        if (vActivationStatus[i].nAge == 1)
+            continue;
+
+        // Search for sidechain activation commitments
         bool fFound = false;
         for (const uint256& u : vHash) {
             if (u == vActivationStatus[i].proposal.GetHash()) {
@@ -2003,64 +2027,73 @@ void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
     }
 
     // Remove sidechain proposals with too many failures to activate
-    std::vector<std::vector<SidechainActivationStatus>::const_iterator> vFail;
-    for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        if (vActivationStatus[i].nFail >= SIDECHAIN_ACTIVATION_MAX_FAILURES) {
+    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+        if (it->nFail >= SIDECHAIN_ACTIVATION_MAX_FAILURES) {
             LogPrintf("SCDB %s: Sidechain proposal rejected:\n%s\n",
                     __func__,
-                    vActivationStatus[i].proposal.ToString());
+                    it->proposal.ToString());
 
-            vActivationStatus[i] = vActivationStatus.back();
-            vActivationStatus.pop_back();
+            it = vActivationStatus.erase(it);
+        } else {
+            it++;
         }
     }
 
-    // TODO this needs to be replaced
-    // Don't activate any more sidechains if we have reached the max
-    if (vActiveSidechain.size() >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
-        return;
+    // Search for sidechains that have passed the test and should be activated.
+    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+        // The required period to be activated is either the normal sidechain
+        // activation period for a new sidechain, or the same as the WT^
+        // minimum workscore for a proposal that replaces an active sidechain.
+        int nPeriodRequired = 0;
+        if (IsSidechainActive(it->proposal.nSidechain))
+            nPeriodRequired = SIDECHAIN_REPLACEMENT_PERIOD;
+        else
+            nPeriodRequired = SIDECHAIN_ACTIVATION_PERIOD;
 
-    // Move activated sidechains to vActivatedSidechain
-    for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        if (vActivationStatus[i].nAge == SIDECHAIN_ACTIVATION_MAX_AGE) {
-            // Create sidechain object
+        // If a proposal makes it to the required age without being killed off
+        // by failures then it will be activated.
+        if (it->nAge == nPeriodRequired) {
+            // Create sidechain object from proposal
             Sidechain sidechain;
-            sidechain.nVersion = vActivationStatus[i].proposal.nVersion;
-            sidechain.hashID1 = vActivationStatus[i].proposal.hashID1;
-            sidechain.hashID2 = vActivationStatus[i].proposal.hashID2;
-            // TODO Get nSidechain in a smarter way
-            sidechain.nSidechain = vActiveSidechain.size();
-            sidechain.sidechainPriv = vActivationStatus[i].proposal.sidechainPriv;
-            sidechain.sidechainHex = vActivationStatus[i].proposal.sidechainHex;
-            sidechain.sidechainKeyID = vActivationStatus[i].proposal.sidechainKeyID;
-            sidechain.title = vActivationStatus[i].proposal.title;
-            sidechain.description = vActivationStatus[i].proposal.description;
+            sidechain.fActive = true;
+            sidechain.nSidechain    = it->proposal.nSidechain;
+            sidechain.nVersion      = it->proposal.nVersion;
+            sidechain.hashID1       = it->proposal.hashID1;
+            sidechain.hashID2       = it->proposal.hashID2;
+            sidechain.strPrivKey    = it->proposal.strPrivKey;
+            sidechain.scriptPubKey  = it->proposal.scriptPubKey;
+            sidechain.strKeyID      = it->proposal.strKeyID;
+            sidechain.title         = it->proposal.title;
+            sidechain.description   = it->proposal.description;
 
-            vActiveSidechain.push_back(sidechain);
+            // Update nSidechain slot with new sidechain params
+            vSidechain[sidechain.nSidechain] = sidechain;
 
-            // Save proposal for later
-            SidechainProposal proposal = vActivationStatus[i].proposal;
-
-            vActivationStatus[i] = vActivationStatus.back();
-            vActivationStatus.pop_back();
-
-            // Add blank vector to track this sidechain's WT^(s)
-            vWTPrimeStatus.push_back(std::vector<SidechainWTPrimeState>{});
-
-            // Add a blank vector to track this sidechain's deposit(s)
-            vDepositCache.push_back(std::vector<SidechainDeposit>{});
-
-            // Remove proposal from our cache if it has activated
+            // Remove from cache of our own proposals
             for (size_t j = 0; j < vSidechainProposal.size(); j++) {
-                if (proposal == vSidechainProposal[j]) {
+                if (it->proposal == vSidechainProposal[j]) {
                     vSidechainProposal[j] = vSidechainProposal.back();
                     vSidechainProposal.pop_back();
+                    break;
                 }
             }
+            // Remove SCDB proposal activation status
+            it = vActivationStatus.erase(it);
+
+            // Reset WT^ status for new sidechain
+            vWTPrimeStatus[sidechain.nSidechain].clear();
+
+            // Reset deposits for new sidechain
+            vDepositCache[sidechain.nSidechain].clear();
+
+            // Reset CTIP for new sidechain
+            mapCTIP.erase(sidechain.nSidechain);
 
             LogPrintf("SCDB %s: Sidechain activated:\n%s\n",
                     __func__,
-                    vActivationStatus[i].proposal.ToString());
+                    sidechain.ToString());
+        } else {
+            it++;
         }
     }
 }

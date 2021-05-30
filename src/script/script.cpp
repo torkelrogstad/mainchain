@@ -237,39 +237,47 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
-bool CScript::IsCriticalHashCommit() const
+bool CScript::IsCriticalHashCommit(uint256& hash) const
 {
     // Check script size
     size_t size = this->size();
-    if (size < 38) // sha256 hash + optional data / flag bytes + opcodes
+    if (size < 37) // sha256 hash + optional data / flag bytes + opcodes
         return false;
 
     // Check script header
     if ((*this)[0] != OP_RETURN ||
-            (*this)[1] != 0x24 ||
-            (*this)[2] != 0xD1 ||
-            (*this)[3] != 0x61 ||
-            (*this)[4] != 0x73 ||
-            (*this)[5] != 0x68)
+            (*this)[1] != 0xD1 ||
+            (*this)[2] != 0x61 ||
+            (*this)[3] != 0x73 ||
+            (*this)[4] != 0x68)
+        return false;
+
+    hash = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+
+    if (hash.IsNull())
         return false;
 
     return true;
 }
 
-bool CScript::IsSCDBHashMerkleRootCommit() const
+bool CScript::IsSCDBHashMerkleRootCommit(uint256& hashMerkleRoot) const
 {
     // Check script size
     size_t size = this->size();
-    if (size < 38) // sha256 hash + opcodes
+    if (size < 37) // sha256 hash + opcodes
         return false;
 
     // Check script header
     if ((*this)[0] != OP_RETURN ||
-            (*this)[1] != 0x24 ||
-            (*this)[2] != 0xD2 ||
-            (*this)[3] != 0x8E ||
-            (*this)[4] != 0x50 ||
-            (*this)[5] != 0x8C)
+            (*this)[1] != 0xD2 ||
+            (*this)[2] != 0x8E ||
+            (*this)[3] != 0x50 ||
+            (*this)[4] != 0x8C)
+        return false;
+
+    hashMerkleRoot = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+
+    if (hashMerkleRoot.IsNull())
         return false;
 
     return true;
@@ -279,20 +287,19 @@ bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime, uint8_t& nSidechain) con
 {
     // Check script size
     size_t size = this->size();
-    if (size != 39) // sha256 hash + nSidechain + opcodes
+    if (size != 38) // sha256 hash + nSidechain + opcodes
         return false;
 
     // Check script header
     if ((*this)[0] != OP_RETURN ||
-            (*this)[1] != 0x24 ||
-            (*this)[2] != 0xD4 ||
-            (*this)[3] != 0x5A ||
-            (*this)[4] != 0xA9 ||
-            (*this)[5] != 0x43)
+            (*this)[1] != 0xD4 ||
+            (*this)[2] != 0x5A ||
+            (*this)[3] != 0xA9 ||
+            (*this)[4] != 0x43)
         return false;
 
-    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 6, this->begin() + 38));
-    nSidechain = (*this)[38];
+    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    nSidechain = (*this)[37];
 
     if (hashWTPrime.IsNull())
         return false;

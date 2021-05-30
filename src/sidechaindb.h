@@ -28,19 +28,9 @@ struct SidechainBlockData;
 struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
-struct SidechainProposal;
 struct SidechainWTPrimeState;
 struct SidechainSpentWTPrime;
 struct SidechainFailedWTPrime;
-
-// TODO custom operator[] or getter functions for private data members which
-// will check the index and throw an error instead of going out of bounds
-
-// TODO Refactor: remove AddWTPrime() and UpdateSCDBIndex() - handle both inside
-// of SCDB::Update()
-
-// TODO use the bitcoin core lock system or std::mutex & std::lock_guard to
-// protect private data structures.
 
 class SidechainDB
 {
@@ -74,7 +64,7 @@ public:
     void BMMAbandoned(const uint256& txid);
 
     /** Add active sidechains to the in-memory cache */
-    void CacheActiveSidechains(const std::vector<Sidechain>& vSidechainIn);
+    void CacheSidechains(const std::vector<Sidechain>& vSidechainIn);
 
     /** Add a users custom vote to the in-memory cache */
     bool CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote);
@@ -82,11 +72,11 @@ public:
     /** Add SidechainActivationStatus to the in-memory cache */
     void CacheSidechainActivationStatus(const std::vector<SidechainActivationStatus>& vActivationStatusIn);
 
-    /** Add SidechainProposal to the in-memory cache */
-    void CacheSidechainProposals(const std::vector<SidechainProposal>& vSidechainProposalIn);
+    /** Add proposed sidechain to the in-memory cache */
+    void CacheSidechainProposals(const std::vector<Sidechain>& vSidechainProposalIn);
 
     /** Add sidechain-to-be-activated hash to cache */
-    void CacheSidechainHashToActivate(const uint256& u);
+    void CacheSidechainHashToAck(const uint256& u);
 
     /** Add WT^ to the in-memory cache */
     bool CacheWTPrime(const CTransaction& tx, const uint8_t nSidechain);
@@ -102,10 +92,13 @@ public:
 
     /** Check if the hash of the sidechain is in our hashes of sidechains to
      * activate cache. Return true if it is, or false if not. */
-    bool GetActivateSidechain(const uint256& u) const;
+    bool GetAckSidechain(const uint256& u) const;
 
     /** Get list of currently active sidechains */
     std::vector<Sidechain> GetActiveSidechains() const;
+
+    /** Get list of all sidechains */
+    std::vector<Sidechain> GetSidechains() const;
 
     /** Get list of BMM txid that miner removed from the mempool. */
     std::set<uint256> GetRemovedBMM() const;
@@ -156,7 +149,7 @@ public:
     std::string GetSidechainName(uint8_t nSidechain) const;
 
     /** Get list of this node's uncommitted sidechain proposals */
-    std::vector<SidechainProposal> GetSidechainProposals() const;
+    std::vector<Sidechain> GetSidechainProposals() const;
 
     /** Get the scriptPubKey that relates to nSidechain if it exists */
     bool GetSidechainScript(const uint8_t nSidechain, CScript& scriptPubKey) const;
@@ -174,9 +167,6 @@ public:
 
     /** Return cached but uncommitted WT^ transaction's hash(s) for nSidechain */
     std::vector<uint256> GetUncommittedWTPrimeCache(uint8_t nSidechain) const;
-
-    /** Return cached but uncommitted WT^ transaction's hash(s) for nSidechain */
-    std::vector<SidechainProposal> GetUncommittedSidechainProposals() const;
 
     /** Returns SCDB WT^ state with single vote type applied to all of the most
      * recent WT^(s) in the cache */
@@ -213,14 +203,19 @@ public:
     /** Check if SCDB is tracking the work score of a WT^ */
     bool HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSidechain) const;
 
-    /** Check if a sidechain with nSidechain exists in the DB */
-    bool IsSidechainNumberValid(uint8_t nSidechain) const;
+    /** Check if a sidechain slot number has active sidechain */
+    bool IsSidechainActive(uint8_t nSidechain) const;
+
+    /** Return true if the sidechain title, KeyID, deposit script hex & private
+     * key are all different than the values for every active sidechain and
+     * pending sidechain proposal. */
+    bool IsSidechainUnique(const Sidechain& sidechain) const;
 
     void RemoveExpiredWTPrimes();
 
     /** Remove sidechain-to-be-activated hash from cache, because the user
      * changed their mind */
-    void RemoveSidechainHashToActivate(const uint256& u);
+    void RemoveSidechainHashToAck(const uint256& u);
 
     /** Reset SCDB and clear out all data tracked by SidechainDB */
     void ResetWTPrimeState();
@@ -267,6 +262,15 @@ private:
     /** Takes a list of sidechain hashes to upvote */
     void UpdateActivationStatus(const std::vector<uint256>& vHash);
 
+    /** Update CTIP to match the deposit cache - called after sorting / undo */
+    void UpdateCTIP(const uint256& hashBlock);
+
+    /** Calls SortDeposits for all of SCDB's deposit cache */
+    bool SortSCDBDeposits();
+
+    /** All sidechain slots, their activation status, and params if active */
+    std::vector<Sidechain> vSidechain;
+
     /*
      * The CTIP of nSidechain up to the latest connected block (does not include
      * mempool txns). */
@@ -274,9 +278,6 @@ private:
 
     /** The most recent block that SCDB has processed */
     uint256 hashBlockLastSeen;
-
-    /** Sidechains which are currently active */
-    std::vector<Sidechain> vActiveSidechain;
 
     /** Activation status of proposed sidechains */
     std::vector<SidechainActivationStatus> vActivationStatus;
@@ -293,11 +294,11 @@ private:
 
     /** Cache of sidechain hashes, for sidechains which this node has been
      * configured to activate by the user */
-    std::vector<uint256> vSidechainHashActivate;
+    std::vector<uint256> vSidechainHashAck;
 
-    /** Cache of proposals created by this node, which should be included in the
-     * next block that this node mines. */
-    std::vector<SidechainProposal> vSidechainProposal;
+    /** Cache of proposals for new sidechains created by this node,
+     * which should be included in the next block that this node mines. */
+    std::vector<Sidechain> vSidechainProposal;
 
     /** Cache of potential WT^ transactions
      * TODO consider refactoring to use CTransactionRef */
@@ -324,11 +325,6 @@ private:
      * same CTIP as the deposit. */
     std::vector<uint256> vRemovedDeposit;
 
-    /** Calls SortDeposits for all of SCDB's deposit cache */
-    bool SortSCDBDeposits();
-
-    /** Update CTIP to match the deposit cache - called after sorting / undo */
-    void UpdateCTIP(const uint256& hashBlock);
 };
 
 /** Read encoded sum of WT fees from WT^ output script */

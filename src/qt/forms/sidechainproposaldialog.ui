@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>503</width>
-    <height>601</height>
+    <width>537</width>
+    <height>756</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,6 +30,20 @@
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Sidechain Number</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="spinBoxNSidechain">
+        <property name="maximum">
+         <number>255</number>
         </property>
        </widget>
       </item>
