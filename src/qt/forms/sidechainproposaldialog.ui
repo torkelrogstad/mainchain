@@ -181,7 +181,7 @@
          <item>
           <widget class="QLabel" name="label_2">
            <property name="text">
-            <string>Sidechain software hashses (recomended)</string>
+            <string>Sidechain software hashes (recommended)</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
