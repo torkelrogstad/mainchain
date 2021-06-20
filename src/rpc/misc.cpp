@@ -1046,24 +1046,22 @@ UniValue receivewtprime(const JSONRPCRequest& request)
     return ret;
 }
 
-UniValue getbmmproof(const JSONRPCRequest& request)
+UniValue getbmm(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 2)
         throw std::runtime_error(
-            "getbmmproof\n"
-            "Get the BMM proof (txoutproof) of an h* BMM commit transaction "
-            "on the mainchain. Used by the sidechain (optionally) to double "
-            "check BMM commits before connecting a sidechain block\n"
+            "getbmm\n"
+            "Check if a mainchain block includes BMM for a sidechain h*\n"
             "\nArguments:\n"
             "1. \"blockhash\"      (string, required) mainchain blockhash with h*\n"
-            "2. \"criticalhash\"   (string, required) h* to create proof of\n"
+            "2. \"bmmhash\"        (string, required) h* to locate\n"
             "\nExamples:\n"
-            + HelpExampleCli("getbmmproof", "\"blockhash\", \"criticalhash\"")
-            + HelpExampleRpc("getbmmproof", "\"blockhash\", \"criticalhash\"")
+            + HelpExampleCli("getbmm", "\"blockhash\", \"bmmhash\"")
+            + HelpExampleRpc("getbmm", "\"blockhash\", \"bmmhash\"")
             );
 
     uint256 hashBlock = uint256S(request.params[0].get_str());
-    uint256 hashCritical = uint256S(request.params[1].get_str());
+    uint256 hashBMM = uint256S(request.params[1].get_str());
 
     if (!mapBlockIndex.count(hashBlock)) {
         std::string strError = "Block not found";
@@ -1093,7 +1091,7 @@ UniValue getbmmproof(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
     }
 
-    bool fCriticalHashFound = false;
+    bool fBMMFound = false;
     const CTransaction &txCoinbase = *(block.vtx[0]);
     for (const CTxOut& out : txCoinbase.vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
@@ -1114,30 +1112,21 @@ UniValue getbmmproof(const JSONRPCRequest& request)
             std::vector<unsigned char> vchBytes(scriptPubKey.begin() + 37, scriptPubKey.end());
         }
 
-        if (hashCritical == uint256(vch))
-            fCriticalHashFound = true;
+        if (hashBMM == uint256(vch))
+            fBMMFound = true;
     }
 
-    if (!fCriticalHashFound) {
-        std::string strError = "H* not found in block";
+    if (!fBMMFound) {
+        std::string strError = "h* not found in block";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
     }
-
-    std::string strProof = "";
-    if (!GetTxOutProof(txCoinbase.GetHash(), hashBlock, strProof)) {
-        std::string strError = "Could not get txoutproof...";
-        LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
-    }
-
-    std::string strCoinbaseHex = EncodeHexTx(txCoinbase);
 
     UniValue ret(UniValue::VOBJ);
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("proof", strProof));
-    obj.push_back(Pair("coinbasehex", strCoinbaseHex));
-    ret.push_back(Pair("proof", obj));
+    obj.push_back(Pair("txid", txCoinbase.GetHash().ToString()));
+    obj.push_back(Pair("time", itostr(block.nTime)));
+    ret.push_back(Pair("bmm", obj));
 
     return ret;
 }
@@ -2013,7 +2002,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listsidechaindeposits",         &listsidechaindeposits,        {"addressbytes"}},
     { "DriveChain",  "countsidechaindeposits",        &countsidechaindeposits,       {"nsidechain"}},
     { "DriveChain",  "receivewtprime",                &receivewtprime,               {"nsidechain","rawtx"}},
-    { "DriveChain",  "getbmmproof",                   &getbmmproof,                  {"blockhash", "criticalhash"}},
+    { "DriveChain",  "getbmm",                        &getbmm,                       {"blockhash", "bmmhash"}},
     { "DriveChain",  "listpreviousblockhashes",       &listpreviousblockhashes,      {}},
     { "DriveChain",  "listactivesidechains",          &listactivesidechains,         {}},
     { "DriveChain",  "listsidechainactivationstatus", &listsidechainactivationstatus,{}},
