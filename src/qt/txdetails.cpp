@@ -61,13 +61,15 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     ui->labelLockTime->setText(QString::number(mtx.nLockTime));
     ui->labelValueOut->setText(QString::number(tx.GetValueOut()));
 
+    bool fBMMRequest = tx.criticalData.IsBMMRequest();
+
     // Set note
     if (tx.IsCoinBase()) {
         ui->labelNote->setText("This is a coinbase transaction.");
     }
     else
     if (!tx.criticalData.IsNull()) {
-        if (tx.criticalData.IsBMMRequest()) {
+        if (fBMMRequest) {
             ui->labelNote->setText("This is a BMM request.");
         } else {
             ui->labelNote->setText("This is a critical data request.");
@@ -148,7 +150,9 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             // Create a critical hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "Critical Hash Commit: " +
+            // TODO detect if this is a BMM commit or any other critical hash
+            // commit. Nobody is using it for anything else right now though.
+            subItem->setText(1, "BMM h* Commit: " +
                     QString::fromStdString(hashCritical.ToString()));
             AddTreeItem(INDEX_CRITICAL_HASH, subItem);
         }
@@ -166,7 +170,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             // Create a WT^ hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "WT^ Commit: SC# " + QString::number(nSidechain)
+            subItem->setText(1, "New WT^ Hash Commit for SC# " + QString::number(nSidechain)
                     + " : " + QString::fromStdString(hashWTPrime.ToString()));
             AddTreeItem(INDEX_WTPRIME_HASH, subItem);
         }
@@ -246,13 +250,13 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
             topItem->setText(0, "Witness Commit");
         else
         if (index == INDEX_CRITICAL_HASH)
-            topItem->setText(0, "Critical Hash");
+            topItem->setText(0, "BMM / Critical Hash");
         else
         if (index == INDEX_SCDB_MT_HASH)
             topItem->setText(0, "SCDB Merkle Tree Hash");
         else
         if (index == INDEX_WTPRIME_HASH)
-            topItem->setText(0, "WT^ Hash");
+            topItem->setText(0, "New WT^ Hash");
         else
         if (index == INDEX_SC_PROPOSAL)
             topItem->setText(0, "Sidechain Proposal");
