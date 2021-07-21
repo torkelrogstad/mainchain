@@ -1421,28 +1421,6 @@ bool AppInitMain()
     strFailSCDAT += "\n";
     strFailSCDAT += "Reindex now to fix errors?\n";
 
-    // TODO remove
-    if (!fReindex && drivechainsEnabled) {
-        uiInterface.InitMessage(_("Loading active sidechain & deposit cache..."));
-
-        if (!LoadDepositCache()) {
-            // Ask to reindex to fix issue loading DAT
-            bool fRet = uiInterface.ThreadSafeQuestion(
-                strFailSCDAT,
-                "Failed to load sidechain database files. Reindex?",
-                "Failed to load sidechain databae files. Reindex?",
-                CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
-            if (fRet) {
-                scdb.Reset();
-                fReindex = true;
-                fRequestShutdown = false;
-            } else {
-                LogPrintf("Aborted reindex. Exiting.\n");
-                return InitError("Aborted reindex. Exiting.\n");
-            }
-        }
-    }
-
     // ********************************************************* Step 8: load block chain
 
     bool fReindexChainState = gArgs.GetBoolArg("-reindex-chainstate", false);
@@ -1468,7 +1446,6 @@ bool AppInitMain()
     LogPrintf("* Using %.1fMiB for chain state database\n", nCoinDBCache * (1.0 / 1024 / 1024));
     LogPrintf("* Using %.1fMiB for in-memory UTXO set (plus up to %.1fMiB of unused mempool space)\n", nCoinCacheUsage * (1.0 / 1024 / 1024), nMempoolSizeMax * (1.0 / 1024 / 1024));
 
-    // TODO refactor this section so that the code is less indendented
     bool fLoaded = false;
     while (!fLoaded && !fRequestShutdown) {
         bool fReset = fReindex;
@@ -1567,6 +1544,41 @@ bool AppInitMain()
                     assert(chainActive.Tip() != nullptr);
                 }
 
+                // Synchronize SCDB
+                if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
+                {
+                    uiInterface.InitMessage(_("Synchronizing sidechain database..."));
+                    if (!ResyncSCDB(chainActive.Tip())) {
+                        LogPrintf("%s: Error: Failed to initialize SCDB\n", __func__);
+                        scdb.Reset();
+                        fReindex = true;
+                        fRequestShutdown = false;
+                        strLoadError = _("Failed to initialize SCDB.");
+                        break;
+                    }
+                }
+
+                if (drivechainsEnabled && !fReindex) {
+                    if (!LoadDepositCache()) {
+                        // Ask to reindex to fix issue loading DAT
+                        bool fRet = uiInterface.ThreadSafeQuestion(
+                            strFailSCDAT,
+                            "Failed to load sidechain deposit files. Reindex?",
+                            "Failed to load sidechain deposit files. Reindex?",
+                            CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
+                        if (fRet) {
+                            scdb.Reset();
+                            fReindex = true;
+                            fRequestShutdown = false;
+                            strLoadError = _("Error reading sidechain database files.");
+                            break;
+                        } else {
+                            LogPrintf("Aborted reindex. Exiting.\n");
+                            return InitError("Aborted reindex. Exiting.\n");
+                        }
+                    }
+                }
+
                 if (!fReset) {
                     // Note that RewindBlockIndex MUST run even if we're about to -reindex-chainstate.
                     // It both disconnects blocks based on chainActive, and drops block data in
@@ -1604,80 +1616,17 @@ bool AppInitMain()
                     }
                 }
 
-                // TODO remove / refactor.
-                // In order to pass the VerifyDB check above, we need to have loaded the
-                // currently active sidechains and sidechain CTIP info.
-                // After verifydb it will be in an invalid state though, so reload it.
-                // Once SCDB undo is fully supported we can remove this
-
-                if (drivechainsEnabled) {
-                    scdb.Reset();
-                    if (!fReset && (!LoadWTPrimeCache(fReindex))) {
-                        // Ask to reindex to fix issue loading DAT
-                        bool fRet = uiInterface.ThreadSafeQuestion(
-                            strFailSCDAT,
-                            "Failed to load sidechain database files. Reindex?",
-                            "Failed to load sidechain databae files. Reindex?",
-                            CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
-                        if (fRet) {
-                            scdb.Reset();
-                            fReindex = true;
-                            fRequestShutdown = false;
-                            strLoadError = _("Error reading sidechain database files.");
-                            break;
-                        } else {
-                            LogPrintf("Aborted reindex. Exiting.\n");
-                            return InitError("Aborted reindex. Exiting.\n");
-                        }
-                    }
-                }
-
-                // Synchronize SCDB
-                if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
-                {
-                    uiInterface.InitMessage(_("Synchronizing sidechain database..."));
-                    if (!ResyncSCDB(chainActive.Tip())) {
-                        LogPrintf("%s: Error: Failed to initialize SCDB\n", __func__);
-                        scdb.Reset();
-                        fReindex = true;
-                        fRequestShutdown = false;
-                        strLoadError = _("Failed to initialize SCDB.");
-                        break;
-                    }
-                }
-
-                if (drivechainsEnabled && !fReindex) {
-                    if (!LoadDepositCache()) {
-                        // Ask to reindex to fix issue loading DAT
-                        bool fRet = uiInterface.ThreadSafeQuestion(
-                            strFailSCDAT,
-                            "Failed to load sidechain database files. Reindex?",
-                            "Failed to load sidechain databae files. Reindex?",
-                            CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
-                        if (fRet) {
-                            scdb.Reset();
-                            fReindex = true;
-                            fRequestShutdown = false;
-                            strLoadError = _("Error reading sidechain database files.");
-                            break;
-                        } else {
-                            LogPrintf("Aborted reindex. Exiting.\n");
-                            return InitError("Aborted reindex. Exiting.\n");
-                        }
-                    }
-                }
-
+                // Load user's drivechain data
                 if (drivechainsEnabled) {
                     // We want to read the user's data even if reindexing - this data
                     // was created by the user and is not in any block
                     if (!LoadSidechainProposalCache() ||
                             !LoadSidechainActivationHashCache() ||
                             !LoadCustomVoteCache() ||
-                            !LoadBMMCache())
+                            !LoadBMMCache() ||
+                            !LoadWTPrimeCache(fReindex))
                     {
-                        std::string strError = "Error loading users vote data!\n\n";
-                        strError += "Failed to read sidechain & WT^ custom vote settings!";
-                        strError += "\n\n";
+                        std::string strError = "Error loading WT^ vote & BMM settings!\n\n";
                         strError += "You may need to re-set any vote settings you have made.";
                         uiInterface.ThreadSafeMessageBox(_(strError.c_str()), "", CClientUIInterface::MSG_ERROR);
                         LogPrintf("Error reading custom vote cache.\n");
