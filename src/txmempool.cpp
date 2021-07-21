@@ -1261,12 +1261,12 @@ void CTxMemPool::RemoveUnsortedSidechainDeposits(const std::map<uint8_t, Sidecha
         LOCK(cs);
 
         for (indexed_transaction_set::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {
-            if (it->GetSidechainDeposit() && it->GetSidechainNumber() == nSidechain)
-            {
+            if (it->GetSidechainDeposit() && it->GetSidechainNumber() == nSidechain) {
                 SidechainDeposit deposit;
-                if (!scdb.TxnToDeposit(it->GetTx(), {}, deposit)) {
-                    // If there is an invalid deposit, remove deposits for
-                    // this sidechain from the mempool.
+                // Get deposit information from transaction and check format.
+                // We do not have the block hash or transaction number here.
+                if (!scdb.TxnToDeposit(it->GetTx(), 0 /* nTx */, {} /* hashBlock */, deposit)) {
+                    // Reset deposits if we find any invalid for this sidechain
                     LogPrintf("%s: Removing sidechain deposits for sidechain: %u. Found invalid.\n", __func__, nSidechain);
                     RemoveSidechainDeposits(nSidechain, {});
                     if (mapCTIP.count(nSidechain))

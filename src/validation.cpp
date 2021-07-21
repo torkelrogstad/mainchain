@@ -2306,20 +2306,35 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
-    if (drivechainsEnabled && vDepositTx.size()) {
-        if (!scdb.AddDepositsFromBlock(vDepositTx, block.GetHash(), fJustCheck)) {
-            LogPrintf("%s: SCDB Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
-            return error("%s: SCDB Deposits invalid from block: %s", __func__, block.GetHash().ToString());
+    if (drivechainsEnabled && !fJustCheck && vDepositTx.size()) {
+        // Convert deposit transactions into SidechainDeposit objects
+        std::vector<SidechainDeposit> vDeposit;
+        for (size_t i = 0; i <  vDepositTx.size(); i++) {
+            const CTransaction tx = std::get<0>(vDepositTx[i]);
+            int nTx = std::get<1>(vDepositTx[i]);
+            uint256 hashBlock = std::get<2>(vDepositTx[i]);
+            SidechainDeposit deposit;
+            if (!scdb.TxnToDeposit(tx, nTx, hashBlock, deposit)) {
+                LogPrintf("%s: Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
+                return error("%s: Deposits invalid from block: %s", __func__, block.GetHash().ToString());
+            }
+            // Skip WT^ change return deposit, handled by SCDB::SpendWTPrime
+            if (deposit.strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
+                continue;
+            vDeposit.push_back(deposit);
         }
+        scdb.AddDeposits(vDeposit);
     }
 
     if (drivechainsEnabled && vWTPrimeToSpend.size()) {
         for (size_t i = 0; i < vWTPrimeToSpend.size(); i++) {
-            uint8_t nSidechain = vWTPrimeToSpend[i].first;
-            const CTransaction tx = vWTPrimeToSpend[i].second;
+            uint8_t nSidechain = std::get<0>(vWTPrimeToSpend[i]);
+            const CTransaction tx = std::get<1>(vWTPrimeToSpend[i]);
+            int nTx = std::get<2>(vWTPrimeToSpend[i]);
+
             uint256 hashBWT;
             tx.GetBWTHash(hashBWT);
-            if (!scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, fJustCheck, true /* fDebug */)) {
+            if (!scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, nTx, fJustCheck, true /* fDebug */)) {
                 return error("ConnectBlock(): Final spend WT^ failed (blind WT^ hash : txid): %s : %s.\n nSidechain: %u\n", hashBWT.ToString(), tx.GetHash().ToString(), nSidechain);
             }
         }
@@ -5494,7 +5509,7 @@ bool LoadDepositCache()
 
     // Add to SCDB
     if (!vDeposit.empty()) {
-        scdb.AddDeposits(vDeposit, uint256());
+        scdb.AddDeposits(vDeposit);
         mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
     }
 
@@ -5510,7 +5525,6 @@ void DumpDepositCache()
         vDeposit.insert(std::end(vDeposit), std::begin(vSidechainDeposit), std::end(vSidechainDeposit));
     }
 
-    int count = vDeposit.size();
 
     // Write the deposits
     fs::path path = GetDataDir() / "drivechain" / "deposit.dat.new";
@@ -5519,6 +5533,7 @@ void DumpDepositCache()
         return;
     }
 
+    int count = vDeposit.size();
     try {
         fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of deposits in file

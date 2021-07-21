@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wtprime)
     int nHeight = 0;
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         wtTest.nWorkScore = i;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wtTest}, nHeight));
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wtTest}));
         nHeight++;
     }
 
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
         std::vector<SidechainWTPrimeState> vWT;
         wt1.nWorkScore = i;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight));
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}));
         nHeight++;
         nBlocksLeft--;
     }
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
 
     // Keep updating until the first WT^ expires
     while (nBlocksLeft >= 0) {
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, nHeight, false, std::map<uint8_t, uint256>(), false, true));
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, false, std::map<uint8_t, uint256>(), false, true));
         nHeight++;
         nBlocksLeft--;
     }
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     wt2.nSidechain = 0;
     wt2.nWorkScore = 1;
     vWT.push_back(wt2);
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT, 0));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
     BOOST_CHECK(!scdbTest.CheckWorkScore(0, hashWTTest2));
 
     // Verify that scdbTest has updated to correct WT^
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
         std::vector<SidechainWTPrimeState> vWT;
         wt2.nWorkScore = i;
         vWT.push_back(wt2);
-        scdbTest.UpdateSCDBIndex(vWT, nHeight);
+        scdbTest.UpdateSCDBIndex(vWT);
         nHeight++;
     }
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest2));
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     wt.nSidechain = 0;
 
     vWT.push_back(wt);
-    scdbTest.UpdateSCDBIndex(vWT, 0);
+    scdbTest.UpdateSCDBIndex(vWT);
 
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy = scdbTest;
@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
     vWT.clear();
     wt.nWorkScore++;
     vWT.push_back(wt);
-    scdbTestCopy.UpdateSCDBIndex(vWT, 0);
+    scdbTestCopy.UpdateSCDBIndex(vWT);
 
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 }
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     std::vector<SidechainWTPrimeState> vWT;
     vWT.push_back(wtTest);
 
-    scdbTest.UpdateSCDBIndex(vWT, 0);
+    scdbTest.UpdateSCDBIndex(vWT);
 
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy = scdbTest;
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
     vWT.clear();
     vWT.push_back(wtTest);
 
-    scdbTestCopy.UpdateSCDBIndex(vWT, 1);
+    scdbTestCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original scdbTest
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     std::vector<SidechainWTPrimeState> vWT;
     vWT.push_back(wtTest);
 
-    scdbTest.UpdateSCDBIndex(vWT, 0);
+    scdbTest.UpdateSCDBIndex(vWT);
 
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy = scdbTest;
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
     vWT.clear();
     vWT.push_back(wtTest);
 
-    scdbTestCopy.UpdateSCDBIndex(vWT, 1);
+    scdbTestCopy.UpdateSCDBIndex(vWT);
 
     // Use MT hash prediction to update the original scdbTest
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -764,7 +764,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     vWT.push_back(wt1);
     vWT.push_back(wt2);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT, 0));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
     BOOST_CHECK(scdbTest.GetState(0).size() == 1);
     BOOST_CHECK(scdbTest.GetState(1).size() == 1);
 
@@ -779,7 +779,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     vWT.push_back(wt1);
     vWT.push_back(wt2);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT, 1));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -854,7 +854,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
     for (const SidechainWTPrimeState& wt : vWT) {
         std::map<uint8_t, uint256> mapNewWTPrime;
         mapNewWTPrime[wt.nSidechain] = wt.hashWTPrime;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{ wt }, 0, false, mapNewWTPrime));
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{ wt }, false, mapNewWTPrime));
     }
 
     BOOST_CHECK(scdbTest.GetState(0).size() == 3);
@@ -869,7 +869,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
     vWT.clear();
     vWT.push_back(wt2);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT, 1));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -951,7 +951,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
     for (const SidechainWTPrimeState& wt : vWT) {
         std::map<uint8_t, uint256> mapNewWTPrime;
         mapNewWTPrime[wt.nSidechain] = wt.hashWTPrime;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{ wt }, 0, false, mapNewWTPrime));
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{ wt }, false, mapNewWTPrime));
     }
 
     BOOST_CHECK(scdbTest.GetState(0).size() == 4);
@@ -966,7 +966,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
     vWT.clear();
     vWT.push_back(wt3);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT, 1));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -1070,7 +1070,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     vWT.push_back(wt2);
     vWT.push_back(wt3);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT, 0));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
     BOOST_CHECK(scdbTest.GetState(0).size() == 1);
     BOOST_CHECK(scdbTest.GetState(1).size() == 1);
     BOOST_CHECK(scdbTest.GetState(2).size() == 1);
@@ -1089,7 +1089,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     vWT.push_back(wt2);
     vWT.push_back(wt3);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT, 1));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -1201,7 +1201,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     vWT.push_back(wt2a);
     vWT.push_back(wt3a);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT, 0));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
     BOOST_CHECK(scdbTest.GetState(0).size() == 1);
     BOOST_CHECK(scdbTest.GetState(1).size() == 1);
     BOOST_CHECK(scdbTest.GetState(2).size() == 1);
@@ -1215,7 +1215,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     vWT.clear();
     vWT.push_back(wt3a);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT, 1));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -1290,7 +1290,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     vWT.push_back(wt2b);
     vWT.push_back(wt3b);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT, 3));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
     BOOST_CHECK(scdbTest.GetState(0).size() == 2);
     BOOST_CHECK(scdbTest.GetState(1).size() == 2);
     BOOST_CHECK(scdbTest.GetState(2).size() == 2);
@@ -1303,7 +1303,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     vWT.clear();
     vWT.push_back(wt3b);
 
-    BOOST_CHECK(scdbTestCopy2.UpdateSCDBIndex(vWT, 4));
+    BOOST_CHECK(scdbTestCopy2.UpdateSCDBIndex(vWT));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(4, scdbTestCopy2.GetSCDBHash()));
@@ -1398,7 +1398,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
         vWT.push_back(wt);
     }
     // Check that all of the WT^s are added
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT, nBlock));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         BOOST_CHECK(scdbTest.GetState(s.nSidechain).size() == 1);
     }
@@ -1439,7 +1439,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
         vUserVotes.push_back(vote);
         i++;
     }
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vNewScores, nBlock));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vNewScores));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(nBlock, scdbTestCopy.GetSCDBHash()));
@@ -1647,7 +1647,7 @@ BOOST_AUTO_TEST_CASE(txn_to_deposit)
 
     // TxnToDeposit
     SidechainDeposit deposit;
-    BOOST_CHECK(scdbTest.TxnToDeposit(mtx, {}, deposit));
+    BOOST_CHECK(scdbTest.TxnToDeposit(mtx, 0, {}, deposit));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
