@@ -46,6 +46,7 @@
 
 #include <future>
 #include <sstream>
+#include <tuple>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -697,11 +698,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             bool fDestOutput = false;
             for (size_t i = 0; i < tx.vout.size(); i++) {
                 const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
-
-                // This would be non-standard but still checking
                 if (!scriptPubKey.size())
                     continue;
-
 
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
                     if (fSidechainOutput) {
@@ -1778,7 +1776,6 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
     // sure that the coin did not already exist in the cache. As we have queried for that above
     // using HaveCoin, we don't need to guess. When fClean is false, a coin already existed and
     // it is an overwrite.
-
     view.AddCoin(out, std::move(undo), !fClean);
 
     return fClean ? DISCONNECT_OK : DISCONNECT_UNCLEAN;
@@ -2157,8 +2154,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
     std::vector<PrecomputedTransactionData> txdata;
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
-    std::vector<CTransaction> vDepositTx;
-    std::vector<std::pair<uint8_t, CTransaction>> vWTPrimeToSpend;
+    std::vector<std::tuple<CTransaction, int, uint256>> vDepositTx;
+    std::vector<std::tuple<uint8_t, CTransaction, int>> vWTPrimeToSpend;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -2262,8 +2259,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             if (amtSidechainUTXO > amtReturning) {
                 // Note that we are just checking that the WT^ can be spent,
                 // and then tracking it to spend later in the function
-                if (scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, true /* fJustCheck */, true /* fDebug */)) {
-                    vWTPrimeToSpend.push_back(std::make_pair(nSidechain, tx));
+                if (scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, i, true /* fJustCheck */, true /* fDebug */)) {
+                    vWTPrimeToSpend.push_back(std::make_tuple(nSidechain, tx, i));
                 } else {
                     return error("ConnectBlock(): Spend WT^ failed (blind WT^ hash : txid): %s : %s", hashBWT.ToString(), tx.GetHash().ToString());
                 }
@@ -2278,11 +2275,11 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 const CScript& scriptPubKey = out.scriptPubKey;
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
                     fSidechainOutput = true;
+                    break;
                 }
             }
-            if (fSidechainOutput) {
-                vDepositTx.push_back(tx);
-            }
+            if (fSidechainOutput)
+                vDepositTx.push_back(std::make_tuple(tx, i, block.GetHash()));
         }
 
         CTxUndo undoDummy;
@@ -5961,7 +5958,7 @@ bool ResyncSCDB(const CBlockIndex* pindex)
 {
     uiInterface.InitMessage(_("Resyncing sidechain database..."));
 
-    // We don't sync the genesis block
+    // No sidechain data in the genesis block
     if (pindex->GetBlockHash() == Params().GetConsensus().hashGenesisBlock)
         return true;
 
