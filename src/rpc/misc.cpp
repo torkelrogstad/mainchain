@@ -1046,18 +1046,18 @@ UniValue receivewtprime(const JSONRPCRequest& request)
     return ret;
 }
 
-UniValue getbmm(const JSONRPCRequest& request)
+UniValue verifybmm(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 2)
         throw std::runtime_error(
-            "getbmm\n"
+            "verifybmm\n"
             "Check if a mainchain block includes BMM for a sidechain h*\n"
             "\nArguments:\n"
             "1. \"blockhash\"      (string, required) mainchain blockhash with h*\n"
             "2. \"bmmhash\"        (string, required) h* to locate\n"
             "\nExamples:\n"
-            + HelpExampleCli("getbmm", "\"blockhash\", \"bmmhash\"")
-            + HelpExampleRpc("getbmm", "\"blockhash\", \"bmmhash\"")
+            + HelpExampleCli("verifybmm", "\"blockhash\", \"bmmhash\"")
+            + HelpExampleRpc("verifybmm", "\"blockhash\", \"bmmhash\"")
             );
 
     uint256 hashBlock = uint256S(request.params[0].get_str());
@@ -2002,7 +2002,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listsidechaindeposits",         &listsidechaindeposits,        {"addressbytes"}},
     { "DriveChain",  "countsidechaindeposits",        &countsidechaindeposits,       {"nsidechain"}},
     { "DriveChain",  "receivewtprime",                &receivewtprime,               {"nsidechain","rawtx"}},
-    { "DriveChain",  "getbmm",                        &getbmm,                       {"blockhash", "bmmhash"}},
+    { "DriveChain",  "verifybmm",                     &verifybmm,                    {"blockhash", "bmmhash"}},
     { "DriveChain",  "listpreviousblockhashes",       &listpreviousblockhashes,      {}},
     { "DriveChain",  "listactivesidechains",          &listactivesidechains,         {}},
     { "DriveChain",  "listsidechainactivationstatus", &listsidechainactivationstatus,{}},
