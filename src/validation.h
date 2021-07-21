@@ -582,7 +582,7 @@ void DumpSCDBCache();
 
 /** Resync SCDB WT^ status & verify hashBlockLastSeen. Used during init and
  * when a block is disconnected. */
-bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect = false);
+bool ResyncSCDB(const CBlockIndex* pindex);
 
 double GetNetworkHashPerSecond(int nLookup, int nHeight);
 

@@ -1838,7 +1838,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     }
 
     // Load SCDB undo data from disk
-    if (!ResyncSCDB(pindex->pprev, true /* fDisconnect */)) {
+    if (!ResyncSCDB(pindex->pprev)) {
         error("%s: Failed to re-sync SCDB for disconnected block: %s!", __func__, block.GetHash().ToString());
         return DISCONNECT_FAILED;
     }
@@ -5942,7 +5942,7 @@ void DumpSCDBCache()
     DumpBMMCache();
 }
 
-bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect)
+bool ResyncSCDB(const CBlockIndex* pindex)
 {
     uiInterface.InitMessage(_("Resyncing sidechain database..."));
 
