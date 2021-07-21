@@ -314,7 +314,7 @@ void PruneBlockFilesManual(int nManualPruneHeight);
 
 /** Calculate input and output values specific
  *  to sidechain deposit transactions with mempool view */
-void GetSidechainValues(CTxMemPool& pool, const CTransaction& tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
+void GetSidechainValues(const CCoinsView& coins, const CTransaction& tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
                         CAmount& amtReturning, CAmount& amtWithdrawn);
 
 /** Compare the blinded hash (B-WT^) with the transaction provided */

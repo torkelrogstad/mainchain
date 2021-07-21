@@ -548,17 +548,19 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, CValidationSt
     return CheckInputs(tx, state, view, true, flags, cacheSigStore, true, txdata);
 }
 
-void GetSidechainValues(CTxMemPool& pool, const CTransaction &tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
+void GetSidechainValues(const CCoinsView& coins, const CTransaction &tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
                         CAmount& amtReturning, CAmount& amtWithdrawn)
 {
     // Collect coins from inputs
-    CCoinsViewMemPool viewWithMemPool(pcoinsTip.get(), pool);
     std::vector<Coin> vCoin;
     for (const CTxIn& in : tx.vin) {
         Coin coin;
+
         // TODO return false / assert here if we can't find the coin
-        if (viewWithMemPool.GetCoin(in.prevout, coin))
-            vCoin.push_back(coin);
+        if (!coins.GetCoin(in.prevout, coin)) {
+            return;
+        }
+        vCoin.push_back(coin);
     }
 
     // Count value of inputs
@@ -597,7 +599,6 @@ bool CheckBWTHash(const uint256& hashWTPrime, const CTransaction &tx)
 
     return false;
 }
-
 
 static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool& pool, CValidationState& state, const CTransactionRef& ptx,
                               bool* pfMissingInputs, int64_t nAcceptTime, std::list<CTransactionRef>* plTxnReplaced,
@@ -679,7 +680,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         CAmount amtUserInput = CAmount(0);
         CAmount amtReturning = CAmount(0);
         CAmount amtWithdrawn = CAmount(0);
-        GetSidechainValues(pool, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
+        CCoinsViewMemPool poolCoins(pcoinsTip.get(), pool);
+        GetSidechainValues(poolCoins, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
 
         if (amtSidechainUTXO > amtReturning) {
             // M6 Withdrawal
@@ -2254,7 +2256,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             CAmount amtUserInput = CAmount(0);
             CAmount amtReturning = CAmount(0);
             CAmount amtWithdrawn = CAmount(0);
-            GetSidechainValues(mempool, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
+            GetSidechainValues(view, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
 
             if (amtSidechainUTXO > amtReturning) {
                 // Note that we are just checking that the WT^ can be spent,
