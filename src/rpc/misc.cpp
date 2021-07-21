@@ -801,7 +801,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
         // Check if we have reached a deposit the sidechain already has. The
         // sidechain can pass in a TXID & output index 'n' to let us know what
         // the latest deposit they've already received is.
-        if (!txidKnown.IsNull() && d.tx.GetHash() == txidKnown && d.n == nKnown)
+        if (!txidKnown.IsNull() && d.tx.GetHash() == txidKnown && d.nBurnIndex == nKnown)
         {
             LogPrintf("%s: Reached known deposit. TXID: %s n: %u\n",
                     __func__, txidKnown.ToString(), nKnown);
@@ -814,8 +814,6 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
         setTxids.insert(txid);
 
         LOCK(cs_main);
-
-        // TODO improve all of these error messages
 
         BlockMap::iterator it = mapBlockIndex.find(d.hashBlock);
         if (it == mapBlockIndex.end()) {
@@ -836,31 +834,6 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
             LogPrintf("%s: %s\n", __func__, strError);
             throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
         }
-
-        // Read block containing deposit output
-        CBlock block;
-        if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus())) {
-            std::string strError = "Can't read block from disk";
-            LogPrintf("%s: %s\n", __func__, strError);
-            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
-        }
-
-        // Look for deposit transaction
-        bool found = false;
-        for (const auto& tx : block.vtx)
-            if (tx->GetHash() == txid)
-                found = true;
-        if (!found) {
-            std::string strError = "transaction not found in specified block";
-            LogPrintf("%s: %s\n", __func__, strError);
-            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
-        }
-
-        // Serialize and take hex of txout proof
-        CDataStream ssMB(SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS);
-        CMerkleBlock mb(block, setTxids);
-        ssMB << mb;
-        std::string strProofHex = HexStr(ssMB.begin(), ssMB.end());
 #endif
 
 #ifdef ENABLE_WALLET
@@ -868,8 +841,9 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
         obj.push_back(Pair("nsidechain", d.nSidechain));
         obj.push_back(Pair("strdest", d.strDest));
         obj.push_back(Pair("txhex", EncodeHexTx(d.tx)));
-        obj.push_back(Pair("n", (int64_t)d.n));
-        obj.push_back(Pair("proofhex", strProofHex));
+        obj.push_back(Pair("nburnindex", (int)d.nBurnIndex));
+        obj.push_back(Pair("ntx", (int)d.nTx));
+        obj.push_back(Pair("hashblock", d.hashBlock.ToString()));
 
         arr.push_back(obj);
 #endif
@@ -1128,6 +1102,84 @@ UniValue verifybmm(const JSONRPCRequest& request)
     obj.push_back(Pair("time", itostr(block.nTime)));
     ret.push_back(Pair("bmm", obj));
 
+    return ret;
+}
+
+UniValue verifydeposit(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 3)
+        throw std::runtime_error(
+            "verifydeposit\n"
+            "Check if a mainchain block includes valid deposit with txid.\n"
+            "\nArguments:\n"
+            "1. \"blockhash\"      (string, required) mainchain blockhash with deposit\n"
+            "2. \"txid\"           (string, required) deposit txid to locate\n"
+            "3. \"nTx\"            (int, required) deposit tx number in block\n"
+            "\nExamples:\n"
+            + HelpExampleCli("verifybmm", "\"blockhash\", \"txid\"")
+            + HelpExampleRpc("verifybmm", "\"blockhash\", \"txid\"")
+            );
+
+    uint256 hashBlock = uint256S(request.params[0].get_str());
+    uint256 txid = uint256S(request.params[1].get_str());
+    int nTx = request.params[2].get_int();
+
+    if (!mapBlockIndex.count(hashBlock)) {
+        std::string strError = "Block not found";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    CBlockIndex* pblockindex = mapBlockIndex[hashBlock];
+    if (pblockindex == NULL)
+    {
+        std::string strError = "pblockindex null";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    if (!scdb.HaveDepositCached(txid)) {
+        std::string strError = "SCDB does not know deposit";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    CBlock block;
+    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+    {
+        std::string strError = "Failed to read block from disk";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    if (!block.vtx.size()) {
+        std::string strError = "No txns in block";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    if ((int)block.vtx.size() <= nTx) {
+        std::string strError = "nTx out of range for block";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    const CTransaction &tx = *(block.vtx[nTx]);
+    if (tx.GetHash() != txid) {
+        std::string strError = "Transaction at block index specified does not match txid";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    SidechainDeposit deposit;
+    if (!scdb.TxnToDeposit(tx, nTx, hashBlock, deposit)) {
+        std::string strError = "Invalid deposit transaction format";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("txid", tx.GetHash().ToString()));
     return ret;
 }
 
@@ -2003,6 +2055,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "countsidechaindeposits",        &countsidechaindeposits,       {"nsidechain"}},
     { "DriveChain",  "receivewtprime",                &receivewtprime,               {"nsidechain","rawtx"}},
     { "DriveChain",  "verifybmm",                     &verifybmm,                    {"blockhash", "bmmhash"}},
+    { "DriveChain",  "verifydeposit",                 &verifydeposit,                {"blockhash", "txid", "ntx"}},
     { "DriveChain",  "listpreviousblockhashes",       &listpreviousblockhashes,      {}},
     { "DriveChain",  "listactivesidechains",          &listactivesidechains,         {}},
     { "DriveChain",  "listsidechainactivationstatus", &listsidechainactivationstatus,{}},
