@@ -1178,9 +1178,7 @@ UniValue verifydeposit(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
     }
 
-    UniValue ret(UniValue::VOBJ);
-    ret.push_back(Pair("txid", tx.GetHash().ToString()));
-    return ret;
+    return tx.GetHash().ToString();
 }
 
 UniValue listpreviousblockhashes(const JSONRPCRequest& request)
