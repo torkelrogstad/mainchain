@@ -265,15 +265,12 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_create)
 {
-    /* TODO
     // Create a deposit (and CTIP) for a single sidechain
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    // TODO use the wallet function
-    // Create deposit
     CMutableTransaction mtx;
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
@@ -289,27 +286,31 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_create)
 
     mtx.vout.push_back(CTxOut(CAmount(0), dataScript));
 
-    Sidechain sidechain;
-    BOOST_CHECK(scdbTest.GetSidechain(0, sidechain));
-
     CScript sidechainScript;
     BOOST_CHECK(scdbTest.GetSidechainScript(0, sidechainScript));
 
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(scdb.TxnToDeposit(mtx));
+    SidechainDeposit deposit;
+    deposit.nSidechain = 0;
+    deposit.strDest = "";
+    deposit.tx = mtx;
+    deposit.nBurnIndex = 1;
+    deposit.nTx = 1;
+    deposit.hashBlock = GetRandHash();
 
-    // Check if we cached it
+    scdbTest.AddDeposits(std::vector<SidechainDeposit>{ deposit });
+
+    // Check if deposit was cached
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
-    BOOST_CHECK(vDeposit.size() == 1 && vDeposit.front().tx == mtx);
+    BOOST_CHECK(vDeposit.size() == 1 && vDeposit.front() == deposit);
 
-    // Compare with scdbTest CTIP
+    // Check if CTIP was updated
     SidechainCTIP ctip;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctip));
-    BOOST_CHECK(ctip.out.hash == mtx.GetHash());
+    BOOST_CHECK(ctip.out.hash == deposit.tx.GetHash());
     BOOST_CHECK(ctip.out.n == 1);
-    */
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_sidechain)
@@ -323,7 +324,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_sidechain)
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
 {
-    /* TODO
     // Create many deposits and make sure that single valid CTIP results
     SidechainDB scdbTest;
 
@@ -356,7 +356,14 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx});
+    SidechainDeposit deposit;
+    deposit.nSidechain = 0;
+    deposit.strDest = "";
+    deposit.tx = mtx;
+    deposit.nBurnIndex = 1;
+    deposit.nTx = 1;
+
+    scdbTest.AddDeposits(std::vector<SidechainDeposit>{ deposit });
 
     // Check if we cached it
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
@@ -387,7 +394,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
     // Add deposit output
     mtx2.vout.push_back(CTxOut(25 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx2});
+    deposit.tx = mtx2;
+
+    scdbTest.AddDeposits(std::vector<SidechainDeposit>{ deposit });
 
     // Check if we cached it
     vDeposit.clear();
@@ -399,7 +408,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits)
     BOOST_CHECK(scdbTest.GetCTIP(0, ctip2));
     BOOST_CHECK(ctip2.out.hash == mtx2.GetHash());
     BOOST_CHECK(ctip2.out.n == 1);
-    */
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits_multi_sidechain)
@@ -415,7 +423,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits_multi_sidechain)
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
 {
-    /*
     // Create a deposit (and CTIP) for a single sidechain,
     // and then spend it with a WT^
     SidechainDB scdbTest;
@@ -449,7 +456,14 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx});
+    SidechainDeposit deposit;
+    deposit.nSidechain = 0;
+    deposit.strDest = "";
+    deposit.tx = mtx;
+    deposit.nBurnIndex = 1;
+    deposit.nTx = 1;
+
+    scdbTest.AddDeposits(std::vector<SidechainDeposit>{ deposit });
 
     // Check if we cached it
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
@@ -488,19 +502,17 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashBlind));
 
     // Spend the WT^
-    BOOST_CHECK(scdbTest.SpendWTPrime(0, GetRandHash(), wmtx));
+    BOOST_CHECK(scdbTest.SpendWTPrime(0, GetRandHash(), wmtx, 1));
 
     // Check that the CTIP has been updated to the return amount from the WT^
     SidechainCTIP ctipFinal;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctipFinal));
     BOOST_CHECK(ctipFinal.out.hash == wmtx.GetHash());
     BOOST_CHECK(ctipFinal.out.n == 3);
-    */
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
 {
-    /*
     // Create a deposit (and CTIP) for a single sidechain, and then spend it
     // with a WT^. After doing that, create another deposit.
     SidechainDB scdbTest;
@@ -534,7 +546,14 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     // Add deposit output
     mtx.vout.push_back(CTxOut(50 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx});
+    SidechainDeposit deposit;
+    deposit.nSidechain = 0;
+    deposit.strDest = "";
+    deposit.tx = mtx;
+    deposit.nBurnIndex = 1;
+    deposit.nTx = 1;
+
+    scdbTest.AddDeposits(std::vector<SidechainDeposit>{ deposit });
 
     // Check if we cached it
     std::vector<SidechainDeposit> vDeposit = scdbTest.GetDeposits(0);
@@ -573,7 +592,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashBlind));
 
     // Spend the WT^
-    BOOST_CHECK(scdbTest.SpendWTPrime(0, GetRandHash(), wmtx));
+    BOOST_CHECK(scdbTest.SpendWTPrime(0, GetRandHash(), wmtx, 1));
 
     // Check that the CTIP has been updated to the return amount from the WT^
     SidechainCTIP ctipFinal;
@@ -600,7 +619,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     // Add deposit output
     mtx2.vout.push_back(CTxOut(25 * CENT, sidechainScript));
 
-    scdbTest.AddDeposits(std::vector<CTransaction>{mtx2});
+    deposit.tx = mtx2;
+
+    scdbTest.AddDeposits(std::vector<SidechainDeposit>{ deposit });
 
     // Check if we cached it
     vDeposit.clear();
@@ -613,7 +634,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     BOOST_CHECK(scdbTest.GetCTIP(0, ctip2));
     BOOST_CHECK(ctip2.out.hash == mtx2.GetHash());
     BOOST_CHECK(ctip2.out.n == 1);
-    */
 }
 
 BOOST_AUTO_TEST_CASE(IsCriticalHashCommit)
