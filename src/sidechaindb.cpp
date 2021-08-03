@@ -40,44 +40,20 @@ void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
     vRemovedDeposit.push_back(hashRemoved);
 }
 
-bool SidechainDB::AddDepositsFromBlock(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck)
+void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit)
 {
-    // Note that we aren't splitting the deposits by nSidechain yet, that will
-    // be done after verifying all of the deposits.
-    std::vector<SidechainDeposit> vDeposit;
-    for (const CTransaction& tx : vtx) {
-        SidechainDeposit deposit;
-        if (!TxnToDeposit(tx, hashBlock, deposit)) {
-            LogPrintf("%s: Failed to read deposit from transaction! Skipping!\n", __func__);
-            continue;
-        }
-        // We skip WT^(s) here - they are handled by the SpendWTPrime function.
-        if (deposit.strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
-            continue;
-        }
-        vDeposit.push_back(deposit);
-    }
+    if (vDeposit.empty())
+        return;
 
-    if (fJustCheck)
-        return true;
-
-    // Add deposits to cache, note that this AddDeposit call will split deposits
-    // by nSidechain and sort them
-    AddDeposits(vDeposit, hashBlock);
-
-    return true;
-}
-
-void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, const uint256& hashBlock)
-{
-    // Split the deposits by nSidechain - and double check them
+    // Split the deposits by nSidechain
     std::vector<std::vector<SidechainDeposit>> vDepositSplit;
     vDepositSplit.resize(vDepositCache.size());
     for (const SidechainDeposit& d : vDeposit) {
         if (!IsSidechainActive(d.nSidechain))
             continue;
-        if (HaveDepositCached(d))
+        if (HaveDepositCached(d.tx.GetHash()))
             continue;
+
         // Put deposit into vector based on nSidechain
         vDepositSplit[d.nSidechain].push_back(d);
     }
@@ -86,15 +62,21 @@ void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit, con
     for (size_t x = 0; x < vDepositSplit.size(); x++) {
         for (size_t y = 0; y < vDepositSplit[x].size(); y++) {
             vDepositCache[x].push_back(vDepositSplit[x][y]);
+            setDepositTXID.insert(vDepositSplit[x][y].tx.GetHash());
         }
     }
 
     // Sort the deposits by CTIP UTXO spend order
     // TODO check return value
-    SortSCDBDeposits();
+    if (!SortSCDBDeposits()) {
+        LogPrintf("SCDB %s: Failed to sort SCDB deposits!", __func__);
+    }
 
+    // TODO check return value
     // Finally, update the CTIP for each nSidechain and log it
-    UpdateCTIP(hashBlock);
+    if (!UpdateCTIP()) {
+        LogPrintf("SCDB %s: Failed to update CTIP!", __func__);
+    }
 }
 
 bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int nHeight, bool fDebug)
@@ -144,7 +126,7 @@ bool SidechainDB::AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int
 
     // TODO
     // Remove fSkipDEC
-    bool fUpdated = UpdateSCDBIndex(vWT, nHeight, true /* fDebug */, mapNewWTPrime, true /* fSkipDEC */);
+    bool fUpdated = UpdateSCDBIndex(vWT, true /* fDebug */, mapNewWTPrime, true /* fSkipDEC */);
 
     if (!fUpdated && fDebug)
         LogPrintf("SCDB %s: Failed to update SCDBIndex.\n", __func__);
@@ -275,18 +257,11 @@ void SidechainDB::CacheSidechainHashToAck(const uint256& u)
 
 bool SidechainDB::CacheWTPrime(const CTransaction& tx, uint8_t nSidechain)
 {
-    if (!IsSidechainActive(nSidechain)) {
-        LogPrintf("%s: Rejecting WT^: %s - Invalid sidechain number!\n",
-                __func__, tx.GetHash().ToString());
-        return false;
-    }
-
     if (HaveWTPrimeCached(tx.GetHash())) {
         LogPrintf("%s: Rejecting WT^: %s - Already cached!\n",
                 __func__, tx.GetHash().ToString());
         return false;
     }
-
 
     vWTPrimeCache.push_back(std::make_pair(nSidechain, tx));
 
@@ -537,7 +512,7 @@ uint256 SidechainDB::GetSCDBHash() const
 uint256 SidechainDB::GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime, bool fRemoveExpired) const
 {
     SidechainDB scdbCopy = (*this);
-    if (!scdbCopy.UpdateSCDBIndex(vNewScores, nHeight, false /* fDebug */, mapNewWTPrime, false, fRemoveExpired))
+    if (!scdbCopy.UpdateSCDBIndex(vNewScores, false /* fDebug */, mapNewWTPrime, false, fRemoveExpired))
     {
         LogPrintf("%s: SCDB failed to get updated hash at height: %i\n", __func__, nHeight);
         return uint256();
@@ -717,16 +692,9 @@ bool SidechainDB::HasSidechainScript(const std::vector<CScript>& vScript, uint8_
     return false;
 }
 
-bool SidechainDB::HaveDepositCached(const SidechainDeposit &deposit) const
+bool SidechainDB::HaveDepositCached(const uint256& txid) const
 {
-    if (!IsSidechainActive(deposit.nSidechain))
-        return false;
-
-    for (const SidechainDeposit& d : vDepositCache[deposit.nSidechain]) {
-        if (d == deposit)
-            return true;
-    }
-    return false;
+    return (setDepositTXID.find(txid) != setDepositTXID.end());
 }
 
 bool SidechainDB::HaveSpentWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const
@@ -779,13 +747,10 @@ bool SidechainDB::IsSidechainActive(uint8_t nSidechain) const
 {
     if (nSidechain >= SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return false;
-
     if (nSidechain >= vWTPrimeStatus.size())
         return false;
-
     if (nSidechain >= vDepositCache.size())
         return false;
-
     if (nSidechain >= vSidechain.size())
         return false;
 
@@ -943,8 +908,9 @@ void SidechainDB::Reset()
         vSidechain[i].nSidechain = i;
 }
 
-bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck, bool fDebug)
+bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, const int nTx, bool fJustCheck, bool fDebug)
 {
+    fDebug = true;
     if (!IsSidechainActive(nSidechain)) {
         if (fDebug) {
             LogPrintf("SCDB %s: Cannot spend WT^ (txid): %s for sidechain number: %u.\n Invalid sidechain number.\n",
@@ -990,7 +956,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     // as the required SIDECHAIN_WTPRIME_RETURN_DEST OP_RETURN output.
     bool fChangeOutputFound = false;
     bool fReturnDestFound = false;
-    uint32_t n = 0;
+    uint32_t nBurnIndex = 0;
     uint8_t nSidechainScript;
     CAmount amountChange = 0;
     for (size_t i = 0; i < tx.vout.size(); i++) {
@@ -1057,7 +1023,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
             }
 
             // Copy output index of sidechain change return deposit
-            n = i;
+            nBurnIndex = i;
             fChangeOutputFound = true;
 
             // Copy amount of sidechain change
@@ -1171,11 +1137,12 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     deposit.nSidechain = nSidechain;
     deposit.strDest = SIDECHAIN_WTPRIME_RETURN_DEST;
     deposit.tx = tx;
-    deposit.n = n;
+    deposit.nBurnIndex = nBurnIndex;
+    deposit.nTx = nTx;
     deposit.hashBlock = hashBlock;
 
-    // This will also update the SCDB CTIP
-    AddDeposits(std::vector<SidechainDeposit>{deposit}, hashBlock);
+    // Add deposit to cache, update CTIP
+    AddDeposits(std::vector<SidechainDeposit>{ deposit });
 
     // TODO In the event that the block which spent a WT^ is disconnected, a
     // miner will no longer have the raw WT^ transaction to create a WT^ payout
@@ -1210,7 +1177,7 @@ bool SidechainDB::SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, con
     return true;
 }
 
-bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock, SidechainDeposit& deposit)
+bool SidechainDB::TxnToDeposit(const CTransaction& tx, const int nTx, const uint256& hashBlock, SidechainDeposit& deposit)
 {
     // Note that the first OP_RETURN output found in a deposit transaction will
     // be used as the destination. Others are ignored.
@@ -1232,7 +1199,7 @@ bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock,
 
             // We found the burn output, copy the output index & nSidechain
             deposit.nSidechain = nSidechain;
-            deposit.n = i;
+            deposit.nBurnIndex = i;
             fBurnFound = true;
             continue;
         }
@@ -1243,12 +1210,10 @@ bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock,
             continue;
         if (scriptPubKey.front() != OP_RETURN)
             continue;
-
         if (scriptPubKey.size() < 3) {
             LogPrintf("%s: Invalid - First OP_RETURN is invalid (too small).\ntxid: %s\n", __func__, tx.GetHash().ToString());
             return false;
         }
-
         if (scriptPubKey.size() > MAX_DEPOSIT_DESTINATION_BYTES) {
             LogPrintf("%s: Invalid - First OP_RETURN is invalid (too large).\ntxid: %s\n", __func__, tx.GetHash().ToString());
             return false;
@@ -1268,12 +1233,15 @@ bool SidechainDB::TxnToDeposit(const CTransaction& tx, const uint256& hashBlock,
             return false;
         }
 
-        deposit.tx = tx;
         deposit.strDest = strDest;
-        deposit.hashBlock = hashBlock;
 
         fDestFound = true;
     }
+
+    deposit.tx = tx;
+    deposit.hashBlock = hashBlock;
+    deposit.nTx = nTx;
+
     return (fBurnFound && fDestFound && CTransaction(deposit.tx) == tx);
 }
 
@@ -1699,10 +1667,11 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
     // Remove cached WT^ spends from the block that was disconnected
     std::map<uint256, std::vector<SidechainSpentWTPrime>>::const_iterator it;
     it = mapSpentWTPrime.find(hashBlock);
-
     if (it != mapSpentWTPrime.end())
         mapSpentWTPrime.erase(it);
 
+    // TODO lookup deposits in cache with setDepositTXID, then std::remove_if
+    //
     // Undo deposits
     // Loop through the transactions in the block being disconnected, and if
     // they match a transaction in our deposit cache remove it.
@@ -1712,6 +1681,7 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
             std::vector<SidechainDeposit>::iterator it;
             for (it = vDepositCache[x].begin(); it != vDepositCache[x].end();) {
                 if (*tx == CTransaction(it->tx)) {
+                    setDepositTXID.erase(tx->GetHash());
                     fDepositRemoved = true;
                     it = vDepositCache[x].erase(it);
                 } else {
@@ -1724,8 +1694,13 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
     // If any deposits were removed re-sort deposits and update CTIP
     if (fDepositRemoved) {
         // TODO check return value
-        SortSCDBDeposits();
-        UpdateCTIP(hashBlock);
+        if (!SortSCDBDeposits()) {
+            LogPrintf("SCDB %s: Failed to sort SCDB deposits!", __func__);
+        }
+        // TODO check return value
+        if (!UpdateCTIP()) {
+            LogPrintf("SCDB %s: Failed to update CTIP!", __func__);
+        }
     }
 
     // Undo hashBlockLastSeen
@@ -1736,8 +1711,7 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
     return true;
 }
 
-// TODO remove unused nHeight
-bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug, const std::map<uint8_t, uint256>& mapNewWTPrime, bool fSkipDec, bool fRemoveExpired)
+bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, bool fDebug, const std::map<uint8_t, uint256>& mapNewWTPrime, bool fSkipDec, bool fRemoveExpired)
 {
     if (vWTPrimeStatus.empty()) {
         if (fDebug)
@@ -1918,13 +1892,6 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNew
         }
     }
 
-    // Too noisy but can be re-enabled for debugging
-    //if (fDebug)
-    //    LogPrintf("SCDB %s: Finished updating at height: %u with %u WT^ updates.\n",
-    //            __func__,
-    //            nHeight,
-    //            vNewScores.size());
-
     return true;
 }
 
@@ -1936,26 +1903,26 @@ bool SidechainDB::UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, 
     // Try testing out most likely updates
     std::vector<SidechainWTPrimeState> vUpvote = GetLatestStateWithVote(SCDB_UPVOTE, mapNewWTPrime);
     if (GetSCDBHashIfUpdate(vUpvote, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
-        UpdateSCDBIndex(vUpvote, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
+        UpdateSCDBIndex(vUpvote, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
         return (GetSCDBHash() == hashMerkleRoot);
     }
 
     std::vector<SidechainWTPrimeState> vAbstain = GetLatestStateWithVote(SCDB_ABSTAIN, mapNewWTPrime);
     if (GetSCDBHashIfUpdate(vAbstain, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
-        UpdateSCDBIndex(vAbstain, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
+        UpdateSCDBIndex(vAbstain, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
         return (GetSCDBHash() == hashMerkleRoot);
     }
 
     std::vector<SidechainWTPrimeState> vDownvote = GetLatestStateWithVote(SCDB_DOWNVOTE, mapNewWTPrime);
     if (GetSCDBHashIfUpdate(vDownvote, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
-        UpdateSCDBIndex(vDownvote, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
+        UpdateSCDBIndex(vDownvote, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
         return (GetSCDBHash() == hashMerkleRoot);
     }
 
     // Try using new scores (optionally passed in) from update bytes
     if (vScores.size()) {
         if (GetSCDBHashIfUpdate(vScores, nHeight, mapNewWTPrime, true /* fRemoveExpired */) == hashMerkleRoot) {
-            UpdateSCDBIndex(vScores, nHeight, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
+            UpdateSCDBIndex(vScores, true /* fDebug */, mapNewWTPrime, false /* fSkipDec */, true /* fRemoveExpired */);
             return (GetSCDBHash() == hashMerkleRoot);
         }
     }
@@ -2112,24 +2079,23 @@ bool SidechainDB::SortSCDBDeposits()
         vDepositSorted.push_back(vDeposit);
     }
 
-    // TODO check the result
-    // - Make sure that all deposits were sorted
-    // - ...
-
     // Update deposit cache with sorted list
     vDepositCache = vDepositSorted;
 
     return true;
 }
 
-void SidechainDB::UpdateCTIP(const uint256& hashBlock)
+bool SidechainDB::UpdateCTIP()
 {
     for (size_t x = 0; x < vDepositCache.size(); x++) {
         if (vDepositCache[x].size()) {
             const SidechainDeposit& d = vDepositCache[x].back();
 
-            const COutPoint out(d.tx.GetHash(), d.n);
-            const CAmount amount = d.tx.vout[d.n].nValue;
+            if (d.nBurnIndex >= d.tx.vout.size())
+                return false;
+
+            const COutPoint out(d.tx.GetHash(), d.nBurnIndex);
+            const CAmount amount = d.tx.vout[d.nBurnIndex].nValue;
 
             SidechainCTIP ctip;
             ctip.out = out;
@@ -2138,21 +2104,11 @@ void SidechainDB::UpdateCTIP(const uint256& hashBlock)
             mapCTIP[d.nSidechain] = ctip;
 
             // Log the update
-            // If hash block is null - that means we loaded deposits from disk
-            if (!hashBlock.IsNull()) {
-                LogPrintf("SCDB %s: Updated sidechain CTIP for nSidechain: %u. CTIP output: %s CTIP amount: %i hashBlock: %s.\n",
-                    __func__,
-                    d.nSidechain,
-                    out.ToString(),
-                    amount,
-                    hashBlock.ToString());
-            } else {
-                LogPrintf("SCDB %s: Updated sidechain CTIP for nSidechain: %u. CTIP output: %s CTIP amount: %i. (Loaded from disk).\n",
-                    __func__,
-                    d.nSidechain,
-                    out.ToString(),
-                    amount);
-            }
+            LogPrintf("SCDB %s: Updated sidechain CTIP for nSidechain: %u. CTIP output: %s CTIP amount: %i.\n",
+                __func__,
+                d.nSidechain,
+                out.ToString(),
+                amount);
         } else {
             // If there are no deposits now, remove CTIP for nSidechain
             std::map<uint8_t, SidechainCTIP>::const_iterator it;
@@ -2166,6 +2122,7 @@ void SidechainDB::UpdateCTIP(const uint256& hashBlock)
 
         }
     }
+    return true;
 }
 
 bool DecodeWTFees(const CScript& script, CAmount& amount)
@@ -2314,7 +2271,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
             const SidechainDeposit dy = vDeposit[y];
 
             // The CTIP output of the deposit that might be the input
-            const COutPoint prevout(dy.tx.GetHash(), dy.n);
+            const COutPoint prevout(dy.tx.GetHash(), dy.nBurnIndex);
 
             // Look for the CTIP output
             for (const CTxIn& in : dx.tx.vin) {
@@ -2352,7 +2309,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
     // in CTIP spend order.
 
     // Track the CTIP output of the latest deposit we have sorted
-    COutPoint prevout(vDepositSorted.back().tx.GetHash(), vDepositSorted.back().n);
+    COutPoint prevout(vDepositSorted.back().tx.GetHash(), vDepositSorted.back().nBurnIndex);
 
     // Look for the deposit that spends the last sorted CTIP output and sort it.
     // If we cannot find a deposit spending the CTIP, that should mean we
@@ -2367,7 +2324,7 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
 
                 // Update the CTIP output we are looking for
                 const SidechainDeposit deposit = vDepositSorted.back();
-                prevout = COutPoint(deposit.tx.GetHash(), deposit.n);
+                prevout = COutPoint(deposit.tx.GetHash(), deposit.nBurnIndex);
 
                 // Start from begin() again
                 fFound = true;

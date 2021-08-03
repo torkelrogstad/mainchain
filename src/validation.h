@@ -314,7 +314,7 @@ void PruneBlockFilesManual(int nManualPruneHeight);
 
 /** Calculate input and output values specific
  *  to sidechain deposit transactions with mempool view */
-void GetSidechainValues(CTxMemPool& pool, const CTransaction& tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
+void GetSidechainValues(const CCoinsView& coins, const CTransaction& tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
                         CAmount& amtReturning, CAmount& amtWithdrawn);
 
 /** Compare the blinded hash (B-WT^) with the transaction provided */
@@ -582,7 +582,7 @@ void DumpSCDBCache();
 
 /** Resync SCDB WT^ status & verify hashBlockLastSeen. Used during init and
  * when a block is disconnected. */
-bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect = false);
+bool ResyncSCDB(const CBlockIndex* pindex);
 
 double GetNetworkHashPerSecond(int nLookup, int nHeight);
 

@@ -150,7 +150,8 @@ struct SidechainDeposit {
     uint8_t nSidechain;
     std::string strDest;
     CMutableTransaction tx;
-    uint32_t n;
+    uint32_t nBurnIndex; // The deposit burn output in the deposit transaction
+    uint32_t nTx; // The deposit's transaction number in the block
     uint256 hashBlock;
 
     bool operator==(const SidechainDeposit& a) const;
@@ -164,7 +165,8 @@ struct SidechainDeposit {
         READWRITE(nSidechain);
         READWRITE(strDest);
         READWRITE(tx);
-        READWRITE(n);
+        READWRITE(nBurnIndex);
+        READWRITE(nTx);
         READWRITE(hashBlock);
     }
 };

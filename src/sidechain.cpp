@@ -52,7 +52,8 @@ bool SidechainDeposit::operator==(const SidechainDeposit& a) const
     return (a.nSidechain == nSidechain &&
             a.strDest == strDest &&
             a.tx == tx &&
-            a.n == n &&
+            a.nBurnIndex == nBurnIndex &&
+            a.nTx == nTx &&
             a.hashBlock == hashBlock);
 }
 
@@ -62,7 +63,8 @@ std::string SidechainDeposit::ToString() const
     ss << "nsidechain=" << (unsigned int)nSidechain << std::endl;
     ss << "strDest=" << strDest << std::endl;
     ss << "txid=" << tx.GetHash().ToString() << std::endl;
-    ss << "n=" << n << std::endl;
+    ss << "nBurnIndex=" << nBurnIndex << std::endl;
+    ss << "nTx=" << nTx << std::endl;
     ss << "hashblock=" << hashBlock.ToString() << std::endl;
     return ss.str();
 }

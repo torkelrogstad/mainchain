@@ -45,11 +45,8 @@ public:
     /** Add txid of removed sidechain deposit transaction */
     void AddRemovedDeposit(const uint256& hashRemoved);
 
-    /** Add deposit(s) to cache - from block txns */
-    bool AddDepositsFromBlock(const std::vector<CTransaction>& vtx, const uint256& hashBlock, bool fJustCheck = false);
-
-    /** Add deposit(s) to cache - from disk cache */
-    void AddDeposits(const std::vector<SidechainDeposit>& vDeposit, const uint256& hashBlock);
+    /** Add deposit(s) to cache */
+    void AddDeposits(const std::vector<SidechainDeposit>& vDeposit);
 
     /** Add a new WT^ to SCDB */
     bool AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int nHeight, bool fDebug = false);
@@ -188,8 +185,8 @@ public:
      * sidechain number by reference */
     bool HasSidechainScript(const std::vector<CScript>& vScript, uint8_t& nSidechain) const;
 
-    /** Return true if the deposit is cached */
-    bool HaveDepositCached(const SidechainDeposit& deposit) const;
+    /** Return true if the deposit transaction is cached */
+    bool HaveDepositCached(const uint256& txid) const;
 
     /** Return true if the WT^ has been spent */
     bool HaveSpentWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const;
@@ -211,6 +208,7 @@ public:
      * pending sidechain proposal. */
     bool IsSidechainUnique(const Sidechain& sidechain) const;
 
+    /* Remove WT^(s) that are too old to pass with their current score */
     void RemoveExpiredWTPrimes();
 
     /** Remove sidechain-to-be-activated hash from cache, because the user
@@ -227,11 +225,11 @@ public:
     void Reset();
 
     /** Spend a WT^ (if we can) */
-    bool SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, bool fJustCheck = false,  bool fDebug = false);
+    bool SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, const int nTx, bool fJustCheck = false,  bool fDebug = false);
 
     /** Get SidechainDeposit from deposit CTransaction. Part of SCDB because
      * we need the list of active sidechains to find deposit outputs. */
-    bool TxnToDeposit(const CTransaction& tx, const uint256& hashBlock, SidechainDeposit& deposit);
+    bool TxnToDeposit(const CTransaction& tx, const int nTx, const uint256& hashBlock, SidechainDeposit& deposit);
 
     /** Print SCDB WT^ verification status */
     std::string ToString() const;
@@ -243,7 +241,7 @@ public:
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
 
     /** Update / add multiple SCDB WT^(s) to SCDB */
-    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fSkipDec = false, bool fRemoveExpired = false);
+    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fSkipDec = false, bool fRemoveExpired = false);
 
     /** Read the SCDB hash in a new block and try to synchronize our SCDB by
      * testing possible work score updates until the SCDB hash of our SCDB
@@ -263,7 +261,7 @@ private:
     void UpdateActivationStatus(const std::vector<uint256>& vHash);
 
     /** Update CTIP to match the deposit cache - called after sorting / undo */
-    void UpdateCTIP(const uint256& hashBlock);
+    bool UpdateCTIP();
 
     /** Calls SortDeposits for all of SCDB's deposit cache */
     bool SortSCDBDeposits();
@@ -317,6 +315,9 @@ private:
 
     /** List of BMM request txid that the miner removed from the mempool. */
     std::set<uint256> setRemovedBMM;
+
+    /** List of deposit txids that are cached by SCDB */
+    std::set<uint256> setDepositTXID;
 
     /** List of sidechain deposits that were removed from the mempool for one
      * of a few reasons. The deposit could have been replaced by another deposit

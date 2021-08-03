@@ -46,6 +46,7 @@
 
 #include <future>
 #include <sstream>
+#include <tuple>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -547,17 +548,19 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, CValidationSt
     return CheckInputs(tx, state, view, true, flags, cacheSigStore, true, txdata);
 }
 
-void GetSidechainValues(CTxMemPool& pool, const CTransaction &tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
+void GetSidechainValues(const CCoinsView& coins, const CTransaction &tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
                         CAmount& amtReturning, CAmount& amtWithdrawn)
 {
     // Collect coins from inputs
-    CCoinsViewMemPool viewWithMemPool(pcoinsTip.get(), pool);
     std::vector<Coin> vCoin;
     for (const CTxIn& in : tx.vin) {
         Coin coin;
+
         // TODO return false / assert here if we can't find the coin
-        if (viewWithMemPool.GetCoin(in.prevout, coin))
-            vCoin.push_back(coin);
+        if (!coins.GetCoin(in.prevout, coin)) {
+            return;
+        }
+        vCoin.push_back(coin);
     }
 
     // Count value of inputs
@@ -596,7 +599,6 @@ bool CheckBWTHash(const uint256& hashWTPrime, const CTransaction &tx)
 
     return false;
 }
-
 
 static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool& pool, CValidationState& state, const CTransactionRef& ptx,
                               bool* pfMissingInputs, int64_t nAcceptTime, std::list<CTransactionRef>* plTxnReplaced,
@@ -678,7 +680,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         CAmount amtUserInput = CAmount(0);
         CAmount amtReturning = CAmount(0);
         CAmount amtWithdrawn = CAmount(0);
-        GetSidechainValues(pool, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
+        CCoinsViewMemPool poolCoins(pcoinsTip.get(), pool);
+        GetSidechainValues(poolCoins, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
 
         if (amtSidechainUTXO > amtReturning) {
             // M6 Withdrawal
@@ -697,11 +700,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             bool fDestOutput = false;
             for (size_t i = 0; i < tx.vout.size(); i++) {
                 const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
-
-                // This would be non-standard but still checking
                 if (!scriptPubKey.size())
                     continue;
-
 
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
                     if (fSidechainOutput) {
@@ -1778,7 +1778,6 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
     // sure that the coin did not already exist in the cache. As we have queried for that above
     // using HaveCoin, we don't need to guess. When fClean is false, a coin already existed and
     // it is an overwrite.
-
     view.AddCoin(out, std::move(undo), !fClean);
 
     return fClean ? DISCONNECT_OK : DISCONNECT_UNCLEAN;
@@ -1838,7 +1837,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     }
 
     // Load SCDB undo data from disk
-    if (!ResyncSCDB(pindex->pprev, true /* fDisconnect */)) {
+    if (!ResyncSCDB(pindex->pprev)) {
         error("%s: Failed to re-sync SCDB for disconnected block: %s!", __func__, block.GetHash().ToString());
         return DISCONNECT_FAILED;
     }
@@ -2157,8 +2156,8 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
     std::vector<PrecomputedTransactionData> txdata;
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
-    std::vector<CTransaction> vDepositTx;
-    std::vector<std::pair<uint8_t, CTransaction>> vWTPrimeToSpend;
+    std::vector<std::tuple<CTransaction, int, uint256>> vDepositTx;
+    std::vector<std::tuple<uint8_t, CTransaction, int>> vWTPrimeToSpend;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -2257,13 +2256,13 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             CAmount amtUserInput = CAmount(0);
             CAmount amtReturning = CAmount(0);
             CAmount amtWithdrawn = CAmount(0);
-            GetSidechainValues(mempool, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
+            GetSidechainValues(view, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
 
             if (amtSidechainUTXO > amtReturning) {
                 // Note that we are just checking that the WT^ can be spent,
                 // and then tracking it to spend later in the function
-                if (scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, true /* fJustCheck */, true /* fDebug */)) {
-                    vWTPrimeToSpend.push_back(std::make_pair(nSidechain, tx));
+                if (scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, i, true /* fJustCheck */, true /* fDebug */)) {
+                    vWTPrimeToSpend.push_back(std::make_tuple(nSidechain, tx, i));
                 } else {
                     return error("ConnectBlock(): Spend WT^ failed (blind WT^ hash : txid): %s : %s", hashBWT.ToString(), tx.GetHash().ToString());
                 }
@@ -2278,11 +2277,11 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 const CScript& scriptPubKey = out.scriptPubKey;
                 if (scdb.HasSidechainScript(std::vector<CScript>{scriptPubKey}, nSidechain)) {
                     fSidechainOutput = true;
+                    break;
                 }
             }
-            if (fSidechainOutput) {
-                vDepositTx.push_back(tx);
-            }
+            if (fSidechainOutput)
+                vDepositTx.push_back(std::make_tuple(tx, i, block.GetHash()));
         }
 
         CTxUndo undoDummy;
@@ -2306,20 +2305,35 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
-    if (drivechainsEnabled && vDepositTx.size()) {
-        if (!scdb.AddDepositsFromBlock(vDepositTx, block.GetHash(), fJustCheck)) {
-            LogPrintf("%s: SCDB Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
-            return error("%s: SCDB Deposits invalid from block: %s", __func__, block.GetHash().ToString());
+    if (drivechainsEnabled && !fJustCheck && vDepositTx.size()) {
+        // Convert deposit transactions into SidechainDeposit objects
+        std::vector<SidechainDeposit> vDeposit;
+        for (size_t i = 0; i <  vDepositTx.size(); i++) {
+            const CTransaction tx = std::get<0>(vDepositTx[i]);
+            int nTx = std::get<1>(vDepositTx[i]);
+            uint256 hashBlock = std::get<2>(vDepositTx[i]);
+            SidechainDeposit deposit;
+            if (!scdb.TxnToDeposit(tx, nTx, hashBlock, deposit)) {
+                LogPrintf("%s: Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
+                return error("%s: Deposits invalid from block: %s", __func__, block.GetHash().ToString());
+            }
+            // Skip WT^ change return deposit, handled by SCDB::SpendWTPrime
+            if (deposit.strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
+                continue;
+            vDeposit.push_back(deposit);
         }
+        scdb.AddDeposits(vDeposit);
     }
 
     if (drivechainsEnabled && vWTPrimeToSpend.size()) {
         for (size_t i = 0; i < vWTPrimeToSpend.size(); i++) {
-            uint8_t nSidechain = vWTPrimeToSpend[i].first;
-            const CTransaction tx = vWTPrimeToSpend[i].second;
+            uint8_t nSidechain = std::get<0>(vWTPrimeToSpend[i]);
+            const CTransaction tx = std::get<1>(vWTPrimeToSpend[i]);
+            int nTx = std::get<2>(vWTPrimeToSpend[i]);
+
             uint256 hashBWT;
             tx.GetBWTHash(hashBWT);
-            if (!scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, fJustCheck, true /* fDebug */)) {
+            if (!scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, nTx, fJustCheck, true /* fDebug */)) {
                 return error("ConnectBlock(): Final spend WT^ failed (blind WT^ hash : txid): %s : %s.\n nSidechain: %u\n", hashBWT.ToString(), tx.GetHash().ToString(), nSidechain);
             }
         }
@@ -5494,7 +5508,7 @@ bool LoadDepositCache()
 
     // Add to SCDB
     if (!vDeposit.empty()) {
-        scdb.AddDeposits(vDeposit, uint256());
+        scdb.AddDeposits(vDeposit);
         mempool.UpdateCTIPFromBlock(scdb.GetCTIP(), false /* fDisconnect */);
     }
 
@@ -5510,7 +5524,6 @@ void DumpDepositCache()
         vDeposit.insert(std::end(vDeposit), std::begin(vSidechainDeposit), std::end(vSidechainDeposit));
     }
 
-    int count = vDeposit.size();
 
     // Write the deposits
     fs::path path = GetDataDir() / "drivechain" / "deposit.dat.new";
@@ -5519,6 +5532,7 @@ void DumpDepositCache()
         return;
     }
 
+    int count = vDeposit.size();
     try {
         fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of deposits in file
@@ -5942,11 +5956,11 @@ void DumpSCDBCache()
     DumpBMMCache();
 }
 
-bool ResyncSCDB(const CBlockIndex* pindex, bool fDisconnect)
+bool ResyncSCDB(const CBlockIndex* pindex)
 {
     uiInterface.InitMessage(_("Resyncing sidechain database..."));
 
-    // We don't sync the genesis block
+    // No sidechain data in the genesis block
     if (pindex->GetBlockHash() == Params().GetConsensus().hashGenesisBlock)
         return true;
 

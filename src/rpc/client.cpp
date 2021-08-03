@@ -155,6 +155,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "setwtprimevote", 1, "nsidechain" },
     { "listwtprimestatus", 0, "nsidechain" },
     { "listcachedwtprimetransactions", 0, "nsidechain" },
+    { "verifydeposit", 2, "nTx" },
     // Echo with conversion (For testing only)
     { "echojson", 0, "arg0" },
     { "echojson", 1, "arg1" },
