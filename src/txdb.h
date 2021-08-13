@@ -39,6 +39,8 @@ static const int64_t nMaxBlockDBAndTxIndexCache = 1024;
 //! Max memory allocated to coin DB specific cache (MiB)
 static const int64_t nMaxCoinsDBCache = 8;
 
+static const int64_t nOPReturnCache = 500;
+
 struct CDiskTxPos : public CDiskBlockPos
 {
     unsigned int nTxOffset; // after header
@@ -175,5 +177,35 @@ public:
     bool HaveBlockData(const uint256& hashBlock) const;
 };
 
+struct OPReturnData
+{
+    uint256 txid;
+    CScript script;
+    size_t nSize;
+    CAmount fees;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(txid);
+        READWRITE(script);
+        READWRITE(nSize);
+        READWRITE(fees);
+    }
+
+    std::string ToString() const;
+};
+
+/** Access to the OP_RETURN cache database (blocks/opreturn/) */
+class OPReturnDB : public CDBWrapper
+{
+public:
+    OPReturnDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+    bool WriteBlockData(const std::pair<uint256, const std::vector<OPReturnData>>& data);
+
+    bool GetBlockData(const uint256& /* hashBlock */, std::vector<OPReturnData>& vData) const;
+    bool HaveBlockData(const uint256& hashBlock) const;
+};
 
 #endif // BITCOIN_TXDB_H

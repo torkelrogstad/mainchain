@@ -43,6 +43,7 @@ class CValidationState;
 class SidechainDB;
 class SidechainWTPrimeState;
 class CSidechainTreeDB;
+class OPReturnDB;
 struct ChainTxData;
 
 struct PrecomputedTransactionData;
@@ -496,6 +497,8 @@ extern std::unique_ptr<CCoinsViewCache> pcoinsTip;
 extern std::unique_ptr<CBlockTreeDB> pblocktree;
 
 extern std::unique_ptr<CSidechainTreeDB> psidechaintree;
+
+extern std::unique_ptr<OPReturnDB> popreturndb;
 
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().

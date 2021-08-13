@@ -287,6 +287,7 @@ std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 std::unique_ptr<CCoinsViewCache> pcoinsTip;
 std::unique_ptr<CBlockTreeDB> pblocktree;
 std::unique_ptr<CSidechainTreeDB> psidechaintree;
+std::unique_ptr<OPReturnDB> popreturndb;
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -2158,11 +2159,34 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
     std::vector<std::tuple<CTransaction, int, uint256>> vDepositTx;
     std::vector<std::tuple<uint8_t, CTransaction, int>> vWTPrimeToSpend;
+    std::vector<OPReturnData> vOPReturnData;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
 
         nInputs += tx.vin.size();
+
+        // Search for OP_RETURN outputs
+        for (const CTxOut& o : tx.vout) {
+            const CScript scriptPubKey = o.scriptPubKey;
+            if (!scriptPubKey.size())
+                continue;
+            if (scriptPubKey[0] != OP_RETURN)
+                continue;
+
+            OPReturnData data;
+            data.txid = tx.GetHash();
+            data.script = scriptPubKey;
+            data.nSize = ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
+
+            // Using CheckTxInputs to calculate fees and copy to OP_RETURN data
+            data.fees = CAmount(0);
+            if (!tx.IsCoinBase() && !Consensus::CheckTxInputs(tx, state, view, pindex->nHeight, data.fees)) {
+                return error("%s: OP_RETURN DB fee calculation CheckTxInputs: %s, %s", __func__, tx.GetHash().ToString(), FormatStateMessage(state));
+            }
+
+            vOPReturnData.push_back(data);
+        }
 
         bool fSidechainInputs = false;
         uint8_t nSidechain = 0;
@@ -2386,6 +2410,13 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 std::make_pair(block.GetHash(), data)))
     {
         return state.Error("Failed to write sidechain block data!");
+    }
+
+    if (!popreturndb->HaveBlockData(block.GetHash()) &&
+            !popreturndb->WriteBlockData(
+                std::make_pair(block.GetHash(), vOPReturnData)))
+    {
+        return state.Error("Failed to write block OP_RETURN data!");
     }
 
     assert(pindex->phashBlock);

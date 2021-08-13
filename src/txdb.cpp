@@ -36,6 +36,9 @@ static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
 static const char DB_LOADED_COINS = 'p';
+
+static const char DB_OP_RETURN = 'x';
+
 namespace {
 
 struct CoinEntry {
@@ -561,6 +564,32 @@ bool CSidechainTreeDB::HaveBlockData(const uint256& hashBlock) const
 {
     SidechainBlockData data;
     return GetBlockData(hashBlock, data);
+}
+
+OPReturnDB::OPReturnDB(size_t nCacheSize, bool fMemory, bool fWipe)
+    : CDBWrapper(GetDataDir() / "blocks" / "opreturn", nCacheSize, fMemory, fWipe) { }
+
+bool OPReturnDB::WriteBlockData(const std::pair<uint256, const std::vector<OPReturnData>>& data)
+{
+    CDBBatch batch(*this);
+    std::pair<char, uint256> key = std::make_pair(DB_OP_RETURN, data.first);
+    batch.Write(key, data.second);
+
+    return WriteBatch(batch, true);
+}
+
+bool OPReturnDB::GetBlockData(const uint256& hashBlock, std::vector<OPReturnData>& vData) const
+{
+    if (Read(std::make_pair(DB_OP_RETURN, hashBlock), vData))
+        return true;
+
+    return false;
+}
+
+bool OPReturnDB::HaveBlockData(const uint256& hashBlock) const
+{
+    std::vector<OPReturnData> vData;
+    return GetBlockData(hashBlock, vData);
 }
 
 namespace {
