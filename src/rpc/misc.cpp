@@ -2004,6 +2004,58 @@ UniValue listfailedbmm(const JSONRPCRequest& request)
 
     return ret;
 }
+
+UniValue getopreturndata(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "getopreturndata\n"
+            "Print OP_RETURN data for block.\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"txid\" : (string) transaction id\n"
+            "  \"script\" : (string) scriptPubKey.\n"
+            "  \"size\" : (numeric) transaction size.\n"
+            "  \"fees\" : (numeric) transaction fees.\n"
+            "}\n"
+            "\n"
+            "\nExample:\n"
+            + HelpExampleCli("getopreturndata", "")
+            );
+
+    uint256 hashBlock = uint256S(request.params[0].get_str());
+
+    BlockMap::iterator it = mapBlockIndex.find(hashBlock);
+    if (it == mapBlockIndex.end()) {
+        std::string strError = "Block hash not found";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    CBlockIndex* pblockindex = it->second;
+    if (pblockindex == NULL) {
+        std::string strError = "Block index null";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+    }
+
+    std::vector<OPReturnData> vData;
+    if (!popreturndb->GetBlockData(hashBlock, vData))
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't find data for block.");
+
+    UniValue ret(UniValue::VARR);
+    for (const OPReturnData& d : vData) {
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("txid", d.txid.ToString()));
+        obj.push_back(Pair("script", ScriptToAsmStr(d.script)));
+        obj.push_back(Pair("size", d.nSize));
+        obj.push_back(Pair("fees", FormatMoney(d.fees)));
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
+
 UniValue echo(const JSONRPCRequest& request)
 {
     if (request.fHelp)
@@ -2075,6 +2127,9 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "gettotalscdbhash",              &gettotalscdbhash,             {}},
     { "DriveChain",  "getscdbdataforblock",           &getscdbdataforblock,          {"blockhash"}},
     { "DriveChain",  "listfailedbmm",                 &listfailedbmm,                {}},
+
+    { "CoinNews",    "getopreturndata",               &getopreturndata,              {"blockhash"}},
+
 };
 
 void RegisterMiscRPCCommands(CRPCTable &t)
