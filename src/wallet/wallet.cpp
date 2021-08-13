@@ -3266,6 +3266,127 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     return true;
 }
 
+bool CWallet::CreateOPReturnTransaction(CTransactionRef& tx, std::string& strFail, const CAmount& nFee, const CScript& script)
+{
+    strFail = "Unknown error!";
+
+    if (vpwallets.empty()) {
+        strFail = "No active wallet!\n";
+        return false;
+    }
+
+    CMutableTransaction mtx;
+
+    BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, vpwallets[0]->cs_wallet);
+
+    // Select coins to cover fee
+    std::vector<COutput> vCoins;
+    AvailableCoins(vCoins, true /* fOnlySafe */);
+    std::set<CInputCoin> setCoins;
+    CAmount nAmountRet = CAmount(0);
+    if (!SelectCoins(vCoins, nFee, setCoins, nAmountRet)) {
+        strFail = "Could not collect enough coins to cover fee!\n";
+        return false;
+    }
+
+    // Handle change if there is any
+    const CAmount nChange = nAmountRet - nFee;
+    CReserveKey reserveKey(vpwallets[0]);
+    if (nChange > 0) {
+        CScript scriptChange;
+
+        // Reserve a new key pair from key pool
+        CPubKey vchPubKey;
+        if (!reserveKey.GetReservedKey(vchPubKey))
+        {
+            strFail = "Keypool ran out, please call keypoolrefill first!\n";
+            return false;
+        }
+        scriptChange = GetScriptForDestination(vchPubKey.GetID());
+
+        CTxOut out(nChange, scriptChange);
+        if (!IsDust(out, ::dustRelayFee))
+            mtx.vout.push_back(out);
+    }
+
+    // Add inputs
+    for (const auto& coin : setCoins)
+        mtx.vin.push_back(CTxIn(coin.outpoint.hash, coin.outpoint.n, CScript()));
+
+    // Add data output
+    mtx.vout.push_back(CTxOut(CAmount(0), script));
+
+    // Dummy sign the transaction to calculate minimum fee
+    std::set<CInputCoin> setCoinsTemp = setCoins;
+    if (!DummySignTx(mtx, setCoinsTemp)) {
+        strFail = "Dummy signing transaction for required fee calculation failed!";
+        return false;
+    }
+
+    // Get transaction size with dummy signatures
+    unsigned int nBytes = GetVirtualTransactionSize(mtx);
+
+    // Calculate fee
+    CCoinControl coinControl;
+    FeeCalculation feeCalc;
+    CAmount nFeeNeeded = GetMinimumFee(nBytes, coinControl, ::mempool, ::feeEstimator, &feeCalc);
+
+    // Check that the fee is valid for relay
+    if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes)) {
+        strFail = "Transaction too large for fee policy";
+        return false;
+    }
+
+    // Check the user set fee
+    if (nFee < nFeeNeeded) {
+        strFail = "The fee you have set is too small!";
+        return false;
+    }
+
+    // Remove dummy signatures
+    for (auto& vin : mtx.vin) {
+        vin.scriptSig = CScript();
+        vin.scriptWitness.SetNull();
+    }
+
+    // Sign the inputs
+    const CTransaction txToSign = mtx;
+    int nIn = 0;
+    for (const auto& coin : setCoins) {
+        const CScript& scriptPubKey = coin.txout.scriptPubKey;
+        SignatureData sigdata;
+
+        if (!ProduceSignature(TransactionSignatureCreator(this, &txToSign, nIn, coin.txout.nValue, SIGHASH_ALL), scriptPubKey, sigdata))
+        {
+            strFail = "Signing non-sidechain inputs failed!\n";
+            return false;
+        } else {
+            UpdateTransaction(mtx, nIn, sigdata);
+        }
+
+        nIn++;
+    }
+
+    // Broadcast transaction
+    CWalletTx wtxNew;
+    wtxNew.fTimeReceivedIsTxTime = true;
+    wtxNew.fFromMe = true;
+    wtxNew.BindWallet(this);
+
+    wtxNew.SetTx(MakeTransactionRef(std::move(mtx)));
+
+    CValidationState state;
+    if (!CommitTransaction(wtxNew, reserveKey, g_connman.get(), state, true /* fRemoveIfFail */)) {
+        strFail = "Failed to commit OP_RETURN transaction! Reject reason: " + FormatStateMessage(state) + "\n";
+        return false;
+    }
+    tx = wtxNew.tx;
+
+    return true;
+}
+
 /**
  * Call after CreateTransaction unless you want to abort
  */

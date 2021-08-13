@@ -3671,6 +3671,71 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
     return tx->GetHash().GetHex();
 }
 
+UniValue createopreturntransaction(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() != 2)
+        throw std::runtime_error(
+            "createopreturntransaction \"text\" \"fee\"\n"
+            "\nCreate a transaction with OP_RETURN data.\n"
+            + HelpRequiringPassphrase(pwallet) +
+            "\nArguments:\n"
+            "1. \"text\"        (string, required) The amount in " + CURRENCY_UNIT + " to send. eg 0.1\n"
+            "2. \"fee\"         (numeric or string, required) The fee in " + CURRENCY_UNIT + "\n"
+            "\nResult:\n"
+            "\"txid\"           (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("createopreturntransaction", "hello world, 0.1")
+            + HelpExampleRpc("createopreturntransaction", "hello world, 0.1")
+        );
+
+    ObserveSafeMode();
+
+    // text
+    std::string text = request.params[0].get_str();
+    if (text.empty()) {
+
+        std::string strError = "Invalid text";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    // Fee
+    CAmount nFee = AmountFromValue(request.params[1]);
+    if (nFee <= 0) {
+        std::string strError = "Invalid fee amount";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    pwallet->BlockUntilSyncedToCurrentChain();
+
+    LOCK2(cs_main, pwallet->cs_wallet);
+
+    EnsureWalletIsUnlocked(pwallet);
+
+    std::string strHex = HexStr(text.begin(), text.end());
+    std::vector<unsigned char> vBytes = ParseHex(strHex);
+
+    CScript script = CScript() << OP_RETURN << vBytes;
+
+    CTransactionRef tx;
+    std::string strFail = "";
+    if (!pwallet->CreateOPReturnTransaction(tx, strFail, nFee, script))
+    {
+        LogPrintf("%s: %s\n", __func__, strFail);
+        throw JSONRPCError(RPC_MISC_ERROR, strFail);
+    }
+
+    return tx->GetHash().GetHex();
+}
+
 UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
 {
     CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
@@ -3912,66 +3977,69 @@ extern UniValue importmulti(const JSONRPCRequest& request);
 extern UniValue rescanblockchain(const JSONRPCRequest& request);
 
 static const CRPCCommand commands[] =
-{ //  category              name                        actor (function)           argNames
-    //------------------    ------------------------    ----------------------     ----------
-    { "rawtransactions",    "fundrawtransaction",       &fundrawtransaction,       {"hexstring","options","iswitness"} },
-    { "hidden",             "resendwallettransactions", &resendwallettransactions, {} },
-    { "wallet",             "abandontransaction",       &abandontransaction,       {"txid"} },
-    { "wallet",             "abandonbmm",               &abandonbmm,               {} },
-    { "wallet",             "abandondeposits",          &abandondeposits,          {} },
-    { "wallet",             "abortrescan",              &abortrescan,              {} },
-    { "wallet",             "addmultisigaddress",       &addmultisigaddress,       {"nrequired","keys","account","address_type"} },
-    { "hidden",             "addwitnessaddress",        &addwitnessaddress,        {"address","p2sh"} },
-    { "wallet",             "backupwallet",             &backupwallet,             {"destination"} },
-    { "wallet",             "bumpfee",                  &bumpfee,                  {"txid", "options"} },
-    { "wallet",             "dumpprivkey",              &dumpprivkey,              {"address"}  },
-    { "wallet",             "dumpwallet",               &dumpwallet,               {"filename"} },
-    { "wallet",             "encryptwallet",            &encryptwallet,            {"passphrase"} },
-    { "wallet",             "getaccountaddress",        &getaccountaddress,        {"account"} },
-    { "wallet",             "getaccount",               &getaccount,               {"address"} },
-    { "wallet",             "getaddressesbyaccount",    &getaddressesbyaccount,    {"account"} },
-    { "wallet",             "getbalance",               &getbalance,               {"account","minconf","include_watchonly"} },
-    { "wallet",             "getnewaddress",            &getnewaddress,            {"account","address_type"} },
-    { "wallet",             "getrawchangeaddress",      &getrawchangeaddress,      {"address_type"} },
-    { "wallet",             "getreceivedbyaccount",     &getreceivedbyaccount,     {"account","minconf"} },
-    { "wallet",             "getreceivedbyaddress",     &getreceivedbyaddress,     {"address","minconf"} },
-    { "wallet",             "gettransaction",           &gettransaction,           {"txid","include_watchonly"} },
-    { "wallet",             "getunconfirmedbalance",    &getunconfirmedbalance,    {} },
-    { "wallet",             "getwalletinfo",            &getwalletinfo,            {} },
-    { "wallet",             "importmulti",              &importmulti,              {"requests","options"} },
-    { "wallet",             "importprivkey",            &importprivkey,            {"privkey","label","rescan"} },
-    { "wallet",             "importwallet",             &importwallet,             {"filename"} },
-    { "wallet",             "importaddress",            &importaddress,            {"address","label","rescan","p2sh"} },
-    { "wallet",             "importprunedfunds",        &importprunedfunds,        {"rawtransaction","txoutproof"} },
-    { "wallet",             "importpubkey",             &importpubkey,             {"pubkey","label","rescan"} },
-    { "wallet",             "keypoolrefill",            &keypoolrefill,            {"newsize"} },
-    { "wallet",             "listaccounts",             &listaccounts,             {"minconf","include_watchonly"} },
-    { "wallet",             "listaddressgroupings",     &listaddressgroupings,     {} },
-    { "wallet",             "listlockunspent",          &listlockunspent,          {} },
-    { "wallet",             "listreceivedbyaccount",    &listreceivedbyaccount,    {"minconf","include_empty","include_watchonly"} },
-    { "wallet",             "listreceivedbyaddress",    &listreceivedbyaddress,    {"minconf","include_empty","include_watchonly"} },
-    { "wallet",             "listsinceblock",           &listsinceblock,           {"blockhash","target_confirmations","include_watchonly","include_removed"} },
-    { "wallet",             "listtransactions",         &listtransactions,         {"account","count","skip","include_watchonly"} },
-    { "wallet",             "listunspent",              &listunspent,              {"minconf","maxconf","addresses","include_unsafe","query_options"} },
-    { "wallet",             "listwallets",              &listwallets,              {} },
-    { "wallet",             "lockunspent",              &lockunspent,              {"unlock","transactions"} },
-    { "wallet",             "move",                     &movecmd,                  {"fromaccount","toaccount","amount","minconf","comment"} },
-    { "wallet",             "sendfrom",                 &sendfrom,                 {"fromaccount","toaddress","amount","minconf","comment","comment_to"} },
-    { "wallet",             "sendmany",                 &sendmany,                 {"fromaccount","amounts","minconf","comment","subtractfeefrom","replaceable","conf_target","estimate_mode"} },
-    { "wallet",             "sendtoaddress",            &sendtoaddress,            {"address","amount","comment","comment_to","subtractfeefromamount","replaceable","conf_target","estimate_mode"} },
-    { "wallet",             "setaccount",               &setaccount,               {"address","account"} },
-    { "wallet",             "settxfee",                 &settxfee,                 {"amount"} },
-    { "wallet",             "signmessage",              &signmessage,              {"address","message"} },
-    { "wallet",             "walletlock",               &walletlock,               {} },
-    { "wallet",             "walletpassphrasechange",   &walletpassphrasechange,   {"oldpassphrase","newpassphrase"} },
-    { "wallet",             "walletpassphrase",         &walletpassphrase,         {"passphrase","timeout"} },
-    { "wallet",             "removeprunedfunds",        &removeprunedfunds,        {"txid"} },
-    { "wallet",             "rescanblockchain",         &rescanblockchain,         {"start_height", "stop_height"} },
+{ //  category              name                          actor (function)             argNames
+    //------------------    ------------------------      ----------------------       ----------
+    { "rawtransactions",    "fundrawtransaction",         &fundrawtransaction,         {"hexstring","options","iswitness"} },
+    { "hidden",             "resendwallettransactions",   &resendwallettransactions,   {} },
+    { "wallet",             "abandontransaction",         &abandontransaction,         {"txid"} },
+    { "wallet",             "abandonbmm",                 &abandonbmm,                 {} },
+    { "wallet",             "abandondeposits",            &abandondeposits,            {} },
+    { "wallet",             "abortrescan",                &abortrescan,                {} },
+    { "wallet",             "addmultisigaddress",         &addmultisigaddress,         {"nrequired","keys","account","address_type"} },
+    { "hidden",             "addwitnessaddress",          &addwitnessaddress,          {"address","p2sh"} },
+    { "wallet",             "backupwallet",               &backupwallet,               {"destination"} },
+    { "wallet",             "bumpfee",                    &bumpfee,                    {"txid", "options"} },
+    { "wallet",             "dumpprivkey",                &dumpprivkey,                {"address"}  },
+    { "wallet",             "dumpwallet",                 &dumpwallet,                 {"filename"} },
+    { "wallet",             "encryptwallet",              &encryptwallet,              {"passphrase"} },
+    { "wallet",             "getaccountaddress",          &getaccountaddress,          {"account"} },
+    { "wallet",             "getaccount",                 &getaccount,                 {"address"} },
+    { "wallet",             "getaddressesbyaccount",      &getaddressesbyaccount,      {"account"} },
+    { "wallet",             "getbalance",                 &getbalance,                 {"account","minconf","include_watchonly"} },
+    { "wallet",             "getnewaddress",              &getnewaddress,              {"account","address_type"} },
+    { "wallet",             "getrawchangeaddress",        &getrawchangeaddress,        {"address_type"} },
+    { "wallet",             "getreceivedbyaccount",       &getreceivedbyaccount,       {"account","minconf"} },
+    { "wallet",             "getreceivedbyaddress",       &getreceivedbyaddress,       {"address","minconf"} },
+    { "wallet",             "gettransaction",             &gettransaction,             {"txid","include_watchonly"} },
+    { "wallet",             "getunconfirmedbalance",      &getunconfirmedbalance,      {} },
+    { "wallet",             "getwalletinfo",              &getwalletinfo,              {} },
+    { "wallet",             "importmulti",                &importmulti,                {"requests","options"} },
+    { "wallet",             "importprivkey",              &importprivkey,              {"privkey","label","rescan"} },
+    { "wallet",             "importwallet",               &importwallet,               {"filename"} },
+    { "wallet",             "importaddress",              &importaddress,              {"address","label","rescan","p2sh"} },
+    { "wallet",             "importprunedfunds",          &importprunedfunds,          {"rawtransaction","txoutproof"} },
+    { "wallet",             "importpubkey",               &importpubkey,               {"pubkey","label","rescan"} },
+    { "wallet",             "keypoolrefill",              &keypoolrefill,              {"newsize"} },
+    { "wallet",             "listaccounts",               &listaccounts,               {"minconf","include_watchonly"} },
+    { "wallet",             "listaddressgroupings",       &listaddressgroupings,       {} },
+    { "wallet",             "listlockunspent",            &listlockunspent,            {} },
+    { "wallet",             "listreceivedbyaccount",      &listreceivedbyaccount,      {"minconf","include_empty","include_watchonly"} },
+    { "wallet",             "listreceivedbyaddress",      &listreceivedbyaddress,      {"minconf","include_empty","include_watchonly"} },
+    { "wallet",             "listsinceblock",             &listsinceblock,             {"blockhash","target_confirmations","include_watchonly","include_removed"} },
+    { "wallet",             "listtransactions",           &listtransactions,           {"account","count","skip","include_watchonly"} },
+    { "wallet",             "listunspent",                &listunspent,                {"minconf","maxconf","addresses","include_unsafe","query_options"} },
+    { "wallet",             "listwallets",                &listwallets,                {} },
+    { "wallet",             "lockunspent",                &lockunspent,                {"unlock","transactions"} },
+    { "wallet",             "move",                       &movecmd,                    {"fromaccount","toaccount","amount","minconf","comment"} },
+    { "wallet",             "sendfrom",                   &sendfrom,                   {"fromaccount","toaddress","amount","minconf","comment","comment_to"} },
+    { "wallet",             "sendmany",                   &sendmany,                   {"fromaccount","amounts","minconf","comment","subtractfeefrom","replaceable","conf_target","estimate_mode"} },
+    { "wallet",             "sendtoaddress",              &sendtoaddress,              {"address","amount","comment","comment_to","subtractfeefromamount","replaceable","conf_target","estimate_mode"} },
+    { "wallet",             "setaccount",                 &setaccount,                 {"address","account"} },
+    { "wallet",             "settxfee",                   &settxfee,                   {"amount"} },
+    { "wallet",             "signmessage",                &signmessage,                {"address","message"} },
+    { "wallet",             "walletlock",                 &walletlock,                 {} },
+    { "wallet",             "walletpassphrasechange",     &walletpassphrasechange,     {"oldpassphrase","newpassphrase"} },
+    { "wallet",             "walletpassphrase",           &walletpassphrase,           {"passphrase","timeout"} },
+    { "wallet",             "removeprunedfunds",          &removeprunedfunds,          {"txid"} },
+    { "wallet",             "rescanblockchain",           &rescanblockchain,           {"start_height", "stop_height"} },
 
-    { "generating",         "generate",                 &generate,                 {"nblocks","maxtries"} },
+    { "generating",         "generate",                   &generate,                   {"nblocks","maxtries"} },
 
-    { "DriveChain",         "createsidechaindeposit",   &createsidechaindeposit,   {"nSidechain", "depositaddress", "amount", "fee"} },
-    { "DriveChain",         "createbmmcriticaldatatx",  &createbmmcriticaldatatx,  {"amount", "height", "criticalhash", "nsidechain", "ndag"}},
+    { "DriveChain",         "createsidechaindeposit",     &createsidechaindeposit,     {"nSidechain", "depositaddress", "amount", "fee"} },
+    { "DriveChain",         "createbmmcriticaldatatx",    &createbmmcriticaldatatx,    {"amount", "height", "criticalhash", "nsidechain", "ndag"}},
+
+    { "CoinNews",           "createopreturntransaction",  &createopreturntransaction,  {"text", "fee"} },
+
 };
 
 void RegisterWalletRPCCommands(CRPCTable &t)
