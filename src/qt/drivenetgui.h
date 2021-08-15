@@ -29,6 +29,7 @@ class SendCoinsRecipient;
 class SidechainTableDialog;
 class SidechainPage;
 class SidechainWithdrawalTableModel;
+class MemPoolTableModel;
 class MiningDialog;
 class WalletFrame;
 class WalletModel;
@@ -62,6 +63,7 @@ public:
     void setClientModel(ClientModel *clientModel);
 
     void setWithdrawalModel(SidechainWithdrawalTableModel *model);
+    void setMemPoolModel(MemPoolTableModel *model);
 
 #ifdef ENABLE_WALLET
     /** Set the wallet model.
@@ -86,6 +88,7 @@ private:
     ClientModel *clientModel;
     WalletFrame *walletFrame;
     SidechainWithdrawalTableModel *withdrawalModel;
+    MemPoolTableModel *memPoolModel;
 
     QLabel *labelWalletEncryptionIcon;
     QLabel *connectionsControl;

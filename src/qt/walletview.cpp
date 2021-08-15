@@ -11,6 +11,7 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/overviewpage.h>
+#include <qt/mempooltablemodel.h>
 #include <qt/platformstyle.h>
 #include <qt/receivecoinsdialog.h>
 #include <qt/sendcoinsdialog.h>
@@ -36,6 +37,7 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     clientModel(0),
     walletModel(0),
     withdrawalModel(0),
+    memPoolModel(0),
     platformStyle(_platformStyle)
 {
     // Create tabs
@@ -156,6 +158,14 @@ void WalletView::setWithdrawalModel(SidechainWithdrawalTableModel* model)
     if (model) {
         sidechainPage->setWithdrawalModel(model);
         overviewPage->setWithdrawalModel(model);
+    }
+}
+
+void WalletView::setMemPoolModel(MemPoolTableModel* model)
+{
+    this->memPoolModel = model;
+    if (model) {
+        overviewPage->setMemPoolModel(model);
     }
 }
 

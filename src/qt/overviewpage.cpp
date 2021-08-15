@@ -365,6 +365,13 @@ void OverviewPage::setWithdrawalModel(SidechainWithdrawalTableModel *model)
     }
 }
 
+void OverviewPage::setMemPoolModel(MemPoolTableModel *model)
+{
+    this->memPoolModel = model;
+
+    // TODO set table model
+}
+
 void OverviewPage::updateDisplayUnit()
 {
     if(walletModel && walletModel->getOptionsModel())

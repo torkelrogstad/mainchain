@@ -545,6 +545,7 @@ private:
     void UpdateChild(txiter entry, txiter child, bool add);
 
     std::vector<indexed_transaction_set::const_iterator> GetSortedDepthAndScore() const;
+    std::vector<indexed_transaction_set::const_iterator> GetSortedTimeThenScore() const;
 
 public:
     indirectmap<COutPoint, const CTransaction*> mapNextTx;
@@ -680,6 +681,8 @@ public:
     CTransactionRef get(const uint256& hash) const;
     TxMempoolInfo info(const uint256& hash) const;
     std::vector<TxMempoolInfo> infoAll() const;
+
+    std::vector<TxMempoolInfo> InfoRecent(int nTx) const;
 
     size_t DynamicMemoryUsage() const;
 

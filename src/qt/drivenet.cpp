@@ -14,6 +14,7 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/intro.h>
+#include <qt/mempooltablemodel.h>
 #include <qt/networkstyle.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
@@ -247,6 +248,7 @@ private:
     OptionsModel *optionsModel;
     ClientModel *clientModel;
     SidechainWithdrawalTableModel *withdrawalModel;
+    MemPoolTableModel *memPoolModel;
     BitcoinGUI *window;
     QTimer *pollShutdownTimer;
 #ifdef ENABLE_WALLET
@@ -487,6 +489,12 @@ void BitcoinApplication::initializeResult(bool success)
 
         withdrawalModel = new SidechainWithdrawalTableModel(this);
         window->setWithdrawalModel(withdrawalModel);
+
+        memPoolModel = new MemPoolTableModel(this);
+        window->setMemPoolModel(memPoolModel);
+
+        connect(clientModel, SIGNAL(mempoolSizeChanged(long, size_t)),
+                        memPoolModel, SLOT(memPoolSizeChanged(long, size_t)));
 
 #ifdef ENABLE_WALLET
         // TODO: Expose secondary wallets

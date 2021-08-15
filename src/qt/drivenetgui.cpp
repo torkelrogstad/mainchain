@@ -10,6 +10,7 @@
 #include <qt/hashcalcdialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
+#include <qt/mempooltablemodel.h>
 #include <qt/miningdialog.h>
 #include <qt/networkstyle.h>
 #include <qt/notificator.h>
@@ -87,6 +88,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     clientModel(0),
     walletFrame(0),
     withdrawalModel(0),
+    memPoolModel(0),
     labelWalletEncryptionIcon(0),
     connectionsControl(0),
     labelBlocksIcon(0),
@@ -604,6 +606,11 @@ void BitcoinGUI::setWithdrawalModel(SidechainWithdrawalTableModel *model)
         }
 #endif // ENABLE_WALLET
     }
+}
+
+void BitcoinGUI::setMemPoolModel(MemPoolTableModel *model)
+{
+    this->memPoolModel = model;
 }
 
 #ifdef ENABLE_WALLET

@@ -821,6 +821,37 @@ std::vector<CTxMemPool::indexed_transaction_set::const_iterator> CTxMemPool::Get
     return iters;
 }
 
+namespace {
+class TimeThenScoreComparator
+{
+public:
+    bool operator()(const CTxMemPool::indexed_transaction_set::const_iterator& a, const CTxMemPool::indexed_transaction_set::const_iterator& b)
+    {
+        int64_t timea = a->GetTime();
+        int64_t timeb = b->GetTime();
+        if (timea == timeb) {
+            return CompareTxMemPoolEntryByScore()(*a, *b);
+        }
+        // TODO this might actually be inverse of what i want
+        return timea < timeb;
+    }
+};
+} // namespace
+
+std::vector<CTxMemPool::indexed_transaction_set::const_iterator> CTxMemPool::GetSortedTimeThenScore() const
+{
+    std::vector<indexed_transaction_set::const_iterator> iters;
+    AssertLockHeld(cs);
+
+    iters.reserve(mapTx.size());
+
+    for (indexed_transaction_set::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi) {
+        iters.push_back(mi);
+    }
+    std::sort(iters.begin(), iters.end(), TimeThenScoreComparator());
+    return iters;
+}
+
 void CTxMemPool::queryHashes(std::vector<uint256>& vtxid)
 {
     LOCK(cs);
@@ -850,6 +881,28 @@ std::vector<TxMempoolInfo> CTxMemPool::infoAll() const
     }
 
     return ret;
+}
+
+std::vector<TxMempoolInfo> CTxMemPool::InfoRecent(int nTx) const
+{
+    LOCK(cs);
+
+    std::vector<indexed_transaction_set::const_iterator> vIter;
+    vIter = GetSortedTimeThenScore();
+
+    // Get info for nTx latest transactions that were added to vTxHashes
+    std::vector<TxMempoolInfo> vInfo;
+    int nCount = 0;
+    for (auto rit = vIter.rbegin(); rit != vIter.rend(); rit++) {
+        if (nCount >= nTx)
+            break;
+
+        TxMempoolInfo info = GetInfo(*rit);
+        vInfo.push_back(GetInfo(*rit));
+        nCount++;
+    }
+
+    return vInfo;
 }
 
 CTransactionRef CTxMemPool::get(const uint256& hash) const

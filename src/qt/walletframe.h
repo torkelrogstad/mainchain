@@ -15,6 +15,7 @@ class SendCoinsRecipient;
 class WalletModel;
 class WalletView;
 class SidechainWithdrawalTableModel;
+class MemPoolTableModel;
 
 QT_BEGIN_NAMESPACE
 class QStackedWidget;
@@ -37,6 +38,7 @@ public:
 
     void setClientModel(ClientModel *clientModel);
     void setWithdrawalModel(SidechainWithdrawalTableModel* model);
+    void setMemPoolModel(MemPoolTableModel* model);
 
     bool addWallet(const QString& name, WalletModel *walletModel);
     bool setCurrentWallet(const QString& name);
@@ -56,6 +58,7 @@ private:
     BitcoinGUI *gui;
     ClientModel *clientModel;
     SidechainWithdrawalTableModel *withdrawalModel;
+    MemPoolTableModel *memPoolModel;
     QMap<QString, WalletView*> mapWalletViews;
 
     bool bOutOfSync;

@@ -152,6 +152,7 @@ QT_MOC_CPP = \
   qt/moc_intro.cpp \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
+  qt/moc_mempooltablemodel.cpp \
   qt/moc_miningdialog.cpp \
   qt/moc_merkletreedialog.cpp \
   qt/moc_notificator.cpp \
@@ -242,6 +243,7 @@ DRIVENET_QT_H = \
   qt/intro.h \
   qt/macdockiconhandler.h \
   qt/macnotificationhandler.h \
+  qt/mempooltablemodel.h \
   qt/miningdialog.h \
   qt/merkletreedialog.h \
   qt/networkstyle.h \
@@ -417,6 +419,7 @@ DRIVENET_QT_BASE_CPP = \
   qt/guiutil.cpp \
   qt/hashcalcdialog.cpp \
   qt/intro.cpp \
+  qt/mempooltablemodel.cpp \
   qt/networkstyle.cpp \
   qt/notificator.cpp \
   qt/optionsdialog.cpp \

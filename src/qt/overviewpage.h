@@ -17,6 +17,7 @@ class WTPrimeViewDelegate;
 class PlatformStyle;
 class SidechainWithdrawalTableModel;
 class WalletModel;
+class MemPoolTableModel;
 
 namespace Ui {
     class OverviewPage;
@@ -40,6 +41,7 @@ public:
     void setClientModel(ClientModel *clientModel);
     void setWalletModel(WalletModel *walletModel);
     void setWithdrawalModel(SidechainWithdrawalTableModel *model);
+    void setMemPoolModel(MemPoolTableModel *model);
     void showOutOfSyncWarning(bool fShow);
 
 public Q_SLOTS:
@@ -55,6 +57,7 @@ private:
     Ui::OverviewPage *ui;
     ClientModel *clientModel;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
+    MemPoolTableModel *memPoolModel = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
     CAmount currentUnconfirmedBalance;
