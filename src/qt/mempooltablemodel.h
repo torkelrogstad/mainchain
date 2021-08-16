@@ -5,18 +5,23 @@
 #ifndef MEMPOOLTABLEMODEL_H
 #define MEMPOOLTABLEMODEL_H
 
-#include <uint256.h>
-
 #include <QAbstractTableModel>
 #include <QList>
 
-QT_BEGIN_NAMESPACE
-class QTimer;
-QT_END_NAMESPACE
+#include <amount.h>
+#include <policy/feerate.h>
+#include <uint256.h>
+
+class CFeeRate;
+class uint256;
 
 struct MemPoolTableObject
 {
     uint256 txid;
+    CAmount fee;
+    CFeeRate feeRate;
+    size_t nWeight;
+    CAmount value;
 };
 
 class MemPoolTableModel : public QAbstractTableModel

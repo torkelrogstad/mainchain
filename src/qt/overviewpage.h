@@ -40,7 +40,6 @@ public:
 
     void setClientModel(ClientModel *clientModel);
     void setWalletModel(WalletModel *walletModel);
-    void setWithdrawalModel(SidechainWithdrawalTableModel *model);
     void setMemPoolModel(MemPoolTableModel *model);
     void showOutOfSyncWarning(bool fShow);
 
@@ -49,14 +48,11 @@ public Q_SLOTS:
                     const CAmount& watchOnlyBalance, const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
 
 Q_SIGNALS:
-    void transactionClicked(const QModelIndex &index);
-    void SidechainWTClicked();
     void outOfSyncWarningClicked();
 
 private:
     Ui::OverviewPage *ui;
     ClientModel *clientModel;
-    SidechainWithdrawalTableModel *withdrawalModel = nullptr;
     MemPoolTableModel *memPoolModel = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
@@ -66,32 +62,11 @@ private:
     CAmount currentWatchUnconfBalance;
     CAmount currentWatchImmatureBalance;
 
-    TxViewDelegate *txdelegate;
-    WTPrimeViewDelegate *wtdelegate;
-    std::unique_ptr<TransactionFilterProxy> filter;
-
-    bool fShowMore;
-    QDateTime* lastBlockDate;
-    QTimer* updateTimer;
-
 private Q_SLOTS:
     void updateDisplayUnit();
-    void handleTransactionClicked(const QModelIndex &index);
-    void handleSidechainWTClicked();
     void updateAlerts(const QString &warnings);
     void updateWatchOnlyLabels(bool showWatchOnly);
     void handleOutOfSyncWarningClicks();
-
-    void on_pushButtonMore_clicked();
-
-    /** Set number of connections shown in the UI */
-    void setNumConnections(int count);
-    /** Set number of blocks and last block date shown in the UI */
-    void numBlocksChanged(int count, const QDateTime& blockDate, double nVerificationProgress, bool headers);
-    /** Set size (number of transactions) of the mempool in the UI */
-    void setMempoolSize(long nTxn, size_t dynUsage);
-    /** Refresh "more" data based on timer */
-    void refresh();
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

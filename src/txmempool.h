@@ -352,6 +352,12 @@ struct TxMempoolInfo
 
     /** The fee delta. */
     int64_t nFeeDelta;
+
+    /** The total amount paid in fees */
+    CAmount fee;
+
+    /** Tx Weight */
+    size_t nTxWeight;
 };
 
 /** Reason why a transaction was removed from the mempool,

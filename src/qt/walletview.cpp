@@ -157,7 +157,6 @@ void WalletView::setWithdrawalModel(SidechainWithdrawalTableModel* model)
     this->withdrawalModel = model;
     if (model) {
         sidechainPage->setWithdrawalModel(model);
-        overviewPage->setWithdrawalModel(model);
     }
 }
 

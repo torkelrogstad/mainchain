@@ -1,8 +1,6 @@
 #ifndef SIDECHAINWITHDRAWALTABLEMODEL_H
 #define SIDECHAINWITHDRAWALTABLEMODEL_H
 
-#include <uint256.h>
-
 #include <QAbstractTableModel>
 #include <QList>
 

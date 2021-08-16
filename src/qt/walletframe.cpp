@@ -53,7 +53,7 @@ void WalletFrame::setMemPoolModel(MemPoolTableModel *model)
 
 bool WalletFrame::addWallet(const QString& name, WalletModel *walletModel)
 {
-    if (!gui || !clientModel || !walletModel || !withdrawalModel || mapWalletViews.count(name) > 0)
+    if (!gui || !clientModel || !walletModel || !withdrawalModel || !memPoolModel || mapWalletViews.count(name) > 0)
         return false;
 
     WalletView *walletView = new WalletView(platformStyle, this);

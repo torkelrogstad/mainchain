@@ -611,6 +611,22 @@ void BitcoinGUI::setWithdrawalModel(SidechainWithdrawalTableModel *model)
 void BitcoinGUI::setMemPoolModel(MemPoolTableModel *model)
 {
     this->memPoolModel = model;
+    if(model)
+    {
+#ifdef ENABLE_WALLET
+        if (walletFrame)
+        {
+            walletFrame->setMemPoolModel(model);
+        }
+#endif // ENABLE_WALLET
+    } else {
+#ifdef ENABLE_WALLET
+        if (walletFrame)
+        {
+            walletFrame->setMemPoolModel(nullptr);
+        }
+#endif // ENABLE_WALLET
+    }
 }
 
 #ifdef ENABLE_WALLET
