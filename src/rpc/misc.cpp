@@ -2050,6 +2050,13 @@ UniValue getopreturndata(const JSONRPCRequest& request)
         obj.push_back(Pair("script", ScriptToAsmStr(d.script)));
         obj.push_back(Pair("size", d.nSize));
         obj.push_back(Pair("fees", FormatMoney(d.fees)));
+
+        std::string strDecode;
+        for (const unsigned char& c : d.script) {
+            strDecode += c;
+        }
+        obj.push_back(Pair("decode", strDecode));
+
         ret.push_back(obj);
     }
 
