@@ -42,10 +42,10 @@ QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
     int row = index.row();
     int col = index.column();
 
-    if (!model.at(col).canConvert<BlockTableObject>())
+    if (!model.at(row).canConvert<BlockTableObject>())
         return QVariant();
 
-    BlockTableObject object = model.at(col).value<BlockTableObject>();
+    BlockTableObject object = model.at(row).value<BlockTableObject>();
 
     switch (role) {
     case Qt::DisplayRole:
@@ -166,8 +166,8 @@ void LatestBlockTableModel::UpdateModel()
     if (nHeight < nBlocksToDisplay)
         nBlocksToDisplay = nHeight;
 
-    beginInsertColumns(QModelIndex(), model.size(), model.size() + nBlocksToDisplay - 1);
-    for (int i = nBlocksToDisplay; i; i--) {
+    beginInsertRows(QModelIndex(), model.size(), model.size() + nBlocksToDisplay - 1);
+    for (int i = 0; i < nBlocksToDisplay; i++) {
         CBlockIndex *index = chainActive[nHeight - i];
 
         // TODO add error message or something to table?
@@ -190,7 +190,7 @@ void LatestBlockTableModel::UpdateModel()
 
         model.append(QVariant::fromValue(object));
     }
-    endInsertColumns();
+    endInsertRows();
 }
 
 CBlockIndex* LatestBlockTableModel::GetBlockIndex(const uint256& hash) const
