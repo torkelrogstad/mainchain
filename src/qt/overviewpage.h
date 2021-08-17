@@ -11,13 +11,14 @@
 #include <memory>
 
 class ClientModel;
-class TransactionFilterProxy;
-class TxViewDelegate;
-class WTPrimeViewDelegate;
+class LatestBlockTableModel;
+class MemPoolTableModel;
 class PlatformStyle;
 class SidechainWithdrawalTableModel;
+class TransactionFilterProxy;
+class TxViewDelegate;
 class WalletModel;
-class MemPoolTableModel;
+class WTPrimeViewDelegate;
 
 namespace Ui {
     class OverviewPage;
@@ -53,6 +54,7 @@ Q_SIGNALS:
 private:
     Ui::OverviewPage *ui;
     ClientModel *clientModel;
+    LatestBlockTableModel *latestBlockModel = nullptr;
     MemPoolTableModel *memPoolModel = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;

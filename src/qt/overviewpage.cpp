@@ -9,6 +9,7 @@
 #include <qt/clientmodel.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
+#include <qt/latestblocktablemodel.h>
 #include <qt/mempooltablemodel.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
@@ -41,28 +42,39 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     showOutOfSyncWarning(true);
     connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
 
+    latestBlockModel = new LatestBlockTableModel(this);
+    ui->tableViewBlocks->setModel(latestBlockModel);
+
+    // Style mempool & block table
+
     // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000
     ui->tableViewMempool->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewBlocks->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
 #else
     ui->tableViewMempool->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewBlocks->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #endif
 
     // Don't stretch last cell of horizontal header
     ui->tableViewMempool->horizontalHeader()->setStretchLastSection(false);
+    ui->tableViewBlocks->horizontalHeader()->setStretchLastSection(false);
 
     // Hide vertical header
-    ui->tableViewMempool->verticalHeader()->setVisible(false);
+    ui->tableViewBlocks->verticalHeader()->setVisible(false);
 
     // Left align the horizontal header text
-    ui->tableViewMempool->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewBlocks->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
     ui->tableViewMempool->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewMempool->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewBlocks->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewBlocks->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
 
     // Disable word wrap
     ui->tableViewMempool->setWordWrap(false);
+    ui->tableViewBlocks->setWordWrap(false);
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()
@@ -126,6 +138,8 @@ void OverviewPage::setClientModel(ClientModel *model)
         // Show warning if this is a prerelease version
         connect(model, SIGNAL(alertsChanged(QString)), this, SLOT(updateAlerts(QString)));
         updateAlerts(model->getStatusBarWarnings());
+
+        latestBlockModel->setClientModel(model);
     }
 }
 

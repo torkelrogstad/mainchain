@@ -424,25 +424,55 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
      <property name="bottomMargin">
       <number>0</number>
      </property>
      <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Latest Transactions:</string>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="bottomMargin">
+        <number>0</number>
        </property>
-      </widget>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Latest Transactions:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableView" name="tableViewMempool">
+         <property name="font">
+          <font>
+           <family>Noto Mono</family>
+          </font>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QTableView" name="tableViewMempool">
-       <property name="font">
-        <font>
-         <family>Noto Mono</family>
-        </font>
+      <layout class="QVBoxLayout" name="verticalLayout_5">
+       <property name="rightMargin">
+        <number>0</number>
        </property>
-      </widget>
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Latest Blocks:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableView" name="tableViewBlocks">
+         <property name="font">
+          <font>
+           <family>Noto Mono</family>
+          </font>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

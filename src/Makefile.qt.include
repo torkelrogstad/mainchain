@@ -150,6 +150,7 @@ QT_MOC_CPP = \
   qt/moc_guiutil.cpp \
   qt/moc_hashcalcdialog.cpp \
   qt/moc_intro.cpp \
+  qt/moc_latestblocktablemodel.cpp \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
   qt/moc_mempooltablemodel.cpp \
@@ -241,6 +242,7 @@ DRIVENET_QT_H = \
   qt/guiutil.h \
   qt/hashcalcdialog.h \
   qt/intro.h \
+  qt/latestblocktablemodel.h \
   qt/macdockiconhandler.h \
   qt/macnotificationhandler.h \
   qt/mempooltablemodel.h \
@@ -446,6 +448,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/coincontroltreewidget.cpp \
   qt/coinsplitconfirmationdialog.cpp \
   qt/editaddressdialog.cpp \
+  qt/latestblocktablemodel.cpp \
   qt/merkletreedialog.cpp \
   qt/miningdialog.cpp \
   qt/openuridialog.cpp \
