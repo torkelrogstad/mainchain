@@ -11,6 +11,7 @@
 #include <memory>
 
 class ClientModel;
+class CreateNewsDialog;
 class LatestBlockTableModel;
 class MemPoolTableModel;
 class NewsTableModel;
@@ -55,6 +56,7 @@ Q_SIGNALS:
 private:
     Ui::OverviewPage *ui;
     ClientModel *clientModel;
+    CreateNewsDialog *createNewsDialog = nullptr;
     LatestBlockTableModel *latestBlockModel = nullptr;
     MemPoolTableModel *memPoolModel = nullptr;
     NewsTableModel *newsModel = nullptr;
@@ -71,6 +73,7 @@ private Q_SLOTS:
     void updateAlerts(const QString &warnings);
     void updateWatchOnlyLabels(bool showWatchOnly);
     void handleOutOfSyncWarningClicks();
+    void on_pushButtonCreateNews_clicked();
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

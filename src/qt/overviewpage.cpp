@@ -7,6 +7,7 @@
 
 #include <qt/drivenetunits.h>
 #include <qt/clientmodel.h>
+#include <qt/createnewsdialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/latestblocktablemodel.h>
@@ -42,6 +43,8 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     // start with displaying the "out of sync" warnings
     showOutOfSyncWarning(true);
     connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
+
+    createNewsDialog = new CreateNewsDialog(this);
 
     latestBlockModel = new LatestBlockTableModel(this);
     ui->tableViewBlocks->setModel(latestBlockModel);
@@ -92,6 +95,11 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 void OverviewPage::handleOutOfSyncWarningClicks()
 {
     Q_EMIT outOfSyncWarningClicked();
+}
+
+void OverviewPage::on_pushButtonCreateNews_clicked()
+{
+    createNewsDialog->show();
 }
 
 OverviewPage::~OverviewPage()
