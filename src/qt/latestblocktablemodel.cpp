@@ -75,10 +75,6 @@ QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
             return QString::fromStdString(strprintf("%08x", object.nBits));
         }
     }
-    case HeightRole:
-    {
-        return object.nHeight;
-    }
     case HashRole:
     {
         return QString::fromStdString(object.hash.ToString());

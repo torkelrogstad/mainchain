@@ -45,8 +45,7 @@ public:
     CBlockIndex* GetTip() const;
 
     enum RoleIndex {
-        HeightRole = Qt::UserRole,
-        HashRole
+        HashRole = Qt::UserRole,
     };
 
 public Q_SLOTS:

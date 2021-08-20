@@ -10,6 +10,7 @@
 #include <QWidget>
 #include <memory>
 
+class BlockIndexDetailsDialog;
 class ClientModel;
 class CreateNewsDialog;
 class LatestBlockTableModel;
@@ -55,6 +56,7 @@ Q_SIGNALS:
 
 private:
     Ui::OverviewPage *ui;
+    BlockIndexDetailsDialog* blockIndexDialog = nullptr;
     ClientModel *clientModel;
     CreateNewsDialog *createNewsDialog = nullptr;
     LatestBlockTableModel *latestBlockModel = nullptr;
@@ -74,6 +76,7 @@ private Q_SLOTS:
     void updateWatchOnlyLabels(bool showWatchOnly);
     void handleOutOfSyncWarningClicks();
     void on_pushButtonCreateNews_clicked();
+    void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

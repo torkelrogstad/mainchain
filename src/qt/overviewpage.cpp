@@ -5,9 +5,10 @@
 #include <qt/overviewpage.h>
 #include <qt/forms/ui_overviewpage.h>
 
-#include <qt/drivenetunits.h>
+#include <qt/blockindexdetailsdialog.h>
 #include <qt/clientmodel.h>
 #include <qt/createnewsdialog.h>
+#include <qt/drivenetunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/latestblocktablemodel.h>
@@ -51,6 +52,8 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 
     newsModel = new NewsTableModel(this);
     ui->tableViewNews->setModel(newsModel);
+
+    blockIndexDialog = new BlockIndexDetailsDialog(this);
 
     // Style mempool & block table
 
@@ -213,3 +216,35 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
     ui->labelWalletStatus->setVisible(fShow);
 }
+
+void OverviewPage::on_tableViewBlocks_doubleClicked(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    QMessageBox messageBox;
+
+    QString strHash = index.data(LatestBlockTableModel::HashRole).toString();
+    uint256 hash = uint256S(strHash.toStdString());
+
+    // TODO update error message
+    if (hash.IsNull()) {
+        messageBox.setWindowTitle("Error - invalid block hash!");
+        messageBox.setText("Block hash is null!\n");
+        messageBox.exec();
+        return;
+    }
+
+    // TODO update error message
+    CBlockIndex* pBlockIndex = latestBlockModel->GetBlockIndex(hash);
+    if (!pBlockIndex) {
+        messageBox.setWindowTitle("Error - couldn't locate block index!");
+        messageBox.setText("Invalid block index!\n");
+        messageBox.exec();
+        return;
+    }
+
+    blockIndexDialog->SetBlockIndex(pBlockIndex);
+    blockIndexDialog->show();
+}
+
