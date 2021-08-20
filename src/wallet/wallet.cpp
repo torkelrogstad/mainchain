@@ -3378,7 +3378,7 @@ bool CWallet::CreateOPReturnTransaction(CTransactionRef& tx, std::string& strFai
     wtxNew.SetTx(MakeTransactionRef(std::move(mtx)));
 
     CValidationState state;
-    if (!CommitTransaction(wtxNew, reserveKey, g_connman.get(), state, true /* fRemoveIfFail */)) {
+    if (!CommitTransaction(wtxNew, reserveKey, g_connman.get(), state, true /* fRemoveIfFail */, 1 * COIN /* nAbsurdFee */)) {
         strFail = "Failed to commit OP_RETURN transaction! Reject reason: " + FormatStateMessage(state) + "\n";
         return false;
     }
@@ -3390,7 +3390,7 @@ bool CWallet::CreateOPReturnTransaction(CTransactionRef& tx, std::string& strFai
 /**
  * Call after CreateTransaction unless you want to abort
  */
-bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state, bool fRemoveIfFail)
+bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state, bool fRemoveIfFail, CAmount nAbsurdFee)
 {
     {
         LOCK2(cs_main, cs_wallet);
@@ -3426,7 +3426,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CCon
         if (fBroadcastTransactions)
         {
             // Broadcast
-            if (!wtx.AcceptToMemoryPool(maxTxFee, state)) {
+            if (!wtx.AcceptToMemoryPool(maxTxFee > nAbsurdFee ? maxTxFee : nAbsurdFee, state)) {
                 LogPrintf("%s: Transaction cannot be broadcast immediately, %s\n", __func__, state.GetRejectReason());
                 const uint256 hashTx = wtx.GetHash();
                 if (fRemoveIfFail && mapWallet.count(hashTx)) {

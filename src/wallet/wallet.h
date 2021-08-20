@@ -1019,7 +1019,7 @@ public:
 
     bool CreateOPReturnTransaction(CTransactionRef& tx, std::string& strFail, const CAmount& nFee, const CScript& script);
 
-    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state, bool fRemoveIfFail = false);
+    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state, bool fRemoveIfFail = false, CAmount nAbsurdFee = CAmount(0));
 
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& entries);
     bool AddAccountingEntry(const CAccountingEntry&);
