@@ -11,6 +11,7 @@
 #include <qt/guiutil.h>
 #include <qt/latestblocktablemodel.h>
 #include <qt/mempooltablemodel.h>
+#include <qt/newstablemodel.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/transactionfilterproxy.h>
@@ -45,36 +46,47 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     latestBlockModel = new LatestBlockTableModel(this);
     ui->tableViewBlocks->setModel(latestBlockModel);
 
+    newsModel = new NewsTableModel(this);
+    ui->tableViewNews->setModel(newsModel);
+
     // Style mempool & block table
 
     // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000
     ui->tableViewMempool->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewBlocks->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewNews->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
 #else
     ui->tableViewMempool->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewBlocks->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewNews->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 #endif
 
     // Don't stretch last cell of horizontal header
     ui->tableViewMempool->horizontalHeader()->setStretchLastSection(false);
     ui->tableViewBlocks->horizontalHeader()->setStretchLastSection(false);
+    ui->tableViewNews->horizontalHeader()->setStretchLastSection(false);
 
     // Hide vertical header
     ui->tableViewBlocks->verticalHeader()->setVisible(false);
+    ui->tableViewNews->verticalHeader()->setVisible(false);
 
     // Left align the horizontal header text
     ui->tableViewBlocks->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewNews->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
     ui->tableViewMempool->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewMempool->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
     ui->tableViewBlocks->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewBlocks->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewNews->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewNews->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
 
     // Disable word wrap
     ui->tableViewMempool->setWordWrap(false);
     ui->tableViewBlocks->setWordWrap(false);
+    ui->tableViewNews->setWordWrap(false);
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()
@@ -140,6 +152,8 @@ void OverviewPage::setClientModel(ClientModel *model)
         updateAlerts(model->getStatusBarWarnings());
 
         latestBlockModel->setClientModel(model);
+
+        newsModel->setClientModel(model);
     }
 }
 

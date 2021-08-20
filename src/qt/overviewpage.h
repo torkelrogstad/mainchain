@@ -13,6 +13,7 @@
 class ClientModel;
 class LatestBlockTableModel;
 class MemPoolTableModel;
+class NewsTableModel;
 class PlatformStyle;
 class SidechainWithdrawalTableModel;
 class TransactionFilterProxy;
@@ -56,6 +57,7 @@ private:
     ClientModel *clientModel;
     LatestBlockTableModel *latestBlockModel = nullptr;
     MemPoolTableModel *memPoolModel = nullptr;
+    NewsTableModel *newsModel = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
     CAmount currentUnconfirmedBalance;
