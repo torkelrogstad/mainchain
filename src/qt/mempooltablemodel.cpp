@@ -6,6 +6,7 @@
 
 #include <qt/drivenetunits.h>
 
+#include <primitives/transaction.h>
 #include <txmempool.h>
 #include <utilmoneystr.h>
 #include <validation.h>
@@ -92,6 +93,10 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
+    case HashRole:
+    {
+        return QString::fromStdString(object.txid.ToString());
+    }
     }
     return QVariant();
 }
@@ -152,4 +157,13 @@ void MemPoolTableModel::memPoolSizeChanged(long nTxIn, size_t nBytesIn)
 
         updateModel();
     }
+}
+
+bool MemPoolTableModel::GetTx(const uint256& txid, CTransactionRef& tx) const
+{
+    if (!mempool.exists(txid))
+        return false;
+
+    tx = mempool.get(txid);
+    return true;
 }

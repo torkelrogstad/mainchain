@@ -14,6 +14,8 @@
 
 class CFeeRate;
 class uint256;
+class CTransaction;
+typedef std::shared_ptr<const CTransaction> CTransactionRef;
 
 struct MemPoolTableObject
 {
@@ -28,12 +30,17 @@ class MemPoolTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 
+    enum RoleIndex {
+        HashRole = Qt::UserRole,
+    };
+
 public:
     explicit MemPoolTableModel(QObject *parent = 0);
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
+    bool GetTx(const uint256& txid, CTransactionRef& tx) const;
 
 public Q_SLOTS:
     void memPoolSizeChanged(long nTx, size_t nBytes);

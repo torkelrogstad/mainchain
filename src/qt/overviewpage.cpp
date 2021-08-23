@@ -18,6 +18,7 @@
 #include <qt/platformstyle.h>
 #include <qt/transactionfilterproxy.h>
 #include <qt/transactiontablemodel.h>
+#include <qt/txdetails.h>
 #include <qt/walletmodel.h>
 
 #include <QScrollBar>
@@ -248,3 +249,38 @@ void OverviewPage::on_tableViewBlocks_doubleClicked(const QModelIndex& index)
     blockIndexDialog->show();
 }
 
+void OverviewPage::on_tableViewMempool_doubleClicked(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    QMessageBox messageBox;
+
+    QString strHash = index.data(LatestBlockTableModel::HashRole).toString();
+    uint256 hash = uint256S(strHash.toStdString());
+
+    // TODO update error message
+    if (hash.IsNull()) {
+        messageBox.setWindowTitle("Error - invalid block hash!");
+        messageBox.setText("Block hash is null!\n");
+        messageBox.exec();
+        return;
+    }
+
+    CTransactionRef txRef;
+    if (!memPoolModel->GetTx(hash, txRef)) {
+        messageBox.setWindowTitle("Error - not found in mempool!");
+        messageBox.setText("Transaction is not in your memory pool!\n");
+        messageBox.exec();
+        return;
+    }
+
+    if (!txRef) {
+        return;
+    }
+
+    TxDetails detailsDialog;
+    detailsDialog.SetTransaction(*txRef);
+
+    detailsDialog.exec();
+}

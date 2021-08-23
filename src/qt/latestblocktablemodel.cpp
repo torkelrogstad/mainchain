@@ -15,7 +15,6 @@
 #include <QTimer>
 #include <QVariant>
 
-
 Q_DECLARE_METATYPE(BlockTableObject)
 
 LatestBlockTableModel::LatestBlockTableModel(QObject *parent) :

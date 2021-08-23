@@ -77,6 +77,8 @@ private Q_SLOTS:
     void handleOutOfSyncWarningClicks();
     void on_pushButtonCreateNews_clicked();
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
+    void on_tableViewMempool_doubleClicked(const QModelIndex& index);
+
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H
