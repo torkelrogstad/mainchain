@@ -21,6 +21,7 @@ public:
 
 private Q_SLOTS:
     void on_pushButtonCreate_clicked();
+    void on_pushButtonHelp_clicked();
 
 private:
     Ui::CreateNewsDialog *ui;

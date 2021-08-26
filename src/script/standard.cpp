@@ -104,6 +104,12 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
         return true;
     }
 
+    // Coin News data output
+    if (scriptPubKey.IsNewsUSDay() || scriptPubKey.IsNewsTokyoDay()) {
+        typeRet = TX_NULL_DATA;
+        return true;
+    }
+
     // Scan templates
     const CScript& script1 = scriptPubKey;
     for (const std::pair<txnouttype, CScript>& tplate : mTemplates)

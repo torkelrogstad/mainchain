@@ -22,6 +22,9 @@
     </widget>
    </item>
    <item>
+    <widget class="QComboBox" name="comboBoxCategory"/>
+   </item>
+   <item>
     <widget class="QPlainTextEdit" name="plainTextEdit"/>
    </item>
    <item>
@@ -43,7 +46,7 @@
       <widget class="BitcoinAmountField" name="feeAmount"/>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton">
+      <widget class="QPushButton" name="pushButtonHelp">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
          <horstretch>0</horstretch>

@@ -580,10 +580,7 @@ bool OPReturnDB::WriteBlockData(const std::pair<uint256, const std::vector<OPRet
 
 bool OPReturnDB::GetBlockData(const uint256& hashBlock, std::vector<OPReturnData>& vData) const
 {
-    if (Read(std::make_pair(DB_OP_RETURN, hashBlock), vData))
-        return true;
-
-    return false;
+    return Read(std::make_pair(DB_OP_RETURN, hashBlock), vData);
 }
 
 bool OPReturnDB::HaveBlockData(const uint256& hashBlock) const

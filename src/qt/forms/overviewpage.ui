@@ -431,6 +431,37 @@
     </widget>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QRadioButton" name="radioButtonNewsAll">
+       <property name="text">
+        <string>All OP_RETURN Daily</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="radioButtonNewsTokyoDay">
+       <property name="text">
+        <string>Tokyo Daily News</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="radioButtonNewsUSDay">
+       <property name="text">
+        <string>US Daily News</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <property name="bottomMargin">
       <number>0</number>

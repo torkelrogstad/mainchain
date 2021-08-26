@@ -670,6 +670,10 @@ public:
     bool IsSidechainActivationCommit(uint256& hashSidechain) const;
     bool IsSCDBUpdate() const;
 
+    /** News OP_RETURN script types */
+    bool IsNewsUSDay() const;
+    bool IsNewsTokyoDay() const;
+
     /** Called by IsStandardTx and P2SH/BIP62 VerifyScript (which makes it consensus-critical). */
     bool IsPushOnly(const_iterator pc) const;
     bool IsPushOnly() const;

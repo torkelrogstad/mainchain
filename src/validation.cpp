@@ -651,7 +651,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
 
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     std::string reason;
-    if (fRequireStandard && !IsStandardTx(tx, reason, witnessEnabled))
+    if (fRequireStandard && !IsStandardTx(tx, reason, witnessEnabled, drivechainsEnabled))
         return state.DoS(0, false, REJECT_NONSTANDARD, reason);
 
     // Only accept nLockTime-using transactions that can be mined in the next
@@ -2412,7 +2412,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         return state.Error("Failed to write sidechain block data!");
     }
 
-    if (!popreturndb->HaveBlockData(block.GetHash()) &&
+    if (vOPReturnData.size() && !popreturndb->HaveBlockData(block.GetHash()) &&
             !popreturndb->WriteBlockData(
                 std::make_pair(block.GetHash(), vOPReturnData)))
     {
@@ -3787,6 +3787,30 @@ void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<
     CMutableTransaction mtx(*block.vtx[0]);
     mtx.vout.push_back(out);
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
+}
+
+CScript GetNewsTokyoDailyHeader()
+{
+    CScript script;
+    script.resize(5);
+    script[0] = OP_RETURN;
+    script[1] = 0xA1;
+    script[2] = 0xB2;
+    script[3] = 0xC3;
+    script[4] = 0x01;
+    return script;
+}
+
+CScript GetNewsUSDailyHeader()
+{
+    CScript script;
+    script.resize(5);
+    script[0] = OP_RETURN;
+    script[1] = 0xA1;
+    script[2] = 0xB2;
+    script[3] = 0xC3;
+    script[4] = 0x02;
+    return script;
 }
 
 std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block, const Consensus::Params& consensusParams)

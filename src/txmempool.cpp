@@ -832,7 +832,6 @@ public:
         if (timea == timeb) {
             return CompareTxMemPoolEntryByScore()(*a, *b);
         }
-        // TODO this might actually be inverse of what i want
         return timea < timeb;
     }
 };

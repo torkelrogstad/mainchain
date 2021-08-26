@@ -1,4 +1,4 @@
-// Copyright (c) 2021 The Bitcoin Core developers
+﻿// Copyright (c) 2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,8 +7,10 @@
 
 #include <amount.h>
 #include <wallet/wallet.h>
+#include <validation.h>
 
 #include <qt/drivenetunits.h>
+#include <qt/newstablemodel.h> // TODO move enum NewsFilters
 
 #include <QMessageBox>
 
@@ -18,6 +20,10 @@ CreateNewsDialog::CreateNewsDialog(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->feeAmount->setValue(0);
+
+    ui->comboBoxCategory->addItem("General OP_RETURN data");
+    ui->comboBoxCategory->addItem("Tokyo daily news");
+    ui->comboBoxCategory->addItem("US daily news");
 }
 
 CreateNewsDialog::~CreateNewsDialog()
@@ -57,11 +63,25 @@ void CreateNewsDialog::on_pushButtonCreate_clicked()
     // Block until the wallet has been updated with the latest chain tip
     vpwallets[0]->BlockUntilSyncedToCurrentChain();
 
-    std::string strHex = HexStr(strText.begin(), strText.end());
-    std::vector<unsigned char> vBytes = ParseHex(strHex);
+    // Create news OP_RETURN script
+    CScript script;
+
+    if (ui->comboBoxCategory->currentIndex() == COIN_NEWS_ALL) {
+        script << OP_RETURN;
+    }
+    else
+    if (ui->comboBoxCategory->currentIndex() == COIN_NEWS_TOKYO_DAY){
+        script = GetNewsTokyoDailyHeader();
+    }
+    else
+    if (ui->comboBoxCategory->currentIndex() == COIN_NEWS_US_DAY){
+        script = GetNewsUSDailyHeader();
+    }
 
     // TODO Should script include the pushdata size added by << operator?
-    CScript script = CScript() << OP_RETURN << vBytes;
+    std::string strHex = HexStr(strText.begin(), strText.end());
+    std::vector<unsigned char> vBytes = ParseHex(strHex);
+    script << vBytes;
 
     CTransactionRef tx;
     std::string strFail = "";
@@ -82,4 +102,12 @@ void CreateNewsDialog::on_pushButtonCreate_clicked()
     messageBox.setText(result);
     messageBox.exec();
 #endif
+}
+
+void CreateNewsDialog::on_pushButtonHelp_clicked()
+{
+    QMessageBox messageBox;
+    messageBox.setWindowTitle("Help!");
+    messageBox.setText("help");
+    messageBox.exec();
 }

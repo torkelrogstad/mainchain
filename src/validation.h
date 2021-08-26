@@ -458,6 +458,9 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, c
 
 void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams);
 
+CScript GetNewsTokyoDailyHeader();
+CScript GetNewsUSDailyHeader();
+
 /** Return a vector of all of the critical data requests found in a block */
 std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block, const Consensus::Params& consensusParams);
 

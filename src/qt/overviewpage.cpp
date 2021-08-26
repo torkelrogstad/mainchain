@@ -166,6 +166,7 @@ void OverviewPage::setClientModel(ClientModel *model)
         latestBlockModel->setClientModel(model);
 
         newsModel->setClientModel(model);
+        newsModel->setFilter(COIN_NEWS_ALL);
     }
 }
 
@@ -256,7 +257,7 @@ void OverviewPage::on_tableViewMempool_doubleClicked(const QModelIndex& index)
 
     QMessageBox messageBox;
 
-    QString strHash = index.data(LatestBlockTableModel::HashRole).toString();
+    QString strHash = index.data(MemPoolTableModel::HashRole).toString();
     uint256 hash = uint256S(strHash.toStdString());
 
     // TODO update error message
@@ -283,4 +284,38 @@ void OverviewPage::on_tableViewMempool_doubleClicked(const QModelIndex& index)
     detailsDialog.SetTransaction(*txRef);
 
     detailsDialog.exec();
+}
+
+void OverviewPage::on_tableViewNews_doubleClicked(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    QString strNews = index.data(NewsTableModel::NewsRole).toString();
+
+    QMessageBox messageBox;
+    messageBox.setWindowTitle("News");
+    messageBox.setText(strNews);
+    messageBox.exec();
+}
+
+void OverviewPage::on_radioButtonNewsAll_toggled(bool checked)
+{
+    if (checked) {
+        newsModel->setFilter(COIN_NEWS_ALL);
+    }
+}
+
+void OverviewPage::on_radioButtonNewsTokyoDay_toggled(bool checked)
+{
+    if (checked) {
+        newsModel->setFilter(COIN_NEWS_TOKYO_DAY);
+    }
+}
+
+void OverviewPage::on_radioButtonNewsUSDay_toggled(bool checked)
+{
+    if (checked) {
+        newsModel->setFilter(COIN_NEWS_US_DAY);
+    }
 }

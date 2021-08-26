@@ -78,7 +78,10 @@ private Q_SLOTS:
     void on_pushButtonCreateNews_clicked();
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
     void on_tableViewMempool_doubleClicked(const QModelIndex& index);
-
+    void on_tableViewNews_doubleClicked(const QModelIndex& index);
+    void on_radioButtonNewsAll_toggled(bool checked);
+    void on_radioButtonNewsTokyoDay_toggled(bool checked);
+    void on_radioButtonNewsUSDay_toggled(bool checked);
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

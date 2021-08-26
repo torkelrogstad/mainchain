@@ -369,6 +369,42 @@ bool CScript::IsSCDBUpdate() const
     return true;
 }
 
+bool CScript::IsNewsTokyoDay() const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size < 5)
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xA1 ||
+            (*this)[2] != 0xB2 ||
+            (*this)[3] != 0xC3 ||
+            (*this)[4] != 0x01)
+        return false;
+
+    return true;
+}
+
+bool CScript::IsNewsUSDay() const
+{
+    // Check script size
+    size_t size = this->size();
+    if (size < 5)
+        return false;
+
+    // Check script header
+    if ((*this)[0] != OP_RETURN ||
+            (*this)[1] != 0xA1 ||
+            (*this)[2] != 0xB2 ||
+            (*this)[3] != 0xC3 ||
+            (*this)[4] != 0x02)
+        return false;
+
+    return true;
+}
+
 bool CScript::IsPushOnly(const_iterator pc) const
 {
     while (pc < end())

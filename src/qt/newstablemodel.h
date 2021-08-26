@@ -12,6 +12,7 @@
 
 class CBlockIndex;
 class ClientModel;
+class OPReturnData;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
@@ -22,6 +23,14 @@ struct NewsTableObject
     int nHeight;
     int nTime;
     std::string decode;
+    std::string fees;
+};
+
+enum NewsFilters
+{
+    COIN_NEWS_ALL = 0,
+    COIN_NEWS_TOKYO_DAY = 1,
+    COIN_NEWS_US_DAY = 2
 };
 
 class NewsTableModel : public QAbstractTableModel
@@ -36,6 +45,11 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
 
     void setClientModel(ClientModel *model);
+    void setFilter(int nFilter);
+
+    enum RoleIndex {
+        NewsRole = Qt::UserRole,
+    };
 
 public Q_SLOTS:
     void numBlocksChanged();
@@ -46,6 +60,9 @@ private:
     ClientModel *clientModel = nullptr;
 
     void UpdateModel();
+    void SortByFees(std::vector<NewsTableObject>& vNews);
+
+    int nFilter;
 };
 
 #endif // NEWSBLOCKTABLEMODEL_H

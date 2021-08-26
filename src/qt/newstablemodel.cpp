@@ -1,4 +1,4 @@
-// Copyright (c) 2021 The Bitcoin Core developers
+﻿// Copyright (c) 2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,6 +6,7 @@
 
 #include <chain.h>
 #include <txdb.h>
+#include <utilmoneystr.h>
 #include <validation.h>
 
 #include <qt/clientmodel.h>
@@ -20,6 +21,7 @@ Q_DECLARE_METATYPE(NewsTableObject)
 NewsTableModel::NewsTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
+    nFilter = COIN_NEWS_ALL;
 }
 
 int NewsTableModel::rowCount(const QModelIndex & /*parent*/) const
@@ -29,7 +31,7 @@ int NewsTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int NewsTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 3;
+    return 4;
 }
 
 QVariant NewsTableModel::data(const QModelIndex &index, int role) const
@@ -49,33 +51,46 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DisplayRole:
     {
-        // Height
+        // Fees
         if (col == 0) {
+            return QString::fromStdString(object.fees);
+        }
+        // Height
+        if (col == 1) {
             return object.nHeight;
         }
         // Time
-        if (col == 1) {
+        if (col == 2) {
             return object.nTime;
         }
         // Decode
-        if (col == 2) {
+        if (col == 3) {
             return QString::fromStdString(object.decode);
         }
+
     }
     case Qt::TextAlignmentRole:
     {
-        // Height
+        // Fees
         if (col == 0) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Height
+        if (col == 1) {
             return int(Qt::AlignHCenter | Qt::AlignVCenter);
         }
         // Time
-        if (col == 1) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        if (col == 2) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Decode
-        if (col == 2) {
+        if (col == 3) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
+    }
+    case NewsRole:
+    {
+        return QString::fromStdString(object.decode);
     }
     }
     return QVariant();
@@ -87,10 +102,12 @@ QVariant NewsTableModel::headerData(int section, Qt::Orientation orientation, in
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("Height");
+                return QString("Fees");
             case 1:
-                return QString("Time");
+                return QString("Height");
             case 2:
+                return QString("Time");
+            case 3:
                 return QString("Decode");
             }
         }
@@ -125,11 +142,26 @@ void NewsTableModel::UpdateModel()
     endResetModel();
 
     int nHeight = chainActive.Height() + 1;
-    int nBlocksToDisplay = 10;
+
+    int nBlocksToDisplay = 0;
+    if (nFilter == COIN_NEWS_ALL) {
+        nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
+    }
+    else
+    if (nFilter == COIN_NEWS_TOKYO_DAY) {
+        nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
+    }
+    else
+    if (nFilter == COIN_NEWS_US_DAY) {
+        nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
+    }
+
+
     if (nHeight < nBlocksToDisplay)
         nBlocksToDisplay = nHeight;
 
-    beginInsertRows(QModelIndex(), model.size(), model.size() + nBlocksToDisplay - 1);
+    // Lookup and filter data that we want to display
+    std::vector<NewsTableObject> vNews;
     for (int i = 0; i < nBlocksToDisplay; i++) {
         CBlockIndex *index = chainActive[nHeight - i];
 
@@ -144,7 +176,13 @@ void NewsTableModel::UpdateModel()
             continue;
         }
 
+        // Find the data we want to display
         for (const OPReturnData& d : vData) {
+            if (nFilter == COIN_NEWS_TOKYO_DAY && !d.script.IsNewsTokyoDay())
+                continue;
+            if (nFilter == COIN_NEWS_US_DAY && !d.script.IsNewsUSDay())
+                continue;
+
             NewsTableObject object;
             object.nHeight = nHeight - i;
             object.nTime = index->nTime;
@@ -154,9 +192,48 @@ void NewsTableModel::UpdateModel()
                 strDecode += c;
 
             object.decode = strDecode;
+            object.fees = FormatMoney(d.fees);
 
-            model.append(QVariant::fromValue(object));
+            vNews.push_back(object);
         }
     }
+
+    // Sort by fees
+    SortByFees(vNews);
+
+    beginInsertRows(QModelIndex(), model.size(), model.size() + vNews.size() - 1);
+    for (const NewsTableObject& o : vNews)
+        model.append(QVariant::fromValue(o));
     endInsertRows();
+}
+
+void NewsTableModel::setFilter(int nFilterIn)
+{
+    if (nFilterIn == COIN_NEWS_ALL) {
+        nFilter = COIN_NEWS_ALL;
+        UpdateModel();
+    }
+    else
+    if (nFilterIn == COIN_NEWS_TOKYO_DAY) {
+        nFilter = COIN_NEWS_TOKYO_DAY;
+        UpdateModel();
+    }
+    else
+    if (nFilterIn == COIN_NEWS_US_DAY) {
+        nFilter = COIN_NEWS_US_DAY;
+        UpdateModel();
+    }
+}
+
+struct CompareByFee
+{
+    bool operator()(const NewsTableObject& a, const NewsTableObject& b) const
+    {
+        return a.fees > b.fees;
+    }
+};
+
+void NewsTableModel::SortByFees(std::vector<NewsTableObject>& vNews)
+{
+    std::sort(vNews.begin(), vNews.end(), CompareByFee());
 }

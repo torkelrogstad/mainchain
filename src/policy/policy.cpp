@@ -55,7 +55,7 @@ bool IsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
     return (txout.nValue < GetDustThreshold(txout, dustRelayFeeIn));
 }
 
-bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType, const bool witnessEnabled)
+bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType, const bool witnessEnabled, const bool drivechainEnabled)
 {
     std::vector<std::vector<unsigned char> > vSolutions;
     if (!Solver(scriptPubKey, whichType, vSolutions))
@@ -70,17 +70,21 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType, const bool w
             return false;
         if (m < 1 || m > n)
             return false;
-    } else if (whichType == TX_NULL_DATA &&
-               (!fAcceptDatacarrier || scriptPubKey.size() > nMaxDatacarrierBytes))
-          return false;
-
+    } else if (whichType == TX_NULL_DATA) {
+        if (!fAcceptDatacarrier)
+            return false;
+        if (!drivechainEnabled && scriptPubKey.size() > nMaxDatacarrierBytes)
+            return false;
+        if (drivechainEnabled && scriptPubKey.size() > MAX_DRIVECHAIN_DATA_BYTES)
+            return false;
+    }
     else if (!witnessEnabled && (whichType == TX_WITNESS_V0_KEYHASH || whichType == TX_WITNESS_V0_SCRIPTHASH))
         return false;
 
     return whichType != TX_NONSTANDARD && whichType != TX_WITNESS_UNKNOWN;
 }
 
-bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnessEnabled)
+bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnessEnabled, const bool drivechainEnabled)
 {
     if (tx.nVersion > CTransaction::MAX_STANDARD_VERSION || tx.nVersion < 1) {
         reason = "version";
@@ -119,7 +123,7 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnes
     unsigned int nDataOut = 0;
     txnouttype whichType;
     for (const CTxOut& txout : tx.vout) {
-        if (!::IsStandard(txout.scriptPubKey, whichType, witnessEnabled)) {
+        if (!::IsStandard(txout.scriptPubKey, whichType, witnessEnabled, drivechainEnabled)) {
             reason = "scriptpubkey";
             return false;
         }
@@ -135,9 +139,7 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason, const bool witnes
         }
     }
 
-    bool fDrivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
-
-    if (!(fDrivechainsEnabled && tx.IsCoinBase()) && nDataOut > 1) {
+    if (!(drivechainEnabled && tx.IsCoinBase()) && nDataOut > 1) {
         reason = "multi-op-return";
         return false;
     }
