@@ -29,6 +29,7 @@ namespace Ui {
 
 QT_BEGIN_NAMESPACE
 class QDateTime;
+class QMenu;
 class QModelIndex;
 class QTimer;
 QT_END_NAMESPACE
@@ -69,6 +70,9 @@ private:
     CAmount currentWatchOnlyBalance;
     CAmount currentWatchUnconfBalance;
     CAmount currentWatchImmatureBalance;
+    QMenu *contextMenuNews;
+    QMenu *contextMenuMempool;
+    QMenu *contextMenuBlocks;
 
 private Q_SLOTS:
     void updateDisplayUnit();
@@ -82,6 +86,13 @@ private Q_SLOTS:
     void on_radioButtonNewsAll_toggled(bool checked);
     void on_radioButtonNewsTokyoDay_toggled(bool checked);
     void on_radioButtonNewsUSDay_toggled(bool checked);
+    void contextualMenuNews(const QPoint &);
+    void contextualMenuMempool(const QPoint &);
+    void contextualMenuBlocks(const QPoint &);
+
+    void showDetailsNews();
+    void showDetailsMempool();
+    void showDetailsBlock();
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

@@ -21,6 +21,8 @@
 #include <qt/txdetails.h>
 #include <qt/walletmodel.h>
 
+#include <QMenu>
+#include <QPoint>
 #include <QScrollBar>
 
 OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) :
@@ -94,6 +96,43 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->tableViewMempool->setWordWrap(false);
     ui->tableViewBlocks->setWordWrap(false);
     ui->tableViewNews->setWordWrap(false);
+
+    // Select rows
+    ui->tableViewMempool->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewBlocks->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewNews->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+    // Apply custom context menu
+    ui->tableViewNews->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->tableViewMempool->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->tableViewBlocks->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    // News table context menu
+    QAction *showDetailsNewsAction = new QAction(tr("Show full decode"), this);
+    contextMenuNews = new QMenu(this);
+    contextMenuNews->setObjectName("contextMenuNews");
+    contextMenuNews->addAction(showDetailsNewsAction);
+
+    // Recent txns (mempool) table context menu
+    QAction *showDetailsMempoolAction = new QAction(tr("Show transaction details from mempool"), this);
+    contextMenuMempool = new QMenu(this);
+    contextMenuMempool->setObjectName("contextMenuMempool");
+    contextMenuMempool->addAction(showDetailsMempoolAction);
+
+    // Recent block table context menu
+    QAction *showDetailsBlockAction = new QAction(tr("Open in block explorer"), this);
+    contextMenuBlocks = new QMenu(this);
+    contextMenuBlocks->setObjectName("contextMenuBlocks");
+    contextMenuBlocks->addAction(showDetailsBlockAction);
+
+    // Connect context menus
+    connect(ui->tableViewNews, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuNews(QPoint)));
+    connect(ui->tableViewMempool, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuMempool(QPoint)));
+    connect(ui->tableViewBlocks, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuBlocks(QPoint)));
+
+    connect(showDetailsNewsAction, SIGNAL(triggered()), this, SLOT(showDetailsNews()));
+    connect(showDetailsMempoolAction, SIGNAL(triggered()), this, SLOT(showDetailsMempool()));
+    connect(showDetailsBlockAction, SIGNAL(triggered()), this, SLOT(showDetailsBlock()));
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()
@@ -318,4 +357,55 @@ void OverviewPage::on_radioButtonNewsUSDay_toggled(bool checked)
     if (checked) {
         newsModel->setFilter(COIN_NEWS_US_DAY);
     }
+}
+
+void OverviewPage::contextualMenuNews(const QPoint &point)
+{
+    QModelIndex index = ui->tableViewNews->indexAt(point);
+    if (index.isValid())
+        contextMenuNews->popup(ui->tableViewNews->viewport()->mapToGlobal(point));
+}
+
+void OverviewPage::contextualMenuMempool(const QPoint &point)
+{
+    QModelIndex index = ui->tableViewMempool->indexAt(point);
+    if (index.isValid())
+        contextMenuMempool->popup(ui->tableViewMempool->viewport()->mapToGlobal(point));
+}
+
+void OverviewPage::contextualMenuBlocks(const QPoint &point)
+{
+    QModelIndex index = ui->tableViewBlocks->indexAt(point);
+    if (index.isValid())
+        contextMenuBlocks->popup(ui->tableViewBlocks->viewport()->mapToGlobal(point));
+}
+
+void OverviewPage::showDetailsNews()
+{
+    if(!ui->tableViewNews->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewNews->selectionModel()->selectedRows();
+    if(!selection.isEmpty())
+        on_tableViewNews_doubleClicked(selection.front());
+}
+
+void OverviewPage::showDetailsMempool()
+{
+    if(!ui->tableViewMempool->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewMempool->selectionModel()->selectedRows();
+    if(!selection.isEmpty())
+        on_tableViewMempool_doubleClicked(selection.front());
+}
+
+void OverviewPage::showDetailsBlock()
+{
+    if(!ui->tableViewBlocks->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewBlocks->selectionModel()->selectedRows();
+    if(!selection.isEmpty())
+        on_tableViewBlocks_doubleClicked(selection.front());
 }

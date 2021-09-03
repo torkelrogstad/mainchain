@@ -101,7 +101,10 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
 
     // Always show scroll bar
     view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
     view->setTabKeyNavigation(false);
+
+    // Apply custom context menu
     view->setContextMenuPolicy(Qt::CustomContextMenu);
 
     view->installEventFilter(this);
