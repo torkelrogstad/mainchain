@@ -74,7 +74,8 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     // Don't stretch last cell of horizontal header
     ui->tableViewMempool->horizontalHeader()->setStretchLastSection(false);
     ui->tableViewBlocks->horizontalHeader()->setStretchLastSection(false);
-    ui->tableViewNews->horizontalHeader()->setStretchLastSection(false);
+
+    ui->tableViewNews->horizontalHeader()->setStretchLastSection(true);
 
     // Hide vertical header
     ui->tableViewBlocks->verticalHeader()->setVisible(false);
@@ -108,7 +109,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->tableViewBlocks->setContextMenuPolicy(Qt::CustomContextMenu);
 
     // News table context menu
-    QAction *showDetailsNewsAction = new QAction(tr("Show full decode"), this);
+    QAction *showDetailsNewsAction = new QAction(tr("Show full data decode"), this);
     contextMenuNews = new QMenu(this);
     contextMenuNews->setObjectName("contextMenuNews");
     contextMenuNews->addAction(showDetailsNewsAction);
@@ -120,7 +121,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     contextMenuMempool->addAction(showDetailsMempoolAction);
 
     // Recent block table context menu
-    QAction *showDetailsBlockAction = new QAction(tr("Open in block explorer"), this);
+    QAction *showDetailsBlockAction = new QAction(tr("Show in block explorer"), this);
     contextMenuBlocks = new QMenu(this);
     contextMenuBlocks->setObjectName("contextMenuBlocks");
     contextMenuBlocks->addAction(showDetailsBlockAction);
