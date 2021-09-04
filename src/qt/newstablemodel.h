@@ -33,6 +33,8 @@ enum NewsFilters
     COIN_NEWS_US_DAY = 2
 };
 
+static const size_t NEWS_HEADLINE_CHARS = 64;
+
 class NewsTableModel : public QAbstractTableModel
 {
     Q_OBJECT

@@ -65,9 +65,11 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
         }
         // Decode
         if (col == 3) {
-            return QString::fromStdString(object.decode);
+            if (object.decode.size() > NEWS_HEADLINE_CHARS)
+                return QString::fromStdString(object.decode).left(NEWS_HEADLINE_CHARS) + "...";
+            else
+                return QString::fromStdString(object.decode);
         }
-
     }
     case Qt::TextAlignmentRole:
     {
@@ -156,7 +158,6 @@ void NewsTableModel::UpdateModel()
         nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
     }
 
-
     if (nHeight < nBlocksToDisplay)
         nBlocksToDisplay = nHeight;
 
@@ -187,9 +188,11 @@ void NewsTableModel::UpdateModel()
             object.nHeight = nHeight - i;
             object.nTime = index->nTime;
 
+            // Copy chars from script, skipping non-message bytes
             std::string strDecode;
-            for (const unsigned char& c : d.script)
-                strDecode += c;
+            size_t nStart = nFilter == COIN_NEWS_ALL ? 2 : 6;
+            for (size_t i = nStart; i < d.script.size(); i++)
+                strDecode += d.script[i];
 
             object.decode = strDecode;
             object.fees = FormatMoney(d.fees);
