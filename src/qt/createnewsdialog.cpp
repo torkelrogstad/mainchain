@@ -24,6 +24,8 @@ CreateNewsDialog::CreateNewsDialog(QWidget *parent) :
     ui->comboBoxCategory->addItem("General OP_RETURN data");
     ui->comboBoxCategory->addItem("Tokyo daily news");
     ui->comboBoxCategory->addItem("US daily news");
+
+    ui->labelCharsRemaining->setText(QString::number(NEWS_HEADLINE_CHARS));
 }
 
 CreateNewsDialog::~CreateNewsDialog()
@@ -110,4 +112,58 @@ void CreateNewsDialog::on_pushButtonHelp_clicked()
     messageBox.setWindowTitle("Help!");
     messageBox.setText("help");
     messageBox.exec();
+}
+
+void CreateNewsDialog::on_plainTextEdit_textChanged()
+{
+    QString currentText = ui->plainTextEdit->toPlainText();
+    if (currentText == cacheText)
+        return;
+
+    cacheText = currentText;
+    std::string strText = currentText.toStdString();
+
+    // Reset highlights
+    QTextCursor cursor(ui->plainTextEdit->document());
+    cursor.setPosition(0, QTextCursor::MoveAnchor);
+    cursor.setPosition(strText.size(), QTextCursor::KeepAnchor);
+    cursor.setCharFormat(QTextCharFormat());
+
+    // Update the number of characters remaining label
+    if (strText.size() >= NEWS_HEADLINE_CHARS)
+        ui->labelCharsRemaining->setText(QString::number(0));
+    else
+        ui->labelCharsRemaining->setText(QString::number(NEWS_HEADLINE_CHARS - strText.size()));
+
+    // Highlight characters when there are too many to fit in the headline
+    // or after a newline is added.
+
+    // Highlight characters if we've gone over the limit
+    if (strText.size() > NEWS_HEADLINE_CHARS) {
+        QTextCursor cursor(ui->plainTextEdit->document());
+
+        QTextCharFormat highlight;
+        highlight.setBackground(Qt::red);
+
+        cursor.setPosition(NEWS_HEADLINE_CHARS, QTextCursor::MoveAnchor);
+        cursor.setPosition(strText.size(), QTextCursor::KeepAnchor);
+        cursor.setCharFormat(highlight);
+    }
+
+    // Check for any newlines and if we find one before the character
+    // limit then highlight
+    for (size_t i = 0; i < strText.size(); i++) {
+        if (strText[i] == '\n' || strText[i] == '\r') {
+            QTextCursor cursor(ui->plainTextEdit->document());
+
+            QTextCharFormat highlight;
+            highlight.setBackground(Qt::red);
+
+            cursor.setPosition(i, QTextCursor::MoveAnchor);
+            cursor.setPosition(strText.size(), QTextCursor::KeepAnchor);
+            cursor.setCharFormat(highlight);
+
+            ui->labelCharsRemaining->setText(QString::number(0));
+        }
+    }
 }

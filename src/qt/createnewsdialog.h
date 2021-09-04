@@ -22,9 +22,12 @@ public:
 private Q_SLOTS:
     void on_pushButtonCreate_clicked();
     void on_pushButtonHelp_clicked();
+    void on_plainTextEdit_textChanged();
 
 private:
     Ui::CreateNewsDialog *ui;
+
+    QString cacheText;
 };
 
 #endif // CREATENEWSDIALOG_H
