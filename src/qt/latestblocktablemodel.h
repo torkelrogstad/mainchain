@@ -21,10 +21,7 @@ struct BlockTableObject
 {
     int nHeight;
     uint256 hash;
-    uint256 hashPrev;
-    uint256 hashMerkleRoot;
     int nTime;
-    int nBits;
 };
 
 class LatestBlockTableModel : public QAbstractTableModel

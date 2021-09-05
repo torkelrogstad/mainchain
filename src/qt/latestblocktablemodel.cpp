@@ -29,7 +29,7 @@ int LatestBlockTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int LatestBlockTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 6;
+    return 3;
 }
 
 QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
@@ -55,23 +55,11 @@ QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
         }
         // Hash
         if (col == 1) {
-            return QString::fromStdString(object.hash.ToString()).left(32) + "...";
-        }
-        // hashPrev
-        if (col == 2) {
-            return QString::fromStdString(object.hashPrev.ToString()).left(32) + "...";
-        }
-        // hashMerkleRoot
-        if (col == 3) {
-            return QString::fromStdString(object.hashMerkleRoot.ToString()).left(32) + "...";
+            return QString::fromStdString(object.hash.ToString()).left(21) + "...";
         }
         // Time
-        if (col == 4) {
+        if (col == 2) {
             return QDateTime::fromTime_t((int64_t)object.nTime).toString("dd MMMM yyyy hh:mm");
-        }
-        // nBits
-        if (col == 5) {
-            return QString::fromStdString(strprintf("%08x", object.nBits));
         }
     }
     case HashRole:
@@ -88,20 +76,8 @@ QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // hashPrev
-        if (col == 2) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
-        }
-        // hashMerkleRoot
-        if (col == 3) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
-        }
         // Time
-        if (col == 4) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
-        }
-        // nBits
-        if (col == 5) {
+        if (col == 2) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
@@ -119,13 +95,7 @@ QVariant LatestBlockTableModel::headerData(int section, Qt::Orientation orientat
             case 1:
                 return QString("Hash");
             case 2:
-                return QString("Hash Prev");
-            case 3:
-                return QString("Merkle Root");
-            case 4:
                 return QString("Time");
-            case 5:
-                return QString("Bits");
             }
         }
     }
@@ -173,15 +143,7 @@ void LatestBlockTableModel::UpdateModel()
         BlockTableObject object;
         object.nHeight = nHeight - i;
         object.hash = index->GetBlockHash();
-        object.hashMerkleRoot = index->hashMerkleRoot;
-
-        uint256 hashPrev = uint256();
-        if (index->pprev)
-            hashPrev = index->pprev->GetBlockHash();
-
-        object.hashPrev = hashPrev;
         object.nTime = index->nTime;
-        object.nBits = index->nBits;
 
         model.append(QVariant::fromValue(object));
     }
