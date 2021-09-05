@@ -17,12 +17,14 @@ class uint256;
 class CTransaction;
 typedef std::shared_ptr<const CTransaction> CTransactionRef;
 
+QT_BEGIN_NAMESPACE
+class QString;
+QT_END_NAMESPACE
+
 struct MemPoolTableObject
 {
     uint256 txid;
-    CAmount fee;
-    CFeeRate feeRate;
-    size_t nWeight;
+    QString time;
     CAmount value;
 };
 

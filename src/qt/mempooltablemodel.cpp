@@ -5,11 +5,14 @@
 #include <qt/mempooltablemodel.h>
 
 #include <qt/drivenetunits.h>
+#include <qt/guiutil.h>
 
 #include <primitives/transaction.h>
 #include <txmempool.h>
 #include <utilmoneystr.h>
 #include <validation.h>
+
+#include <QString>
 
 Q_DECLARE_METATYPE(MemPoolTableObject)
 
@@ -27,7 +30,7 @@ int MemPoolTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int MemPoolTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 5;
+    return 3;
 }
 
 QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
@@ -49,24 +52,14 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
     {
         // txid
         if (col == 0) {
-            return QString::fromStdString(object.txid.ToString());
+            return QString::fromStdString(object.txid.ToString()).left(21) + "...";
         }
-        // Fee
+        // Time
         if (col == 1) {
-            return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.fee, false, BitcoinUnits::separatorAlways);
-        }
-        // Fee Rate
-        if (col == 2) {
-            QString rate = BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.feeRate.GetFeePerK(), false, BitcoinUnits::separatorAlways);
-            rate += "/kB";
-            return rate;
-        }
-        // Weight
-        if (col == 3) {
-            return QString::number(object.nWeight) + " wB";
+            return object.time;
         }
         // Value
-        if (col == 4) {
+        if (col == 2) {
             return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.value, false, BitcoinUnits::separatorAlways);
         }
     }
@@ -76,20 +69,12 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         if (col == 0) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // Fee
+        // Time
         if (col == 1) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Fee rate
-        if (col == 2) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
-        }
-        // weight
-        if (col == 3) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
-        }
         // Value
-        if (col == 4) {
+        if (col == 2) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
@@ -109,12 +94,8 @@ QVariant MemPoolTableModel::headerData(int section, Qt::Orientation orientation,
             case 0:
                 return QString("TxID");
             case 1:
-                return QString("Fee");
+                return QString("Time");
             case 2:
-                return QString("Fee Rate");
-            case 3:
-                return QString("Weight");
-            case 4:
                 return QString("Value");
             }
         }
@@ -139,9 +120,7 @@ void MemPoolTableModel::updateModel()
 
         MemPoolTableObject object;
         object.txid = i.tx->GetHash();
-        object.fee = i.fee;
-        object.feeRate = i.feeRate;
-        object.nWeight = i.nTxWeight;
+        object.time = GUIUtil::timeStr(i.nTime);
         object.value = i.tx->GetValueOut();
 
         model.append(QVariant::fromValue(object));
