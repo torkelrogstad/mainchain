@@ -86,6 +86,11 @@ QString dateTimeStr(qint64 nTime)
     return dateTimeStr(QDateTime::fromTime_t((qint32)nTime));
 }
 
+QString timeStr(qint64 nTime)
+{
+    return QDateTime::fromTime_t((qint32)nTime).toString("hh:mm");
+}
+
 QFont fixedPitchFont()
 {
 #if QT_VERSION >= 0x50200
