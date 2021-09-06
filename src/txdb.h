@@ -193,8 +193,24 @@ struct OPReturnData
         READWRITE(nSize);
         READWRITE(fees);
     }
+};
 
-    std::string ToString() const;
+struct CustomNewsType
+{
+    CScript header;
+    std::string title;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(header);
+        READWRITE(title);
+    }
+
+    uint256 GetHash() {
+        return SerializeHash(*this);
+    }
 };
 
 /** Access to the OP_RETURN cache database (blocks/opreturn/) */
@@ -206,6 +222,9 @@ public:
 
     bool GetBlockData(const uint256& /* hashBlock */, std::vector<OPReturnData>& vData) const;
     bool HaveBlockData(const uint256& hashBlock) const;
+
+    void GetCustomTypes(std::vector<CustomNewsType>& vCustom);
+    void WriteCustomType(CustomNewsType custom);
 };
 
 #endif // BITCOIN_TXDB_H

@@ -38,6 +38,7 @@ static const char DB_LAST_BLOCK = 'l';
 static const char DB_LOADED_COINS = 'p';
 
 static const char DB_OP_RETURN = 'x';
+static const char DB_OP_RETURN_TYPES = 'X';
 
 namespace {
 
@@ -587,6 +588,36 @@ bool OPReturnDB::HaveBlockData(const uint256& hashBlock) const
 {
     std::vector<OPReturnData> vData;
     return GetBlockData(hashBlock, vData);
+}
+
+void OPReturnDB::GetCustomTypes(std::vector<CustomNewsType>& vCustom)
+{
+    std::pair<char, uint256> key = std::make_pair(DB_OP_RETURN_TYPES, uint256());
+
+    std::unique_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(key);
+
+    while (pcursor->Valid()) {
+        boost::this_thread::interruption_point();
+
+        CustomNewsType custom;
+        if (pcursor->GetKey(key) && key.first == DB_OP_RETURN_TYPES) {
+            if (pcursor->GetValue(custom))
+                vCustom.push_back(custom);
+        }
+
+        pcursor->Next();
+    }
+}
+
+void OPReturnDB::WriteCustomType(CustomNewsType custom)
+{
+    // Maybe in the future there will be different categories
+    // of custom types. If so, the pair.second can be used.
+    CDBBatch batch(*this);
+    batch.Write(std::make_pair(DB_OP_RETURN_TYPES, custom.GetHash()), custom);
+
+    WriteBatch(batch, true);
 }
 
 namespace {
