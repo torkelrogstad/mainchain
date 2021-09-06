@@ -110,6 +110,13 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
         return true;
     }
 
+    // TODO
+    // For testing we will allow any OP_RETURN script to be standard
+    if (scriptPubKey.size() && scriptPubKey[0] == OP_RETURN) {
+        typeRet = TX_NULL_DATA;
+        return true;
+    }
+
     // Scan templates
     const CScript& script1 = scriptPubKey;
     for (const std::pair<txnouttype, CScript>& tplate : mTemplates)
