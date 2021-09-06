@@ -12,6 +12,7 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/latestblocktablemodel.h>
+#include <qt/managenewsdialog.h>
 #include <qt/mempooltablemodel.h>
 #include <qt/newstablemodel.h>
 #include <qt/optionsmodel.h>
@@ -24,6 +25,9 @@
 #include <QMenu>
 #include <QPoint>
 #include <QScrollBar>
+
+#include <txdb.h>
+#include <validation.h>
 
 OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) :
     QWidget(parent),
@@ -49,6 +53,9 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
 
     createNewsDialog = new CreateNewsDialog(this);
+    manageNewsDialog = new ManageNewsDialog(this);
+    connect(manageNewsDialog, SIGNAL(NewTypeCreated()), this, SLOT(updateNewsTypes()));
+    connect(manageNewsDialog, SIGNAL(NewTypeCreated()), createNewsDialog, SLOT(updateTypes()));
 
     latestBlockModel = new LatestBlockTableModel(this);
     ui->tableViewBlocks->setModel(latestBlockModel);
@@ -134,6 +141,17 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     connect(showDetailsNewsAction, SIGNAL(triggered()), this, SLOT(showDetailsNews()));
     connect(showDetailsMempoolAction, SIGNAL(triggered()), this, SLOT(showDetailsMempool()));
     connect(showDetailsBlockAction, SIGNAL(triggered()), this, SLOT(showDetailsBlock()));
+
+    // Setup news type combo box options
+    // Start with preset types
+    ui->comboBoxNewsType->addItem("All OP_RETURN data");
+    ui->comboBoxNewsType->addItem("Tokyo Daily News");
+    ui->comboBoxNewsType->addItem("US Daily News");
+    // Now add custom news types
+    std::vector<CustomNewsType> vCustom;
+    popreturndb->GetCustomTypes(vCustom);
+    for (const CustomNewsType c : vCustom)
+        ui->comboBoxNewsType->addItem(QString::fromStdString(c.title));
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()
@@ -144,6 +162,11 @@ void OverviewPage::handleOutOfSyncWarningClicks()
 void OverviewPage::on_pushButtonCreateNews_clicked()
 {
     createNewsDialog->show();
+}
+
+void OverviewPage::on_pushButtonManageNews_clicked()
+{
+    manageNewsDialog->show();
 }
 
 OverviewPage::~OverviewPage()
@@ -339,25 +362,9 @@ void OverviewPage::on_tableViewNews_doubleClicked(const QModelIndex& index)
     messageBox.exec();
 }
 
-void OverviewPage::on_radioButtonNewsAll_toggled(bool checked)
+void OverviewPage::on_comboBoxNewsType_currentIndexChanged(int index)
 {
-    if (checked) {
-        newsModel->setFilter(COIN_NEWS_ALL);
-    }
-}
-
-void OverviewPage::on_radioButtonNewsTokyoDay_toggled(bool checked)
-{
-    if (checked) {
-        newsModel->setFilter(COIN_NEWS_TOKYO_DAY);
-    }
-}
-
-void OverviewPage::on_radioButtonNewsUSDay_toggled(bool checked)
-{
-    if (checked) {
-        newsModel->setFilter(COIN_NEWS_US_DAY);
-    }
+    newsModel->setFilter(index);
 }
 
 void OverviewPage::contextualMenuNews(const QPoint &point)
@@ -409,4 +416,20 @@ void OverviewPage::showDetailsBlock()
     QModelIndexList selection = ui->tableViewBlocks->selectionModel()->selectedRows();
     if(!selection.isEmpty())
         on_tableViewBlocks_doubleClicked(selection.front());
+}
+
+void OverviewPage::updateNewsTypes()
+{
+    ui->comboBoxNewsType->clear();
+
+    // Setup news type combo box options
+    // Start with preset types
+    ui->comboBoxNewsType->addItem("All OP_RETURN data");
+    ui->comboBoxNewsType->addItem("Tokyo Daily News");
+    ui->comboBoxNewsType->addItem("US Daily News");
+    // Now add custom news types
+    std::vector<CustomNewsType> vCustom;
+    popreturndb->GetCustomTypes(vCustom);
+    for (const CustomNewsType c : vCustom)
+        ui->comboBoxNewsType->addItem(QString::fromStdString(c.title));
 }

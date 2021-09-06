@@ -14,6 +14,7 @@ class BlockIndexDetailsDialog;
 class ClientModel;
 class CreateNewsDialog;
 class LatestBlockTableModel;
+class ManageNewsDialog;
 class MemPoolTableModel;
 class NewsTableModel;
 class PlatformStyle;
@@ -62,6 +63,7 @@ private:
     CreateNewsDialog *createNewsDialog = nullptr;
     LatestBlockTableModel *latestBlockModel = nullptr;
     MemPoolTableModel *memPoolModel = nullptr;
+    ManageNewsDialog *manageNewsDialog = nullptr;
     NewsTableModel *newsModel = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
@@ -80,15 +82,15 @@ private Q_SLOTS:
     void updateWatchOnlyLabels(bool showWatchOnly);
     void handleOutOfSyncWarningClicks();
     void on_pushButtonCreateNews_clicked();
+    void on_pushButtonManageNews_clicked();
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
     void on_tableViewMempool_doubleClicked(const QModelIndex& index);
     void on_tableViewNews_doubleClicked(const QModelIndex& index);
-    void on_radioButtonNewsAll_toggled(bool checked);
-    void on_radioButtonNewsTokyoDay_toggled(bool checked);
-    void on_radioButtonNewsUSDay_toggled(bool checked);
+    void on_comboBoxNewsType_currentIndexChanged(int index);
     void contextualMenuNews(const QPoint &);
     void contextualMenuMempool(const QPoint &);
     void contextualMenuBlocks(const QPoint &);
+    void updateNewsTypes();
 
     void showDetailsNews();
     void showDetailsMempool();

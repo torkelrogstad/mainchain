@@ -47,7 +47,7 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
 
     void setClientModel(ClientModel *model);
-    void setFilter(int nFilter);
+    void setFilter(size_t nFilter);
 
     enum RoleIndex {
         NewsRole = Qt::UserRole,
@@ -64,7 +64,7 @@ private:
     void UpdateModel();
     void SortByFees(std::vector<NewsTableObject>& vNews);
 
-    int nFilter;
+    size_t nFilter;
 };
 
 #endif // NEWSBLOCKTABLEMODEL_H

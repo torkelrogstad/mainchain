@@ -7,6 +7,7 @@
 
 #include <amount.h>
 #include <wallet/wallet.h>
+#include <txdb.h>
 #include <validation.h>
 
 #include <qt/drivenetunits.h>
@@ -21,11 +22,9 @@ CreateNewsDialog::CreateNewsDialog(QWidget *parent) :
     ui->setupUi(this);
     ui->feeAmount->setValue(0);
 
-    ui->comboBoxCategory->addItem("General OP_RETURN data");
-    ui->comboBoxCategory->addItem("Tokyo daily news");
-    ui->comboBoxCategory->addItem("US daily news");
-
     ui->labelCharsRemaining->setText(QString::number(NEWS_HEADLINE_CHARS));
+
+    updateTypes();
 }
 
 CreateNewsDialog::~CreateNewsDialog()
@@ -78,12 +77,35 @@ void CreateNewsDialog::on_pushButtonCreate_clicked()
     else
     if (ui->comboBoxCategory->currentIndex() == COIN_NEWS_US_DAY){
         script = GetNewsUSDailyHeader();
+    } else {
+        // Figure out the script header for this type
+        std::vector<CustomNewsType> vCustom;
+        popreturndb->GetCustomTypes(vCustom);
+
+        size_t nFilter = ui->comboBoxCategory->currentIndex();
+
+        // TODO figure out a better way to handle custom type lookup.
+        // Perhaps all types should be in ldb and lookup up like this.
+        size_t nBuiltInTypes = 3;
+        nFilter -= nBuiltInTypes;
+
+        if (nFilter >= vCustom.size()) {
+            messageBox.setWindowTitle("Invalid custom type!");
+            messageBox.setText("Couldn't find custom type.");
+            messageBox.exec();
+            return;
+        }
+        script = vCustom[nFilter].header;
     }
 
     // TODO Should script include the pushdata size added by << operator?
     std::string strHex = HexStr(strText.begin(), strText.end());
     std::vector<unsigned char> vBytes = ParseHex(strHex);
     script << vBytes;
+
+    std::string strDecode;
+    for (size_t i = 0; i < script.size(); i++)
+        strDecode += script[i];
 
     CTransactionRef tx;
     std::string strFail = "";
@@ -166,4 +188,19 @@ void CreateNewsDialog::on_plainTextEdit_textChanged()
             ui->labelCharsRemaining->setText(QString::number(0));
         }
     }
+}
+
+void CreateNewsDialog::updateTypes()
+{
+    ui->comboBoxCategory->clear();
+
+    ui->comboBoxCategory->addItem("All OP_RETURN data");
+    ui->comboBoxCategory->addItem("Tokyo Daily News");
+    ui->comboBoxCategory->addItem("US Daily News");
+
+    std::vector<CustomNewsType> vCustom;
+    popreturndb->GetCustomTypes(vCustom);
+
+    for (const CustomNewsType c : vCustom)
+        ui->comboBoxCategory->addItem(QString::fromStdString(c.title));
 }

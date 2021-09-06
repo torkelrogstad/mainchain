@@ -19,6 +19,9 @@ public:
     explicit CreateNewsDialog(QWidget *parent = nullptr);
     ~CreateNewsDialog();
 
+public Q_SLOTS:
+    void updateTypes();
+
 private Q_SLOTS:
     void on_pushButtonCreate_clicked();
     void on_pushButtonHelp_clicked();

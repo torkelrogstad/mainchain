@@ -156,10 +156,34 @@ void NewsTableModel::UpdateModel()
     else
     if (nFilter == COIN_NEWS_US_DAY) {
         nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
+    } else {
+        // TODO
+        // Figure out how many blocks to display for custom type
+        nBlocksToDisplay = 24 * 6;
     }
 
     if (nHeight < nBlocksToDisplay)
         nBlocksToDisplay = nHeight;
+
+    // Load custom types to check those if needed
+    bool fCustomLoaded = false;
+    CustomNewsType custom;
+    if (nFilter != COIN_NEWS_ALL &&
+            nFilter != COIN_NEWS_TOKYO_DAY &&
+            nFilter != COIN_NEWS_US_DAY) {
+        std::vector<CustomNewsType> vCustom;
+        popreturndb->GetCustomTypes(vCustom);
+
+        // Find the custom type we are filtering by
+        // TODO figure out a better way to handle custom type lookup.
+        size_t nBuiltInTypes = 3;
+        size_t nCustomFilter = nFilter - nBuiltInTypes;
+
+        if (nCustomFilter < vCustom.size()) {
+            custom = vCustom[nCustomFilter];
+            fCustomLoaded = true;
+        }
+    }
 
     // Lookup and filter data that we want to display
     std::vector<NewsTableObject> vNews;
@@ -167,21 +191,44 @@ void NewsTableModel::UpdateModel()
         CBlockIndex *index = chainActive[nHeight - i];
 
         // TODO add error message or something to table?
-        if (!index) {
+        if (!index)
             continue;
-        }
 
         // For each block load our cached OP_RETURN data
         std::vector<OPReturnData> vData;
-        if (!popreturndb->GetBlockData(index->GetBlockHash(), vData)) {
+        if (!popreturndb->GetBlockData(index->GetBlockHash(), vData))
             continue;
-        }
 
         // Find the data we want to display
         for (const OPReturnData& d : vData) {
-            if (nFilter == COIN_NEWS_TOKYO_DAY && !d.script.IsNewsTokyoDay())
-                continue;
-            if (nFilter == COIN_NEWS_US_DAY && !d.script.IsNewsUSDay())
+            bool fFound = false;
+            if (nFilter == COIN_NEWS_TOKYO_DAY) {
+                if (!d.script.IsNewsTokyoDay())
+                    continue;
+                fFound = true;
+            }
+            else
+            if (nFilter == COIN_NEWS_US_DAY) {
+                if (!d.script.IsNewsUSDay())
+                    continue;
+                fFound = true;
+            }
+            else
+            if (nFilter == COIN_NEWS_ALL) {
+                fFound = true;
+            }
+            else
+            if (fCustomLoaded && d.script.size() >= 5 && custom.header.size() >= 5) {
+                if (d.script[0] == custom.header[0] &&
+                        d.script[1] == custom.header[1] &&
+                        d.script[2] == custom.header[2] &&
+                        d.script[3] == custom.header[3] &&
+                        d.script[4] == custom.header[4])
+                {
+                            fFound = true;
+                }
+            }
+            if (!fFound)
                 continue;
 
             NewsTableObject object;
@@ -210,22 +257,10 @@ void NewsTableModel::UpdateModel()
     endInsertRows();
 }
 
-void NewsTableModel::setFilter(int nFilterIn)
+void NewsTableModel::setFilter(size_t nFilterIn)
 {
-    if (nFilterIn == COIN_NEWS_ALL) {
-        nFilter = COIN_NEWS_ALL;
-        UpdateModel();
-    }
-    else
-    if (nFilterIn == COIN_NEWS_TOKYO_DAY) {
-        nFilter = COIN_NEWS_TOKYO_DAY;
-        UpdateModel();
-    }
-    else
-    if (nFilterIn == COIN_NEWS_US_DAY) {
-        nFilter = COIN_NEWS_US_DAY;
-        UpdateModel();
-    }
+    nFilter = nFilterIn;
+    UpdateModel();
 }
 
 struct CompareByFee
