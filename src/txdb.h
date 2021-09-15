@@ -197,8 +197,14 @@ struct OPReturnData
 
 struct CustomNewsType
 {
+    // A series of bytes to distinguish this news
     CScript header;
+    // The GUI title of the news type
     std::string title;
+    // Number of days news in this category is collected and ranked before
+    // staring a new period. If the number is 7 then the last 7 days of this
+    // news type should be ranked and displayed on the news table at a time.
+    size_t nDays;
 
     ADD_SERIALIZE_METHODS
 
@@ -206,11 +212,16 @@ struct CustomNewsType
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(header);
         READWRITE(title);
+        READWRITE(nDays);
     }
 
-    uint256 GetHash() {
+    uint256 GetHash() const {
         return SerializeHash(*this);
     }
+
+    std::string GetShareURL() const;
+
+    void SetURL(const std::string& strURL);
 };
 
 /** Access to the OP_RETURN cache database (blocks/opreturn/) */

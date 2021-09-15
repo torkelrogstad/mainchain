@@ -12,6 +12,7 @@
 #include <sidechain.h>
 #include <uint256.h>
 #include <util.h>
+#include <utilstrencodings.h>
 #include <ui_interface.h>
 #include <init.h>
 #include <validation.h>
@@ -618,6 +619,45 @@ void OPReturnDB::WriteCustomType(CustomNewsType custom)
     batch.Write(std::make_pair(DB_OP_RETURN_TYPES, custom.GetHash()), custom);
 
     WriteBatch(batch, true);
+}
+
+std::string CustomNewsType::GetShareURL() const
+{
+    std::string str =
+            std::to_string(nDays)
+            + "{" +
+            HexStr(header.begin(), header.end())
+            + "}"
+            + title;
+    return str;
+}
+
+void CustomNewsType::SetURL(const std::string& strURL)
+{
+    if (strURL.size() < 3)
+        return;
+
+    size_t nFirst = strURL.find("{");
+    size_t nSecond = strURL.find("}");
+
+    if (nFirst == std::string::npos || nSecond == std::string::npos)
+        return;
+    if (nFirst == 0 || nFirst >= strURL.size())
+        return;
+    if (nSecond >= strURL.size())
+        return;
+    if (nFirst == nSecond)
+        return;
+
+    // Get number of days
+    nDays = std::stoi(strURL.substr(0, nFirst));
+
+    // Get header bytes
+    std::vector<unsigned char> vBytes = ParseHex(strURL.substr(nFirst + 1, nSecond - 1));
+    header = CScript(vBytes.begin(), vBytes.end());
+
+    // Get title
+    title = strURL.substr(nSecond + 1);
 }
 
 namespace {
