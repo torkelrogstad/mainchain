@@ -390,31 +390,31 @@ void OverviewPage::contextualMenuBlocks(const QPoint &point)
 
 void OverviewPage::showDetailsNews()
 {
-    if(!ui->tableViewNews->selectionModel())
+    if (!ui->tableViewNews->selectionModel())
         return;
 
     QModelIndexList selection = ui->tableViewNews->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
+    if (!selection.isEmpty())
         on_tableViewNews_doubleClicked(selection.front());
 }
 
 void OverviewPage::showDetailsMempool()
 {
-    if(!ui->tableViewMempool->selectionModel())
+    if (!ui->tableViewMempool->selectionModel())
         return;
 
     QModelIndexList selection = ui->tableViewMempool->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
+    if (!selection.isEmpty())
         on_tableViewMempool_doubleClicked(selection.front());
 }
 
 void OverviewPage::showDetailsBlock()
 {
-    if(!ui->tableViewBlocks->selectionModel())
+    if (!ui->tableViewBlocks->selectionModel())
         return;
 
     QModelIndexList selection = ui->tableViewBlocks->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
+    if (!selection.isEmpty())
         on_tableViewBlocks_doubleClicked(selection.front());
 }
 
