@@ -873,6 +873,11 @@ void setClipboard(const QString& str)
     QApplication::clipboard()->setText(str, QClipboard::Selection);
 }
 
+QString getClipboard()
+{
+    return QApplication::clipboard()->text();
+}
+
 fs::path qstringToBoostPath(const QString &path)
 {
     return fs::path(path.toStdString(), utf8);
