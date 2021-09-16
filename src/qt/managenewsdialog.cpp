@@ -98,8 +98,10 @@ void ManageNewsDialog::UpdateTypes()
     popreturndb->GetCustomTypes(vCustomCache);
 
     for (const CustomNewsType c : vCustomCache) {
-        std::string strHex = "(" + HexStr(c.header.begin(), c.header.end()) + ")";
-        QString label = QString::fromStdString(c.title + " | " + strHex);
+        std::string strHex = "{" + HexStr(c.header.begin(), c.header.end()) + "}";
+        QString label = QString::fromStdString(c.title);
+        label += " (" + QString::number(c.nDays) + " day(s)) ";
+        label += QString::fromStdString(strHex);
         ui->listWidgetTypes->addItem(label);
     }
 }
