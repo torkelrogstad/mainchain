@@ -11,6 +11,13 @@ namespace Ui {
 class ManageNewsDialog;
 }
 
+QT_BEGIN_NAMESPACE
+class QMenu;
+class QPoint;
+QT_END_NAMESPACE
+
+class CustomNewsType;
+
 class ManageNewsDialog : public QDialog
 {
     Q_OBJECT
@@ -21,6 +28,10 @@ public:
 
 private Q_SLOTS:
     void on_pushButtonWrite_clicked();
+    void on_pushButtonAdd_clicked();
+    void on_pushButtonPaste_clicked();
+    void contextualMenu(const QPoint &);
+    void copyShareURL();
 
 Q_SIGNALS:
     void NewTypeCreated();
@@ -28,6 +39,10 @@ Q_SIGNALS:
 private:
     Ui::ManageNewsDialog *ui;
     void UpdateTypes();
+
+    QMenu *contextMenu;
+
+    std::vector<CustomNewsType> vCustomCache;
 };
 
 #endif // MANAGENEWSDIALOG_H
