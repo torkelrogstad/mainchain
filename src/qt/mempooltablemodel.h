@@ -26,6 +26,7 @@ struct MemPoolTableObject
     uint256 txid;
     QString time;
     CAmount value;
+    CFeeRate feeRate;
 };
 
 class MemPoolTableModel : public QAbstractTableModel

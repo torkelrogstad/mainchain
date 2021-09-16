@@ -30,7 +30,7 @@ int MemPoolTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int MemPoolTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 3;
+    return 4;
 }
 
 QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
@@ -62,6 +62,12 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         if (col == 2) {
             return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.value, false, BitcoinUnits::separatorAlways);
         }
+        // Feerate
+        if (col == 3) {
+            QString rate = BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.feeRate.GetFeePerK(), false, BitcoinUnits::separatorAlways);
+            rate += "/kB";
+            return rate;
+        }
     }
     case Qt::TextAlignmentRole:
     {
@@ -75,6 +81,10 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         }
         // Value
         if (col == 2) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Feerate
+        if (col == 3) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
     }
@@ -97,6 +107,8 @@ QVariant MemPoolTableModel::headerData(int section, Qt::Orientation orientation,
                 return QString("Time");
             case 2:
                 return QString("Value");
+            case 3:
+                return QString("Fee");
             }
         }
     }
@@ -122,6 +134,7 @@ void MemPoolTableModel::updateModel()
         object.txid = i.tx->GetHash();
         object.time = GUIUtil::timeStr(i.nTime);
         object.value = i.tx->GetValueOut();
+        object.feeRate = i.feeRate;
 
         model.append(QVariant::fromValue(object));
     }
