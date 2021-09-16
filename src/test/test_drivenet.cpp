@@ -82,6 +82,7 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
         mempool.setSanityCheck(1.0);
         pblocktree.reset(new CBlockTreeDB(1 << 20, true));
         psidechaintree.reset(new CSidechainTreeDB(1 << 20, true));
+        popreturndb.reset(new OPReturnDB(1 << 20, true));
         pcoinsdbview.reset(new CCoinsViewDB(1 << 23, true));
         pcoinsTip.reset(new CCoinsViewCache(pcoinsdbview.get()));
         if (!LoadGenesisBlock(chainparams)) {
@@ -114,6 +115,7 @@ TestingSetup::~TestingSetup()
         pcoinsdbview.reset();
         pblocktree.reset();
         psidechaintree.reset();
+        popreturndb.reset();
         fs::remove_all(pathTemp);
         scdb.Reset();
 }

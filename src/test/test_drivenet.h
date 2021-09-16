@@ -94,6 +94,7 @@ struct TestChain100Setup : public TestingSetup {
 class CTxMemPoolEntry;
 class SidechainDB;
 class Sidechain;
+class OPReturnDB;
 
 struct TestMemPoolEntryHelper
 {

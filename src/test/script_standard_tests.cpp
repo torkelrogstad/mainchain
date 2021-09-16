@@ -165,10 +165,11 @@ BOOST_AUTO_TEST_CASE(script_standard_Solver_failure)
     s << OP_1 << OP_1 << OP_CHECKMULTISIG;
     BOOST_CHECK(!Solver(s, whichType, solutions));
 
+    // Disabled for News feature
     // TX_NULL_DATA with other opcodes
-    s.clear();
-    s << OP_RETURN << std::vector<unsigned char>({75}) << OP_ADD;
-    BOOST_CHECK(!Solver(s, whichType, solutions));
+    // s.clear();
+    // s << OP_RETURN << std::vector<unsigned char>({75}) << OP_ADD;
+    // BOOST_CHECK(!Solver(s, whichType, solutions));
 
     // TX_WITNESS with incorrect program size
     s.clear();
