@@ -59,7 +59,7 @@ QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
         }
         // Time
         if (col == 2) {
-            return QDateTime::fromTime_t((int64_t)object.nTime).toString("dd MMMM yyyy hh:mm");
+            return QDateTime::fromTime_t((int64_t)object.nTime).toString("hh:mm MMMM dd yyyy");
         }
     }
     case HashRole:
