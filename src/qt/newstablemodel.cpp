@@ -134,8 +134,7 @@ void NewsTableModel::numBlocksChanged()
     UpdateModel();
 }
 
-// TODO use this to initialize model / resync after filter change and then
-// have a function to append new data to the model.
+// TODO append new data to the model instead of loading all every time
 void NewsTableModel::UpdateModel()
 {
     // Clear old data
@@ -143,34 +142,17 @@ void NewsTableModel::UpdateModel()
     model.clear();
     endResetModel();
 
-    int nHeight = chainActive.Height() + 1;
+    int nHeight = chainActive.Height();
 
-    int nBlocksToDisplay = 0;
-    if (nFilter == COIN_NEWS_ALL) {
-        nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
-    }
-    else
-    if (nFilter == COIN_NEWS_TOKYO_DAY) {
-        nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
-    }
-    else
-    if (nFilter == COIN_NEWS_US_DAY) {
-        nBlocksToDisplay = 24 * 6; // 6 blocks per hour * 24 hours
-    } else {
-        // TODO
-        // Figure out how many blocks to display for custom type
-        nBlocksToDisplay = 24 * 6;
-    }
-
-    if (nHeight < nBlocksToDisplay)
-        nBlocksToDisplay = nHeight;
-
-    // Load custom types to check those if needed
     bool fCustomLoaded = false;
     CustomNewsType custom;
-    if (nFilter != COIN_NEWS_ALL &&
-            nFilter != COIN_NEWS_TOKYO_DAY &&
-            nFilter != COIN_NEWS_US_DAY) {
+
+    int nDaysToDisplay = 0;
+    if (nFilter == COIN_NEWS_ALL ||
+            nFilter == COIN_NEWS_TOKYO_DAY ||
+            nFilter == COIN_NEWS_US_DAY) {
+        nDaysToDisplay = 1;
+    } else {
         std::vector<CustomNewsType> vCustom;
         popreturndb->GetCustomTypes(vCustom);
 
@@ -183,16 +165,24 @@ void NewsTableModel::UpdateModel()
             custom = vCustom[nCustomFilter];
             fCustomLoaded = true;
         }
+        nDaysToDisplay = custom.nDays;
     }
 
-    // Lookup and filter data that we want to display
-    std::vector<NewsTableObject> vNews;
-    for (int i = 0; i < nBlocksToDisplay; i++) {
-        CBlockIndex *index = chainActive[nHeight - i];
+    QDateTime tipTime = QDateTime::fromTime_t(chainActive.Tip()->GetBlockTime());
+    QDateTime targetTime = tipTime.addDays(-nDaysToDisplay);
 
-        // TODO add error message or something to table?
+    // Loop backwards from chainTip until we reach target time or genesis block.
+    std::vector<NewsTableObject> vNews;
+    for (int i = nHeight; i > 1; i--) {
+        CBlockIndex *index = chainActive[i];
         if (!index)
-            continue;
+            break;
+
+        // Have we gone back in time far enough?
+        QDateTime indexTime = QDateTime::fromTime_t(index->GetBlockTime());
+
+        if (indexTime <= targetTime)
+            break;
 
         // For each block load our cached OP_RETURN data
         std::vector<OPReturnData> vData;
@@ -232,7 +222,7 @@ void NewsTableModel::UpdateModel()
                 continue;
 
             NewsTableObject object;
-            object.nHeight = nHeight - i;
+            object.nHeight = nHeight;
             object.nTime = index->nTime;
 
             // Copy chars from script, skipping non-message bytes
