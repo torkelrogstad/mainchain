@@ -61,7 +61,7 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
         }
         // Time
         if (col == 2) {
-            return object.nTime;
+            return QDateTime::fromTime_t((int64_t)object.nTime).toString("hh:mm MMMM dd");
         }
         // Decode
         if (col == 3) {
