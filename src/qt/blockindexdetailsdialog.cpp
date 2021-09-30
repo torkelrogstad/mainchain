@@ -242,93 +242,77 @@ void BlockIndexDetailsDialog::on_pushButtonCopyHeaderHex_clicked()
     GUIUtil::setClipboard(QString::fromStdString(HexStr(ss.str())));
 }
 
-// TODO move
 // Copy of merkle tree calculator from consensus/merkle.cpp for GUI display
 std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated)
 {
-    if (vLeaf.size() == 0) {
-        fMutated = false;
-        return "";
-    }
     fMutated = false;
+
+    if (vLeaf.size() == 0)
+        return "";
 
     // x = level in tree, y = hash
     // Level 0 is the leaves, and the last level is merkle root
     std::vector<std::vector<uint256>> vTree;
 
-    // Generate a merkle tree, the same way as consensus/merkle.cpp but
-    // record hashes & leaves to a vector of strings organized into levels of
-    // the tree.
+    // Generate a merkle tree
 
-    uint32_t count = 0;
-    uint256 inner[32];
-    int matchlevel = -1;
-    uint32_t branchpos = -1;
-    while (count < vLeaf.size()) {
-        uint256 h = vLeaf[count];
-        bool matchh = count == branchpos;
-        count++;
-        int level;
-        for (level = 0; !(count & (((uint32_t)1) << level)); level++) {
-            // Add a new level to the tree string vector
-            if (level >= (int)vTree.size())
-                vTree.push_back(std::vector<uint256>());
+    // Copy leaves (TxIds) and add first non-leaf level
+    vTree.resize(2);
+    vTree[0] = vLeaf;
 
-            // Record hash for level
-            vTree[level].push_back(h);
+    // Index in the current level
+    size_t i = 0;
 
-            fMutated |= (inner[level] == h);
-            CHash256().Write(inner[level].begin(), 32).Write(h.begin(), 32).Finalize(h.begin());
-        }
-        inner[level] = h;
-        if (matchh) {
-            matchlevel = level;
-        }
-        // Add a new level to the tree string vector
-        if (level >= (int)vTree.size())
+    // Current level of the tree
+    size_t nLevel = 0;
+
+    // Loop through each level of the tree combining every 2 hashes (starting
+    // with txids on level 0) until the merkle root is alone on the last level.
+    while (true && vLeaf.size() > 1) {
+        // Check if we reached the end of this level
+        if (i >= vTree[nLevel].size()) {
+            // Does the next level have anything for us to work on?
+            if (vTree[nLevel + 1].size() <= 1)
+                break;
+
+            i = 0;
+            nLevel++;
+
+            // Add a new level to the tree
             vTree.push_back(std::vector<uint256>());
-
-        // Record hash for level
-        vTree[level].push_back(h);
-    }
-    // Final sweep of right side of tree
-    int level = 0;
-    while (!(count & (((uint32_t)1) << level))) {
-        level++;
-    }
-    uint256 h = inner[level];
-    while (count != (((uint32_t)1) << level)) {
-        CHash256().Write(h.begin(), 32).Write(h.begin(), 32).Finalize(h.begin());
-        count += (((uint32_t)1) << level);
-        level++;
-        while (!(count & (((uint32_t)1) << level))) {
-            if (level >= (int)vTree.size())
-                vTree.push_back(std::vector<uint256>());
-            vTree[level].push_back(h);
-
-            CHash256().Write(inner[level].begin(), 32).Write(h.begin(), 32).Finalize(h.begin());
-            level++;
         }
+
+        // Collect next 2 hashes which will be combined
+        uint256 hash1 = vTree[nLevel][i];
+        uint256 hash2 = i + 1 < vTree[nLevel].size() ? vTree[nLevel][i + 1] : hash1;
+
+        // Write hash1 and hash2 to buffer and finalize SHA256D product
+        uint256 product;
+        CHash256().Write(hash1.begin(), 32).Write(hash2.begin(), 32).Finalize(product.begin());
+
+        vTree[nLevel + 1].push_back(product);
+
+        // Move on to the next pair
+        i+= 2;
     }
 
-    // If the tree has more than 1 level and the last level has only 1 node,
-    // delete the last level.
-    if (vTree.size() > 1 && vTree.back().size() == 1)
-        vTree.pop_back();
-
-    // Add merkle root hash
-    vTree.push_back(std::vector<uint256> { h });
+    // Special case for block with only coinbase transaction
+    if (vLeaf.size() == 1) {
+        vTree.clear();
+        vTree.resize(1);
+        vTree.front().push_back(vLeaf.front());
+    }
 
     // Format results
 
     std::stringstream ss;
 
-    int nTreeLevel = vTree.size() - 1;
+    size_t nTreeLevel = vTree.size() - 1;
     for (auto ritx = vTree.rbegin(); ritx != vTree.rend(); ritx++) {
         ss << "Level " << nTreeLevel;
 
         if (nTreeLevel == vTree.size() - 1)
-            ss << " (Merkle Root):\n";
+            ss << " Merkle Root:\n";
         else
         if (nTreeLevel == 0)
             ss << " (TxID):\n";
@@ -385,4 +369,3 @@ std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated)
 
     return ss.str();
 }
-
