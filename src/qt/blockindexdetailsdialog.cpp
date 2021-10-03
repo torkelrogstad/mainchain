@@ -13,13 +13,9 @@
 
 #include <chain.h>
 #include <chainparams.h>
-#include <consensus/merkle.h>
-#include <primitives/block.h>
 #include <streams.h>
 #include <utilstrencodings.h>
 #include <validation.h>
-
-#include <sstream>
 
 BlockIndexDetailsDialog::BlockIndexDetailsDialog(QWidget *parent) :
     QDialog(parent),
@@ -217,15 +213,23 @@ void BlockIndexDetailsDialog::on_pushButtonMerkleTree_clicked()
     if (cachedBlock.IsNull())
         return;
 
+    // Collect leaves for the merkle tree
     std::vector<uint256> vLeaf;
     for (const CTransactionRef& tx : cachedBlock.vtx) {
         vLeaf.push_back(tx->GetHash());
     }
 
-    bool fMutated = false;
-    std::string strTree = MerkleTreeString(vLeaf, fMutated);
+    // Collect witness hashes for the segwit merkle tree
+    std::vector<uint256> vSegwitLeaf;
+    for (const CTransactionRef& tx : cachedBlock.vtx) {
+        vSegwitLeaf.push_back(tx->GetWitnessHash());
+    }
 
-    merkleTreeDialog->SetTreeString(strTree);
+    // For the segwit merkle tree, the coinbase hash is made null
+    if (vSegwitLeaf.size())
+        vSegwitLeaf[0].SetNull();
+
+    merkleTreeDialog->SetTrees(vLeaf, vSegwitLeaf);
     merkleTreeDialog->show();
 }
 
@@ -240,132 +244,4 @@ void BlockIndexDetailsDialog::on_pushButtonCopyHeaderHex_clicked()
     ss << header;
 
     GUIUtil::setClipboard(QString::fromStdString(HexStr(ss.str())));
-}
-
-// Copy of merkle tree calculator from consensus/merkle.cpp for GUI display
-std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated)
-{
-    fMutated = false;
-
-    if (vLeaf.size() == 0)
-        return "";
-
-    // x = level in tree, y = hash
-    // Level 0 is the leaves, and the last level is merkle root
-    std::vector<std::vector<uint256>> vTree;
-
-    // Generate a merkle tree
-
-    // Copy leaves (TxIds) and add first non-leaf level
-    vTree.resize(2);
-    vTree[0] = vLeaf;
-
-    // Index in the current level
-    size_t i = 0;
-
-    // Current level of the tree
-    size_t nLevel = 0;
-
-    // Loop through each level of the tree combining every 2 hashes (starting
-    // with txids on level 0) until the merkle root is alone on the last level.
-    while (true && vLeaf.size() > 1) {
-        // Check if we reached the end of this level
-        if (i >= vTree[nLevel].size()) {
-            // Does the next level have anything for us to work on?
-            if (vTree[nLevel + 1].size() <= 1)
-                break;
-
-            i = 0;
-            nLevel++;
-
-            // Add a new level to the tree
-            vTree.push_back(std::vector<uint256>());
-        }
-
-        // Collect next 2 hashes which will be combined
-        uint256 hash1 = vTree[nLevel][i];
-        uint256 hash2 = i + 1 < vTree[nLevel].size() ? vTree[nLevel][i + 1] : hash1;
-
-        // Write hash1 and hash2 to buffer and finalize SHA256D product
-        uint256 product;
-        CHash256().Write(hash1.begin(), 32).Write(hash2.begin(), 32).Finalize(product.begin());
-
-        vTree[nLevel + 1].push_back(product);
-
-        // Move on to the next pair
-        i+= 2;
-    }
-
-    // Special case for block with only coinbase transaction
-    if (vLeaf.size() == 1) {
-        vTree.clear();
-        vTree.resize(1);
-        vTree.front().push_back(vLeaf.front());
-    }
-
-    // Format results
-
-    std::stringstream ss;
-
-    size_t nTreeLevel = vTree.size() - 1;
-    for (auto ritx = vTree.rbegin(); ritx != vTree.rend(); ritx++) {
-        ss << "Level " << nTreeLevel;
-
-        if (nTreeLevel == vTree.size() - 1)
-            ss << " Merkle Root:\n";
-        else
-        if (nTreeLevel == 0)
-            ss << " (TxID):\n";
-        else
-            ss << " :\n";
-
-        // Add hashes with a '|' between every group of 2
-        uint8_t nNode = 0;
-        for (const uint256& hash : *ritx) {
-            if (nNode == 2) {
-                nNode = 0;
-                ss << " | ";
-            }
-            ss << hash.ToString() << " ";
-            nNode++;
-        }
-        ss << "\n\n";
-
-        nTreeLevel--;
-    }
-
-    ss << "-------------------------------\n";
-    ss << "## What is this screen showing?\n";
-
-    ss << "This display allows you to audit the \"hashMerkleRoot\" field. You can see each step of the process yourself.\n\n";
-    ss << "         MerkleRoot = hashZ\n\n";
-    ss << "                hashZ\n";
-    ss << "               /    \\\n";
-    ss << "              /      \\\n";
-    ss << "           hashX       hashY |\n";
-    ss << "           /   \\         \\\n";
-    ss << "          /     \\         \\\n";
-    ss << "         /       \\         \\\n";
-    ss << "     hashF       hashG  |   hashH\n";
-    ss << "    /   \\       /     \\      \\\n";
-    ss << "hashA  hashB | hashC  hashD | hashE\n";
-    ss << "\n\n";
-
-
-    ss << "Notes:\n";
-
-    ss << "1. hashF = Sha256 ( hashA, hashB )\n";
-    ss << "* * Each node in the tree, is the hash of the two nodes beneath it.\n";
-    ss << "2. hashY = Sha256 ( hashH, hashH )\n";
-    ss << "* * In the operations above, Hash \"H\" is repeated on purpose. If there is an odd number of nodes at that level, the final node is hashed with itself.\n";
-    ss << "3. Hashes A through E are TxIDs -- the hashes of each transaction.\n";
-
-    ss << "Use the HashCalculator to check that the Sha256 hash of the first two TxIDs is the value one level above it. And so on ad infinitum.\n";
-
-    ss << "Further Reading:\n";
-    ss << "* https://en.bitcoinwiki.org/wiki/Merkle_tree\n";
-    ss << "* https://www.investopedia.com/terms/m/merkle-tree.asp\n";
-    ss << "* https://www.geeksforgeeks.org/introduction-to-merkle-tree/\n";
-
-    return ss.str();
 }

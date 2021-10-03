@@ -7,6 +7,11 @@
 
 #include <QDialog>
 
+#include <uint256.h>
+
+#include <string>
+#include <vector>
+
 namespace Ui {
 class MerkleTreeDialog;
 }
@@ -19,10 +24,19 @@ public:
     explicit MerkleTreeDialog(QWidget *parent = nullptr);
     ~MerkleTreeDialog();
 
-    void SetTreeString(const std::string& str);
+    void SetTrees(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf);
 
 private:
     Ui::MerkleTreeDialog *ui;
+
+    std::vector<uint256> vLeafCache;
+    std::vector<uint256> vSegwitLeafCache;
+
+public Q_SLOTS:
+    void on_checkBoxRCB_stateChanged(int checked);
 };
+
+std::string MerkleTreeString(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf);
+std::string RCBTreeString(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf);
 
 #endif // MERKLETREEDIALOG_H

@@ -50,6 +50,4 @@ private:
     MerkleTreeDialog* merkleTreeDialog = nullptr;
 };
 
-std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool& fMutated);
-
 #endif // BLOCKINDEXDETAILSDIALOG_H
