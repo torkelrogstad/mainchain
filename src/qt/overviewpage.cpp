@@ -60,8 +60,11 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     latestBlockModel = new LatestBlockTableModel(this);
     ui->tableViewBlocks->setModel(latestBlockModel);
 
-    newsModel = new NewsTableModel(this);
-    ui->tableViewNews->setModel(newsModel);
+    newsModel1 = new NewsTableModel(this);
+    ui->tableViewNews1->setModel(newsModel1);
+
+    newsModel2 = new NewsTableModel(this);
+    ui->tableViewNews2->setModel(newsModel2);
 
     blockIndexDialog = new BlockIndexDetailsDialog(this);
 
@@ -71,55 +74,74 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 #if QT_VERSION < 0x050000
     ui->tableViewMempool->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewBlocks->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
-    ui->tableViewNews->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewNews1->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewNews2->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+
 #else
     ui->tableViewMempool->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewBlocks->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    ui->tableViewNews->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewNews1->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableViewNews2->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
 #endif
 
     // Don't stretch last cell of horizontal header
     ui->tableViewMempool->horizontalHeader()->setStretchLastSection(false);
     ui->tableViewBlocks->horizontalHeader()->setStretchLastSection(false);
 
-    ui->tableViewNews->horizontalHeader()->setStretchLastSection(true);
+    ui->tableViewNews1->horizontalHeader()->setStretchLastSection(true);
+    ui->tableViewNews2->horizontalHeader()->setStretchLastSection(true);
 
     // Hide vertical header
     ui->tableViewBlocks->verticalHeader()->setVisible(false);
-    ui->tableViewNews->verticalHeader()->setVisible(false);
+    ui->tableViewNews1->verticalHeader()->setVisible(false);
+    ui->tableViewNews2->verticalHeader()->setVisible(false);
+
 
     // Left align the horizontal header text
     ui->tableViewBlocks->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
-    ui->tableViewNews->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewNews1->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+    ui->tableViewNews2->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
     ui->tableViewMempool->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewMempool->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
     ui->tableViewBlocks->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->tableViewBlocks->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
-    ui->tableViewNews->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-    ui->tableViewNews->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewNews1->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewNews2->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableViewNews1->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+    ui->tableViewNews2->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
 
     // Disable word wrap
     ui->tableViewMempool->setWordWrap(false);
     ui->tableViewBlocks->setWordWrap(false);
-    ui->tableViewNews->setWordWrap(false);
+    ui->tableViewNews1->setWordWrap(false);
+    ui->tableViewNews2->setWordWrap(false);
 
     // Select rows
     ui->tableViewMempool->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableViewBlocks->setSelectionBehavior(QAbstractItemView::SelectRows);
-    ui->tableViewNews->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewNews1->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewNews2->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     // Apply custom context menu
-    ui->tableViewNews->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->tableViewNews1->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->tableViewNews2->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->tableViewMempool->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->tableViewBlocks->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    // News table context menu
-    QAction *showDetailsNewsAction = new QAction(tr("Show full data decode"), this);
-    contextMenuNews = new QMenu(this);
-    contextMenuNews->setObjectName("contextMenuNews");
-    contextMenuNews->addAction(showDetailsNewsAction);
+    // News table 1 context menu
+    QAction *showDetailsNewsAction1 = new QAction(tr("Show full data decode"), this);
+    contextMenuNews1 = new QMenu(this);
+    contextMenuNews1->setObjectName("contextMenuNews1");
+    contextMenuNews1->addAction(showDetailsNewsAction1);
+
+    // News table 2 context menu
+    QAction *showDetailsNewsAction2 = new QAction(tr("Show full data decode"), this);
+    contextMenuNews2 = new QMenu(this);
+    contextMenuNews2->setObjectName("contextMenuNews2");
+    contextMenuNews2->addAction(showDetailsNewsAction2);
 
     // Recent txns (mempool) table context menu
     QAction *showDetailsMempoolAction = new QAction(tr("Show transaction details from mempool"), this);
@@ -134,24 +156,35 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     contextMenuBlocks->addAction(showDetailsBlockAction);
 
     // Connect context menus
-    connect(ui->tableViewNews, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuNews(QPoint)));
+    connect(ui->tableViewNews1, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuNews1(QPoint)));
+    connect(ui->tableViewNews2, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuNews2(QPoint)));
     connect(ui->tableViewMempool, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuMempool(QPoint)));
     connect(ui->tableViewBlocks, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenuBlocks(QPoint)));
 
-    connect(showDetailsNewsAction, SIGNAL(triggered()), this, SLOT(showDetailsNews()));
+    connect(showDetailsNewsAction1, SIGNAL(triggered()), this, SLOT(showDetailsNews1()));
+    connect(showDetailsNewsAction2, SIGNAL(triggered()), this, SLOT(showDetailsNews2()));
     connect(showDetailsMempoolAction, SIGNAL(triggered()), this, SLOT(showDetailsMempool()));
     connect(showDetailsBlockAction, SIGNAL(triggered()), this, SLOT(showDetailsBlock()));
 
     // Setup news type combo box options
     // Start with preset types
-    ui->comboBoxNewsType->addItem("All OP_RETURN data");
-    ui->comboBoxNewsType->addItem("Tokyo Daily News");
-    ui->comboBoxNewsType->addItem("US Daily News");
+    ui->comboBoxNewsType1->addItem("All OP_RETURN data");
+    ui->comboBoxNewsType1->addItem("Tokyo Daily News");
+    ui->comboBoxNewsType1->addItem("US Daily News");
     // Now add custom news types
     std::vector<CustomNewsType> vCustom;
     popreturndb->GetCustomTypes(vCustom);
     for (const CustomNewsType c : vCustom)
-        ui->comboBoxNewsType->addItem(QString::fromStdString(c.title));
+        ui->comboBoxNewsType1->addItem(QString::fromStdString(c.title));
+
+    // Setup news type combo box options
+    // Start with preset types
+    ui->comboBoxNewsType2->addItem("All OP_RETURN data");
+    ui->comboBoxNewsType2->addItem("Tokyo Daily News");
+    ui->comboBoxNewsType2->addItem("US Daily News");
+    // Now add custom news types
+    for (const CustomNewsType c : vCustom)
+        ui->comboBoxNewsType2->addItem(QString::fromStdString(c.title));
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()
@@ -228,8 +261,10 @@ void OverviewPage::setClientModel(ClientModel *model)
 
         latestBlockModel->setClientModel(model);
 
-        newsModel->setClientModel(model);
-        newsModel->setFilter(COIN_NEWS_ALL);
+        newsModel1->setClientModel(model);
+        newsModel1->setFilter(COIN_NEWS_ALL);
+        newsModel2->setClientModel(model);
+        newsModel2->setFilter(COIN_NEWS_ALL);
     }
 }
 
@@ -349,7 +384,7 @@ void OverviewPage::on_tableViewMempool_doubleClicked(const QModelIndex& index)
     detailsDialog.exec();
 }
 
-void OverviewPage::on_tableViewNews_doubleClicked(const QModelIndex& index)
+void OverviewPage::on_tableViewNews1_doubleClicked(const QModelIndex& index)
 {
     if (!index.isValid())
         return;
@@ -362,16 +397,41 @@ void OverviewPage::on_tableViewNews_doubleClicked(const QModelIndex& index)
     messageBox.exec();
 }
 
-void OverviewPage::on_comboBoxNewsType_currentIndexChanged(int index)
+void OverviewPage::on_comboBoxNewsType1_currentIndexChanged(int index)
 {
-    newsModel->setFilter(index);
+    newsModel1->setFilter(index);
 }
 
-void OverviewPage::contextualMenuNews(const QPoint &point)
+void OverviewPage::contextualMenuNews1(const QPoint &point)
 {
-    QModelIndex index = ui->tableViewNews->indexAt(point);
+    QModelIndex index = ui->tableViewNews1->indexAt(point);
     if (index.isValid())
-        contextMenuNews->popup(ui->tableViewNews->viewport()->mapToGlobal(point));
+        contextMenuNews1->popup(ui->tableViewNews1->viewport()->mapToGlobal(point));
+}
+
+void OverviewPage::on_tableViewNews2_doubleClicked(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    QString strNews = index.data(NewsTableModel::NewsRole).toString();
+
+    QMessageBox messageBox;
+    messageBox.setWindowTitle("News");
+    messageBox.setText(strNews);
+    messageBox.exec();
+}
+
+void OverviewPage::on_comboBoxNewsType2_currentIndexChanged(int index)
+{
+    newsModel2->setFilter(index);
+}
+
+void OverviewPage::contextualMenuNews2(const QPoint &point)
+{
+    QModelIndex index = ui->tableViewNews2->indexAt(point);
+    if (index.isValid())
+        contextMenuNews2->popup(ui->tableViewNews2->viewport()->mapToGlobal(point));
 }
 
 void OverviewPage::contextualMenuMempool(const QPoint &point)
@@ -388,14 +448,24 @@ void OverviewPage::contextualMenuBlocks(const QPoint &point)
         contextMenuBlocks->popup(ui->tableViewBlocks->viewport()->mapToGlobal(point));
 }
 
-void OverviewPage::showDetailsNews()
+void OverviewPage::showDetailsNews1()
 {
-    if (!ui->tableViewNews->selectionModel())
+    if (!ui->tableViewNews1->selectionModel())
         return;
 
-    QModelIndexList selection = ui->tableViewNews->selectionModel()->selectedRows();
+    QModelIndexList selection = ui->tableViewNews1->selectionModel()->selectedRows();
     if (!selection.isEmpty())
-        on_tableViewNews_doubleClicked(selection.front());
+        on_tableViewNews1_doubleClicked(selection.front());
+}
+
+void OverviewPage::showDetailsNews2()
+{
+    if (!ui->tableViewNews2->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewNews2->selectionModel()->selectedRows();
+    if (!selection.isEmpty())
+        on_tableViewNews2_doubleClicked(selection.front());
 }
 
 void OverviewPage::showDetailsMempool()
@@ -420,16 +490,23 @@ void OverviewPage::showDetailsBlock()
 
 void OverviewPage::updateNewsTypes()
 {
-    ui->comboBoxNewsType->clear();
+    ui->comboBoxNewsType1->clear();
+    ui->comboBoxNewsType2->clear();
 
     // Setup news type combo box options
     // Start with preset types
-    ui->comboBoxNewsType->addItem("All OP_RETURN data");
-    ui->comboBoxNewsType->addItem("Tokyo Daily News");
-    ui->comboBoxNewsType->addItem("US Daily News");
+    ui->comboBoxNewsType1->addItem("All OP_RETURN data");
+    ui->comboBoxNewsType1->addItem("Tokyo Daily News");
+    ui->comboBoxNewsType1->addItem("US Daily News");
     // Now add custom news types
     std::vector<CustomNewsType> vCustom;
     popreturndb->GetCustomTypes(vCustom);
     for (const CustomNewsType c : vCustom)
-        ui->comboBoxNewsType->addItem(QString::fromStdString(c.title));
+        ui->comboBoxNewsType1->addItem(QString::fromStdString(c.title));
+
+    ui->comboBoxNewsType2->addItem("All OP_RETURN data");
+    ui->comboBoxNewsType2->addItem("Tokyo Daily News");
+    ui->comboBoxNewsType2->addItem("US Daily News");
+    for (const CustomNewsType c : vCustom)
+        ui->comboBoxNewsType2->addItem(QString::fromStdString(c.title));
 }

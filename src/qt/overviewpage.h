@@ -64,7 +64,8 @@ private:
     LatestBlockTableModel *latestBlockModel = nullptr;
     MemPoolTableModel *memPoolModel = nullptr;
     ManageNewsDialog *manageNewsDialog = nullptr;
-    NewsTableModel *newsModel = nullptr;
+    NewsTableModel *newsModel1 = nullptr;
+    NewsTableModel *newsModel2 = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
     CAmount currentUnconfirmedBalance;
@@ -72,7 +73,8 @@ private:
     CAmount currentWatchOnlyBalance;
     CAmount currentWatchUnconfBalance;
     CAmount currentWatchImmatureBalance;
-    QMenu *contextMenuNews;
+    QMenu *contextMenuNews1;
+    QMenu *contextMenuNews2;
     QMenu *contextMenuMempool;
     QMenu *contextMenuBlocks;
 
@@ -85,14 +87,18 @@ private Q_SLOTS:
     void on_pushButtonManageNews_clicked();
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
     void on_tableViewMempool_doubleClicked(const QModelIndex& index);
-    void on_tableViewNews_doubleClicked(const QModelIndex& index);
-    void on_comboBoxNewsType_currentIndexChanged(int index);
-    void contextualMenuNews(const QPoint &);
+    void on_tableViewNews1_doubleClicked(const QModelIndex& index);
+    void on_comboBoxNewsType1_currentIndexChanged(int index);
+    void on_tableViewNews2_doubleClicked(const QModelIndex& index);
+    void on_comboBoxNewsType2_currentIndexChanged(int index);
+    void contextualMenuNews1(const QPoint &);
+    void contextualMenuNews2(const QPoint &);
     void contextualMenuMempool(const QPoint &);
     void contextualMenuBlocks(const QPoint &);
     void updateNewsTypes();
 
-    void showDetailsNews();
+    void showDetailsNews1();
+    void showDetailsNews2();
     void showDetailsMempool();
     void showDetailsBlock();
 };
