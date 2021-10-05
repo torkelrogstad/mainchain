@@ -20,7 +20,6 @@ QT_END_NAMESPACE
 
 struct NewsTableObject
 {
-    int nHeight;
     int nTime;
     std::string decode;
     std::string fees;

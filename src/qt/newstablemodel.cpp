@@ -31,7 +31,7 @@ int NewsTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int NewsTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 4;
+    return 3;
 }
 
 QVariant NewsTableModel::data(const QModelIndex &index, int role) const
@@ -55,16 +55,12 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
         if (col == 0) {
             return QString::fromStdString(object.fees);
         }
-        // Height
-        if (col == 1) {
-            return object.nHeight;
-        }
         // Time
-        if (col == 2) {
+        if (col == 1) {
             return QDateTime::fromTime_t((int64_t)object.nTime).toString("hh:mm MMMM dd");
         }
         // Decode
-        if (col == 3) {
+        if (col == 2) {
             if (object.decode.size() > NEWS_HEADLINE_CHARS)
                 return QString::fromStdString(object.decode).left(NEWS_HEADLINE_CHARS) + "...";
             else
@@ -77,16 +73,12 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
         if (col == 0) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Height
-        if (col == 1) {
-            return int(Qt::AlignHCenter | Qt::AlignVCenter);
-        }
         // Time
-        if (col == 2) {
+        if (col == 1) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Decode
-        if (col == 3) {
+        if (col == 2) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
@@ -106,10 +98,8 @@ QVariant NewsTableModel::headerData(int section, Qt::Orientation orientation, in
             case 0:
                 return QString("Fees");
             case 1:
-                return QString("Height");
-            case 2:
                 return QString("Time");
-            case 3:
+            case 2:
                 return QString("Decode");
             }
         }
@@ -222,7 +212,6 @@ void NewsTableModel::UpdateModel()
                 continue;
 
             NewsTableObject object;
-            object.nHeight = nHeight;
             object.nTime = index->nTime;
 
             // Copy chars from script, skipping non-message bytes
