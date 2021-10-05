@@ -185,6 +185,9 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     // Now add custom news types
     for (const CustomNewsType c : vCustom)
         ui->comboBoxNewsType2->addItem(QString::fromStdString(c.title));
+
+    ui->pushButtonCreateNews->setIcon(platformStyle->SingleColorIcon(":/icons/broadcastnews"));
+    ui->pushButtonManageNews->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()

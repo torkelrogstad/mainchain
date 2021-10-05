@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Create News</string>
+   <string>Broadcast News</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -92,7 +92,17 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>?</string>
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../drivenet.qrc">
+         <normaloff>:/icons/replay_unknown</normaloff>:/icons/replay_unknown</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>32</width>
+         <height>32</height>
+        </size>
        </property>
       </widget>
      </item>
@@ -119,7 +129,17 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Create</string>
+        <string>Broadcast</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../drivenet.qrc">
+         <normaloff>:/icons/edit</normaloff>:/icons/edit</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>32</width>
+         <height>32</height>
+        </size>
        </property>
       </widget>
      </item>
@@ -148,6 +168,8 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../drivenet.qrc"/>
+ </resources>
  <connections/>
 </ui>

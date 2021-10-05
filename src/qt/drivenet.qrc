@@ -68,6 +68,7 @@
         <file alias="replay_loaded">res/icons/replay_loaded.png</file>
         <file alias="search">res/icons/search.png</file>
         <file alias="flip">res/icons/flip.png</file>
+        <file alias="broadcastnews">res/icons/broadcastnews.png</file>
     </qresource>
     <qresource prefix="/movies">
         <file alias="spinner-000">res/movies/spinner-000.png</file>
