@@ -38,8 +38,6 @@
 #include <ui_interface.h>
 #include <util.h>
 
-#include <iostream>
-
 #include <QAction>
 #include <QApplication>
 #include <QDesktopWidget>

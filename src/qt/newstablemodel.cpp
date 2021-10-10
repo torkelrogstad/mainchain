@@ -10,6 +10,7 @@
 #include <validation.h>
 
 #include <qt/clientmodel.h>
+#include <qt/newstypestablemodel.h>
 
 #include <QDateTime>
 #include <QMetaType>
@@ -21,7 +22,7 @@ Q_DECLARE_METATYPE(NewsTableObject)
 NewsTableModel::NewsTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
-    nFilter = COIN_NEWS_ALL;
+    nFilter = 0;
 }
 
 int NewsTableModel::rowCount(const QModelIndex & /*parent*/) const
@@ -119,6 +120,11 @@ void NewsTableModel::setClientModel(ClientModel *model)
     }
 }
 
+void NewsTableModel::setNewsTypesModel(NewsTypesTableModel *model)
+{
+    this->newsTypesModel = model;
+}
+
 void NewsTableModel::numBlocksChanged()
 {
     UpdateModel();
@@ -127,6 +133,9 @@ void NewsTableModel::numBlocksChanged()
 // TODO append new data to the model instead of loading all every time
 void NewsTableModel::UpdateModel()
 {
+    if (!newsTypesModel)
+        return;
+
     // Clear old data
     beginResetModel();
     model.clear();
@@ -134,32 +143,12 @@ void NewsTableModel::UpdateModel()
 
     int nHeight = chainActive.Height();
 
-    bool fCustomLoaded = false;
-    CustomNewsType custom;
-
-    int nDaysToDisplay = 0;
-    if (nFilter == COIN_NEWS_ALL ||
-            nFilter == COIN_NEWS_TOKYO_DAY ||
-            nFilter == COIN_NEWS_US_DAY) {
-        nDaysToDisplay = 1;
-    } else {
-        std::vector<CustomNewsType> vCustom;
-        popreturndb->GetCustomTypes(vCustom);
-
-        // Find the custom type we are filtering by
-        // TODO figure out a better way to handle custom type lookup.
-        size_t nBuiltInTypes = 3;
-        size_t nCustomFilter = nFilter - nBuiltInTypes;
-
-        if (nCustomFilter < vCustom.size()) {
-            custom = vCustom[nCustomFilter];
-            fCustomLoaded = true;
-        }
-        nDaysToDisplay = custom.nDays;
-    }
+    NewsType type;
+    if (!newsTypesModel->GetType(nFilter, type))
+        return;
 
     QDateTime tipTime = QDateTime::fromTime_t(chainActive.Tip()->GetBlockTime());
-    QDateTime targetTime = tipTime.addDays(-nDaysToDisplay);
+    QDateTime targetTime = tipTime.addDays(-type.nDays);
 
     // Loop backwards from chainTip until we reach target time or genesis block.
     std::vector<NewsTableObject> vNews;
@@ -182,28 +171,12 @@ void NewsTableModel::UpdateModel()
         // Find the data we want to display
         for (const OPReturnData& d : vData) {
             bool fFound = false;
-            if (nFilter == COIN_NEWS_TOKYO_DAY) {
-                if (!d.script.IsNewsTokyoDay())
-                    continue;
-                fFound = true;
-            }
-            else
-            if (nFilter == COIN_NEWS_US_DAY) {
-                if (!d.script.IsNewsUSDay())
-                    continue;
-                fFound = true;
-            }
-            else
-            if (nFilter == COIN_NEWS_ALL) {
-                fFound = true;
-            }
-            else
-            if (fCustomLoaded && d.script.size() >= 5 && custom.header.size() >= 5) {
-                if (d.script[0] == custom.header[0] &&
-                        d.script[1] == custom.header[1] &&
-                        d.script[2] == custom.header[2] &&
-                        d.script[3] == custom.header[3] &&
-                        d.script[4] == custom.header[4])
+            if (d.script.size() >= 5 && type.header.size() >= 4) {
+                if (d.script[0] ==  OP_RETURN &&
+                        d.script[1] == type.header[0] &&
+                        d.script[2] == type.header[1] &&
+                        d.script[3] == type.header[2] &&
+                        d.script[4] == type.header[3])
                 {
                             fFound = true;
                 }
@@ -216,8 +189,7 @@ void NewsTableModel::UpdateModel()
 
             // Copy chars from script, skipping non-message bytes
             std::string strDecode;
-            size_t nStart = nFilter == COIN_NEWS_ALL ? 2 : 6;
-            for (size_t i = nStart; i < d.script.size(); i++)
+            for (size_t i = 5; i < d.script.size(); i++)
                 strDecode += d.script[i];
 
             object.decode = strDecode;

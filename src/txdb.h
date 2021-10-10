@@ -195,7 +195,7 @@ struct OPReturnData
     }
 };
 
-struct CustomNewsType
+struct NewsType
 {
     // A series of bytes to distinguish this news
     CScript header;
@@ -234,8 +234,8 @@ public:
     bool GetBlockData(const uint256& /* hashBlock */, std::vector<OPReturnData>& vData) const;
     bool HaveBlockData(const uint256& hashBlock) const;
 
-    void GetCustomTypes(std::vector<CustomNewsType>& vCustom);
-    void WriteCustomType(CustomNewsType custom);
+    void GetNewsTypes(std::vector<NewsType>& vType);
+    void WriteNewsType(NewsType type);
 };
 
 #endif // BITCOIN_TXDB_H

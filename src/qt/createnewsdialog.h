@@ -7,6 +7,9 @@
 
 #include <QDialog>
 
+class NewsTypesTableModel;
+class PlatformStyle;
+
 namespace Ui {
 class CreateNewsDialog;
 }
@@ -16,8 +19,10 @@ class CreateNewsDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit CreateNewsDialog(QWidget *parent = nullptr);
+    explicit CreateNewsDialog(const PlatformStyle *_platformStyle, QWidget *parent = nullptr);
     ~CreateNewsDialog();
+
+    void setNewsTypesModel(NewsTypesTableModel* model);
 
 public Q_SLOTS:
     void updateTypes();
@@ -31,6 +36,10 @@ private:
     Ui::CreateNewsDialog *ui;
 
     QString cacheText;
+
+    NewsTypesTableModel* newsTypesModel = nullptr;
+
+    const PlatformStyle *platformStyle = nullptr;
 };
 
 #endif // CREATENEWSDIALOG_H

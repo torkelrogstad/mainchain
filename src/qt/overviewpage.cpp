@@ -15,6 +15,7 @@
 #include <qt/managenewsdialog.h>
 #include <qt/mempooltablemodel.h>
 #include <qt/newstablemodel.h>
+#include <qt/newstypestablemodel.h>
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/transactionfilterproxy.h>
@@ -52,18 +53,25 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     showOutOfSyncWarning(true);
     connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
 
-    createNewsDialog = new CreateNewsDialog(this);
+    newsTypesTableModel = new NewsTypesTableModel(this);
+
     manageNewsDialog = new ManageNewsDialog(this);
+    createNewsDialog = new CreateNewsDialog(platformStyle, this);
     connect(manageNewsDialog, SIGNAL(NewTypeCreated()), this, SLOT(updateNewsTypes()));
     connect(manageNewsDialog, SIGNAL(NewTypeCreated()), createNewsDialog, SLOT(updateTypes()));
+
+    manageNewsDialog->setNewsTypesModel(newsTypesTableModel);
+    createNewsDialog->setNewsTypesModel(newsTypesTableModel);
 
     latestBlockModel = new LatestBlockTableModel(this);
     ui->tableViewBlocks->setModel(latestBlockModel);
 
     newsModel1 = new NewsTableModel(this);
+    newsModel1->setNewsTypesModel(newsTypesTableModel);
     ui->tableViewNews1->setModel(newsModel1);
 
     newsModel2 = new NewsTableModel(this);
+    newsModel2->setNewsTypesModel(newsTypesTableModel);
     ui->tableViewNews2->setModel(newsModel2);
 
     blockIndexDialog = new BlockIndexDetailsDialog(this);
@@ -167,24 +175,17 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     connect(showDetailsBlockAction, SIGNAL(triggered()), this, SLOT(showDetailsBlock()));
 
     // Setup news type combo box options
-    // Start with preset types
-    ui->comboBoxNewsType1->addItem("All OP_RETURN data");
-    ui->comboBoxNewsType1->addItem("Tokyo Daily News");
-    ui->comboBoxNewsType1->addItem("US Daily News");
-    // Now add custom news types
-    std::vector<CustomNewsType> vCustom;
-    popreturndb->GetCustomTypes(vCustom);
-    for (const CustomNewsType c : vCustom)
-        ui->comboBoxNewsType1->addItem(QString::fromStdString(c.title));
+    std::vector<NewsType> vType = newsTypesTableModel->GetTypes();
+    for (const NewsType t : vType)
+        ui->comboBoxNewsType1->addItem(QString::fromStdString(t.title));
 
-    // Setup news type combo box options
-    // Start with preset types
-    ui->comboBoxNewsType2->addItem("All OP_RETURN data");
-    ui->comboBoxNewsType2->addItem("Tokyo Daily News");
-    ui->comboBoxNewsType2->addItem("US Daily News");
-    // Now add custom news types
-    for (const CustomNewsType c : vCustom)
-        ui->comboBoxNewsType2->addItem(QString::fromStdString(c.title));
+    // Setup news type combo box options # 2
+    for (const NewsType t : vType)
+        ui->comboBoxNewsType2->addItem(QString::fromStdString(t.title));
+
+    // Set default news type options
+    ui->comboBoxNewsType1->setCurrentIndex(0);
+    ui->comboBoxNewsType2->setCurrentIndex(1);
 
     ui->pushButtonCreateNews->setIcon(platformStyle->SingleColorIcon(":/icons/broadcastnews"));
     ui->pushButtonManageNews->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
@@ -265,9 +266,7 @@ void OverviewPage::setClientModel(ClientModel *model)
         latestBlockModel->setClientModel(model);
 
         newsModel1->setClientModel(model);
-        newsModel1->setFilter(COIN_NEWS_ALL);
         newsModel2->setClientModel(model);
-        newsModel2->setFilter(COIN_NEWS_ALL);
     }
 }
 
@@ -493,23 +492,18 @@ void OverviewPage::showDetailsBlock()
 
 void OverviewPage::updateNewsTypes()
 {
+    if (!newsTypesTableModel)
+        return;
+
     ui->comboBoxNewsType1->clear();
     ui->comboBoxNewsType2->clear();
 
     // Setup news type combo box options
-    // Start with preset types
-    ui->comboBoxNewsType1->addItem("All OP_RETURN data");
-    ui->comboBoxNewsType1->addItem("Tokyo Daily News");
-    ui->comboBoxNewsType1->addItem("US Daily News");
-    // Now add custom news types
-    std::vector<CustomNewsType> vCustom;
-    popreturndb->GetCustomTypes(vCustom);
-    for (const CustomNewsType c : vCustom)
-        ui->comboBoxNewsType1->addItem(QString::fromStdString(c.title));
+    std::vector<NewsType> vType = newsTypesTableModel->GetTypes();
+    for (const NewsType t : vType)
+        ui->comboBoxNewsType1->addItem(QString::fromStdString(t.title));
 
-    ui->comboBoxNewsType2->addItem("All OP_RETURN data");
-    ui->comboBoxNewsType2->addItem("Tokyo Daily News");
-    ui->comboBoxNewsType2->addItem("US Daily News");
-    for (const CustomNewsType c : vCustom)
-        ui->comboBoxNewsType2->addItem(QString::fromStdString(c.title));
+    // Setup combo box #2
+    for (const NewsType t : vType)
+        ui->comboBoxNewsType2->addItem(QString::fromStdString(t.title));
 }

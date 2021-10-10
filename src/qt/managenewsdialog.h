@@ -16,7 +16,8 @@ class QMenu;
 class QPoint;
 QT_END_NAMESPACE
 
-class CustomNewsType;
+class NewsType;
+class NewsTypesTableModel;
 
 class ManageNewsDialog : public QDialog
 {
@@ -25,6 +26,8 @@ class ManageNewsDialog : public QDialog
 public:
     explicit ManageNewsDialog(QWidget *parent = nullptr);
     ~ManageNewsDialog();
+
+    void setNewsTypesModel(NewsTypesTableModel* model);
 
 private Q_SLOTS:
     void on_pushButtonWrite_clicked();
@@ -38,11 +41,9 @@ Q_SIGNALS:
 
 private:
     Ui::ManageNewsDialog *ui;
-    void UpdateTypes();
 
-    QMenu *contextMenu;
-
-    std::vector<CustomNewsType> vCustomCache;
+    QMenu *contextMenu = nullptr;
+    NewsTypesTableModel *newsTypesModel = nullptr;
 };
 
 #endif // MANAGENEWSDIALOG_H

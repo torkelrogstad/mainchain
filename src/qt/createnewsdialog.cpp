@@ -11,20 +11,24 @@
 #include <validation.h>
 
 #include <qt/drivenetunits.h>
-#include <qt/newstablemodel.h> // TODO move enum NewsFilters
+#include <qt/newstablemodel.h>
+#include <qt/newstypestablemodel.h>
+#include <qt/platformstyle.h>
 
 #include <QMessageBox>
 
-CreateNewsDialog::CreateNewsDialog(QWidget *parent) :
+CreateNewsDialog::CreateNewsDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::CreateNewsDialog)
+    ui(new Ui::CreateNewsDialog),
+    platformStyle(_platformStyle)
 {
     ui->setupUi(this);
     ui->feeAmount->setValue(0);
 
     ui->labelCharsRemaining->setText(QString::number(NEWS_HEADLINE_CHARS));
 
-    updateTypes();
+    ui->pushButtonCreate->setIcon(platformStyle->SingleColorIcon(":/icons/broadcastnews"));
+    ui->pushButtonHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
 }
 
 CreateNewsDialog::~CreateNewsDialog()
@@ -34,6 +38,9 @@ CreateNewsDialog::~CreateNewsDialog()
 
 void CreateNewsDialog::on_pushButtonCreate_clicked()
 {
+    if (!newsTypesModel)
+        return;
+
     QMessageBox messageBox;
 
     const CAmount& nFee = ui->feeAmount->value();
@@ -61,51 +68,28 @@ void CreateNewsDialog::on_pushButtonCreate_clicked()
         return;
     }
 
+    // Lookup selected type
+    NewsType type;
+    if (!newsTypesModel->GetType(ui->comboBoxCategory->currentIndex(), type)) {
+        messageBox.setWindowTitle("Invalid news type!");
+        messageBox.setText("Failed to locate news type!");
+        messageBox.exec();
+        return;
+    }
+
     // Block until the wallet has been updated with the latest chain tip
     vpwallets[0]->BlockUntilSyncedToCurrentChain();
 
-    // Create news OP_RETURN script
-    CScript script;
-
-    if (ui->comboBoxCategory->currentIndex() == COIN_NEWS_ALL) {
-        script << OP_RETURN;
-    }
-    else
-    if (ui->comboBoxCategory->currentIndex() == COIN_NEWS_TOKYO_DAY){
-        script = GetNewsTokyoDailyHeader();
-    }
-    else
-    if (ui->comboBoxCategory->currentIndex() == COIN_NEWS_US_DAY){
-        script = GetNewsUSDailyHeader();
-    } else {
-        // Figure out the script header for this type
-        std::vector<CustomNewsType> vCustom;
-        popreturndb->GetCustomTypes(vCustom);
-
-        size_t nFilter = ui->comboBoxCategory->currentIndex();
-
-        // TODO figure out a better way to handle custom type lookup.
-        // Perhaps all types should be in ldb and lookup up like this.
-        size_t nBuiltInTypes = 3;
-        nFilter -= nBuiltInTypes;
-
-        if (nFilter >= vCustom.size()) {
-            messageBox.setWindowTitle("Invalid custom type!");
-            messageBox.setText("Couldn't find custom type.");
-            messageBox.exec();
-            return;
-        }
-        script = vCustom[nFilter].header;
-    }
-
-    // TODO Should script include the pushdata size added by << operator?
+    // Get hex bytes of data
     std::string strHex = HexStr(strText.begin(), strText.end());
     std::vector<unsigned char> vBytes = ParseHex(strHex);
-    script << vBytes;
 
-    std::string strDecode;
-    for (size_t i = 0; i < script.size(); i++)
-        strDecode += script[i];
+    // Create news OP_RETURN script
+    CScript script;
+    script.resize(vBytes.size() + type.header.size() + 1);
+    script[0] = OP_RETURN;
+    memcpy(&script[1], type.header.data(), type.header.size());
+    memcpy(&script[type.header.size() + 1], vBytes.data(), vBytes.size());
 
     CTransactionRef tx;
     std::string strFail = "";
@@ -192,15 +176,20 @@ void CreateNewsDialog::on_plainTextEdit_textChanged()
 
 void CreateNewsDialog::updateTypes()
 {
+    if (!newsTypesModel)
+        return;
+
     ui->comboBoxCategory->clear();
 
-    ui->comboBoxCategory->addItem("All OP_RETURN data");
-    ui->comboBoxCategory->addItem("Tokyo Daily News");
-    ui->comboBoxCategory->addItem("US Daily News");
+    std::vector<NewsType> vType = newsTypesModel->GetTypes();
 
-    std::vector<CustomNewsType> vCustom;
-    popreturndb->GetCustomTypes(vCustom);
-
-    for (const CustomNewsType c : vCustom)
-        ui->comboBoxCategory->addItem(QString::fromStdString(c.title));
+    for (const NewsType t : vType)
+        ui->comboBoxCategory->addItem(QString::fromStdString(t.title));
 }
+
+void CreateNewsDialog::setNewsTypesModel(NewsTypesTableModel* newsTypesModelIn)
+{
+    newsTypesModel = newsTypesModelIn;
+    updateTypes();
+}
+

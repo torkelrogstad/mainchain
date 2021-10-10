@@ -12,6 +12,7 @@
 
 class CBlockIndex;
 class ClientModel;
+class NewsTypesTableModel;
 class OPReturnData;
 
 QT_BEGIN_NAMESPACE
@@ -23,13 +24,6 @@ struct NewsTableObject
     int nTime;
     std::string decode;
     std::string fees;
-};
-
-enum NewsFilters
-{
-    COIN_NEWS_ALL = 0,
-    COIN_NEWS_TOKYO_DAY = 1,
-    COIN_NEWS_US_DAY = 2
 };
 
 static const size_t NEWS_HEADLINE_CHARS = 64;
@@ -46,6 +40,7 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
 
     void setClientModel(ClientModel *model);
+    void setNewsTypesModel(NewsTypesTableModel *model);
     void setFilter(size_t nFilter);
 
     enum RoleIndex {
@@ -59,6 +54,7 @@ private:
     QList<QVariant> model;
 
     ClientModel *clientModel = nullptr;
+    NewsTypesTableModel *newsTypesModel = nullptr;
 
     void UpdateModel();
     void SortByFees(std::vector<NewsTableObject>& vNews);
@@ -66,4 +62,4 @@ private:
     size_t nFilter;
 };
 
-#endif // NEWSBLOCKTABLEMODEL_H
+#endif // NEWSTABLEMODEL_H

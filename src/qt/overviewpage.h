@@ -17,6 +17,7 @@ class LatestBlockTableModel;
 class ManageNewsDialog;
 class MemPoolTableModel;
 class NewsTableModel;
+class NewsTypesTableModel;
 class PlatformStyle;
 class SidechainWithdrawalTableModel;
 class TransactionFilterProxy;
@@ -66,6 +67,7 @@ private:
     ManageNewsDialog *manageNewsDialog = nullptr;
     NewsTableModel *newsModel1 = nullptr;
     NewsTableModel *newsModel2 = nullptr;
+    NewsTypesTableModel *newsTypesTableModel = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
     CAmount currentUnconfirmedBalance;

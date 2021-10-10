@@ -161,6 +161,7 @@ QT_MOC_CPP = \
   qt/moc_miningdialog.cpp \
   qt/moc_merkletreedialog.cpp \
   qt/moc_newstablemodel.cpp \
+  qt/moc_newstypestablemodel.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
   qt/moc_optionsdialog.cpp \
@@ -256,6 +257,7 @@ DRIVENET_QT_H = \
   qt/miningdialog.h \
   qt/merkletreedialog.h \
   qt/newstablemodel.h \
+  qt/newstypestablemodel.h \
   qt/networkstyle.h \
   qt/notificator.h \
   qt/openuridialog.h \
@@ -463,6 +465,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/merkletreedialog.cpp \
   qt/miningdialog.cpp \
   qt/newstablemodel.cpp \
+  qt/newstypestablemodel.cpp \
   qt/openuridialog.cpp \
   qt/overviewpage.cpp \
   qt/paymentrequestplus.cpp \

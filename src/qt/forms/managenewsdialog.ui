@@ -22,7 +22,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QListWidget" name="listWidgetTypes"/>
+    <widget class="QTableView" name="tableViewTypes"/>
    </item>
    <item>
     <widget class="Line" name="line">

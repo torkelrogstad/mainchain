@@ -60,7 +60,6 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Initialize deposit confirmation dialog
     depositConfirmationDialog = new SidechainDepositConfirmationDialog(this);
 
-
     // Initialize WT^ & sidechain miner configuration dialogs. Any widget that
     // wants to show them can call ShowActivationDialog() / showWTPrimeDialog()
     // instead of creating a new instance.

@@ -591,7 +591,7 @@ bool OPReturnDB::HaveBlockData(const uint256& hashBlock) const
     return GetBlockData(hashBlock, vData);
 }
 
-void OPReturnDB::GetCustomTypes(std::vector<CustomNewsType>& vCustom)
+void OPReturnDB::GetNewsTypes(std::vector<NewsType>& vType)
 {
     std::pair<char, uint256> key = std::make_pair(DB_OP_RETURN_TYPES, uint256());
 
@@ -601,27 +601,27 @@ void OPReturnDB::GetCustomTypes(std::vector<CustomNewsType>& vCustom)
     while (pcursor->Valid()) {
         boost::this_thread::interruption_point();
 
-        CustomNewsType custom;
+        NewsType type;
         if (pcursor->GetKey(key) && key.first == DB_OP_RETURN_TYPES) {
-            if (pcursor->GetValue(custom))
-                vCustom.push_back(custom);
+            if (pcursor->GetValue(type))
+                vType.push_back(type);
         }
 
         pcursor->Next();
     }
 }
 
-void OPReturnDB::WriteCustomType(CustomNewsType custom)
+void OPReturnDB::WriteNewsType(NewsType type)
 {
     // Maybe in the future there will be different categories
-    // of custom types. If so, the pair.second can be used.
+    // of news types. If so, the pair.second can be used.
     CDBBatch batch(*this);
-    batch.Write(std::make_pair(DB_OP_RETURN_TYPES, custom.GetHash()), custom);
+    batch.Write(std::make_pair(DB_OP_RETURN_TYPES, type.GetHash()), type);
 
     WriteBatch(batch, true);
 }
 
-std::string CustomNewsType::GetShareURL() const
+std::string NewsType::GetShareURL() const
 {
     std::string str =
             std::to_string(nDays)
@@ -632,7 +632,7 @@ std::string CustomNewsType::GetShareURL() const
     return str;
 }
 
-void CustomNewsType::SetURL(const std::string& strURL)
+void NewsType::SetURL(const std::string& strURL)
 {
     if (strURL.size() < 3)
         return;
