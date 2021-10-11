@@ -221,7 +221,7 @@ struct NewsType
 
     std::string GetShareURL() const;
 
-    void SetURL(const std::string& strURL);
+    bool SetURL(const std::string& strURL);
 };
 
 /** Access to the OP_RETURN cache database (blocks/opreturn/) */

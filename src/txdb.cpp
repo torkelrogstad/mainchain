@@ -632,32 +632,46 @@ std::string NewsType::GetShareURL() const
     return str;
 }
 
-void NewsType::SetURL(const std::string& strURL)
+bool NewsType::SetURL(const std::string& strURL)
 {
-    if (strURL.size() < 3)
-        return;
+    if (strURL.size() < 12)
+        return false;
 
     size_t nFirst = strURL.find("{");
     size_t nSecond = strURL.find("}");
 
     if (nFirst == std::string::npos || nSecond == std::string::npos)
-        return;
+        return false;
     if (nFirst == 0 || nFirst >= strURL.size())
-        return;
+        return false;
     if (nSecond >= strURL.size())
-        return;
+        return false;
     if (nFirst == nSecond)
-        return;
+        return false;
 
     // Get number of days
-    nDays = std::stoi(strURL.substr(0, nFirst));
+    try {
+        nDays = std::stoi(strURL.substr(0, nFirst));
+    } catch (...) {
+        return false;
+    }
+
+    std::string strBytes = strURL.substr(nFirst + 1, nSecond - 2);
+    if (!IsHexNumber(strBytes))
+        return false;
 
     // Get header bytes
-    std::vector<unsigned char> vBytes = ParseHex(strURL.substr(nFirst + 1, nSecond - 1));
+    std::vector<unsigned char> vBytes = ParseHex(strBytes);
     header = CScript(vBytes.begin(), vBytes.end());
+    if (header.size() != 4)
+        return false;
 
     // Get title
     title = strURL.substr(nSecond + 1);
+    if (title.empty())
+        return false;
+
+    return true;
 }
 
 namespace {
