@@ -6,6 +6,7 @@
 #include <qt/forms/ui_managenewsdialog.h>
 
 #include <QMenu>
+#include <QMessageBox>
 #include <QPoint>
 
 #include <qt/newstypestablemodel.h>
@@ -22,8 +23,8 @@ ManageNewsDialog::ManageNewsDialog(QWidget *parent) :
 
     ui->tableViewTypes->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableViewTypes->setSelectionMode(QAbstractItemView::SingleSelection);
-
     ui->tableViewTypes->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->tableViewTypes->resizeColumnsToContents();
 
     // Context menu
     QAction *shareAction = new QAction(tr("Copy sharing URL"), this);
@@ -45,15 +46,40 @@ void ManageNewsDialog::on_pushButtonWrite_clicked()
     if (!newsTypesModel)
         return;
 
+    std::string strTitle = ui->lineEditTitle->text().toStdString();
+    if (strTitle.empty()) {
+        QMessageBox::critical(this, tr("Failed to create news type"),
+            tr("News type must have a title!\n"),
+            QMessageBox::Ok);
+        return;
+    }
+
+    std::string strBytes = ui->lineEditBytes->text().toStdString();
+    if (!IsHexNumber(strBytes)) {
+        QMessageBox::critical(this, tr("Failed to create news type"),
+            tr("Invalid header bytes!\n\n"
+               "Header bytes must be four valid hexidecimal characters with no prefix."),
+            QMessageBox::Ok);
+        return;
+    }
+
     // Create header bytes
-    std::vector<unsigned char> vBytes = ParseHex(ui->lineEditBytes->text().toStdString());
+    std::vector<unsigned char> vBytes = ParseHex(strBytes);
 
     // Copy header bytes into OP_RETURN script
     CScript script(vBytes.begin(), vBytes.end());
 
+    if (script.size() != 4) {
+        QMessageBox::critical(this, tr("Failed to create news type"),
+            tr("Invalid hex bytes length!\n\n"
+               "Header bytes must be four valid hexidecimal characters with no prefix."),
+            QMessageBox::Ok);
+        return;
+    }
+
     // New news type object
     NewsType type;
-    type.title = ui->lineEditTitle->text().toStdString();
+    type.title = strTitle;
     type.header = script;
     type.nDays = ui->spinBoxDays->value();
 
@@ -63,6 +89,10 @@ void ManageNewsDialog::on_pushButtonWrite_clicked()
     // Tell widgets we have updated custom types
     newsTypesModel->updateModel();
     Q_EMIT(NewTypeCreated());
+
+    QMessageBox::information(this, tr("News type created"),
+        tr("News type created!"),
+        QMessageBox::Ok);
 }
 
 void ManageNewsDialog::on_pushButtonPaste_clicked()
@@ -77,7 +107,12 @@ void ManageNewsDialog::on_pushButtonAdd_clicked()
 
     QString url = ui->lineEditURL->text();
     NewsType type;
-    type.SetURL(url.toStdString());
+    if (!type.SetURL(url.toStdString())) {
+        QMessageBox::critical(this, tr("Failed to add news type"),
+            tr("Invalid news type URL!\n"),
+            QMessageBox::Ok);
+        return;
+    }
 
     // Save shared custom type
     popreturndb->WriteNewsType(type);
@@ -85,6 +120,10 @@ void ManageNewsDialog::on_pushButtonAdd_clicked()
     // Tell widgets we have updated custom types
     newsTypesModel->updateModel();
     Q_EMIT(NewTypeCreated());
+
+    QMessageBox::information(this, tr("News type added"),
+        tr("News type added!"),
+        QMessageBox::Ok);
 }
 
 void ManageNewsDialog::contextualMenu(const QPoint& point)
@@ -121,4 +160,5 @@ void ManageNewsDialog::setNewsTypesModel(NewsTypesTableModel* model)
 {
     newsTypesModel = model;
     ui->tableViewTypes->setModel(newsTypesModel);
+    ui->tableViewTypes->resizeColumnsToContents();
 }

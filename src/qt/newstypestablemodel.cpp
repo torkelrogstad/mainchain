@@ -16,8 +16,8 @@ Q_DECLARE_METATYPE(NewsTypesTableObject)
 
 std::vector<NewsTypesTableObject> vDefaultType
 {
-    NewsTypesTableObject("US Daily", "a1b1c1d1", 1, "1{6a1b1c1d1}US Daily"),
-    NewsTypesTableObject("Japan Daily", "a2b2c2d2", 1, "1{6a2b2c2d2}Japan Daily")
+    NewsTypesTableObject("US Daily", "a1b1c1d1", 1, "1{a1b1c1d1}US Daily"),
+    NewsTypesTableObject("Japan Daily", "a2b2c2d2", 1, "1{a2b2c2d2}Japan Daily")
 };
 
 NewsTypesTableModel::NewsTypesTableModel(QObject *parent) :
@@ -144,7 +144,8 @@ std::vector<NewsType> NewsTypesTableModel::GetTypes() const
 
         NewsTypesTableObject object = model[i].value<NewsTypesTableObject>();
         NewsType type;
-        type.SetURL(object.url.toStdString());
+        if (!type.SetURL(object.url.toStdString()))
+            continue;
         vType.push_back(type);
     }
     return vType;
@@ -159,7 +160,9 @@ bool NewsTypesTableModel::GetType(int nRow, NewsType& type) const
         return false;
 
     NewsTypesTableObject object = model[nRow].value<NewsTypesTableObject>();
-    type.SetURL(object.url.toStdString());
+
+    if (!type.SetURL(object.url.toStdString()))
+        return false;
 
     return true;
 }
