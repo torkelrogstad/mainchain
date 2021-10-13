@@ -621,6 +621,11 @@ void OPReturnDB::WriteNewsType(NewsType type)
     WriteBatch(batch, true);
 }
 
+void OPReturnDB::EraseNewsType(uint256 hash)
+{
+    Erase(std::make_pair(DB_OP_RETURN_TYPES, hash));
+}
+
 std::string NewsType::GetShareURL() const
 {
     std::string str =

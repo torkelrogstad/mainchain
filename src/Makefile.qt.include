@@ -110,6 +110,7 @@ QT_FORMS_UI = \
   qt/forms/optionsdialog.ui \
   qt/forms/paymentrequestdialog.ui \
   qt/forms/managenewsdialog.ui \
+  qt/forms/newsqrdialog.ui \
   qt/forms/merkletreedialog.ui \
   qt/forms/miningdialog.ui \
   qt/forms/overviewpage.ui \
@@ -162,6 +163,7 @@ QT_MOC_CPP = \
   qt/moc_merkletreedialog.cpp \
   qt/moc_newstablemodel.cpp \
   qt/moc_newstypestablemodel.cpp \
+  qt/moc_newsqrdialog.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
   qt/moc_optionsdialog.cpp \
@@ -258,6 +260,7 @@ DRIVENET_QT_H = \
   qt/merkletreedialog.h \
   qt/newstablemodel.h \
   qt/newstypestablemodel.h \
+  qt/newsqrdialog.h \
   qt/networkstyle.h \
   qt/notificator.h \
   qt/openuridialog.h \
@@ -466,6 +469,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/miningdialog.cpp \
   qt/newstablemodel.cpp \
   qt/newstypestablemodel.cpp \
+  qt/newsqrdialog.cpp \
   qt/openuridialog.cpp \
   qt/overviewpage.cpp \
   qt/paymentrequestplus.cpp \

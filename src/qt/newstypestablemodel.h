@@ -35,6 +35,12 @@ class NewsTypesTableModel : public QAbstractTableModel
 
 public:
     explicit NewsTypesTableModel(QObject *parent = 0);
+
+    enum RoleIndex {
+        /** News type URL */
+        URLRole = Qt::UserRole
+    };
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;

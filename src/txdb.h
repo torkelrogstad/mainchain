@@ -236,6 +236,7 @@ public:
 
     void GetNewsTypes(std::vector<NewsType>& vType);
     void WriteNewsType(NewsType type);
+    void EraseNewsType(uint256 hash);
 };
 
 #endif // BITCOIN_TXDB_H

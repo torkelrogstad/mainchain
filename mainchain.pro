@@ -147,6 +147,7 @@ HEADERS += src/addrdb.h \
            src/qt/merkletreedialog.h \
            src/qt/miningdialog.h \
            src/qt/networkstyle.h \
+           src/qt/newsqrdialog.h \
            src/qt/newstablemodel.h \
            src/qt/newstypestablemodel.h \
            src/qt/notificator.h \
@@ -362,6 +363,7 @@ FORMS += src/qt/forms/addressbookpage.ui \
          src/qt/forms/managenewsdialog.ui \
          src/qt/forms/merkletreedialog.ui \
          src/qt/forms/miningdialog.ui \
+         src/qt/forms/newsqrdialog.ui \
          src/qt/forms/openuridialog.ui \
          src/qt/forms/optionsdialog.ui \
          src/qt/forms/overviewpage.ui \
@@ -505,6 +507,7 @@ SOURCES += src/addrdb.cpp \
            src/qt/merkletreedialog.cpp \
            src/qt/miningdialog.cpp \
            src/qt/networkstyle.cpp \
+           src/qt/newsqrdialog.cpp \
            src/qt/newstablemodel.cpp \
            src/qt/newstypestablemodel.cpp \
            src/qt/notificator.cpp \

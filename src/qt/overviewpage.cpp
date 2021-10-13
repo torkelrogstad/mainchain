@@ -55,7 +55,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 
     newsTypesTableModel = new NewsTypesTableModel(this);
 
-    manageNewsDialog = new ManageNewsDialog(this);
+    manageNewsDialog = new ManageNewsDialog(platformStyle, this);
     createNewsDialog = new CreateNewsDialog(platformStyle, this);
     connect(manageNewsDialog, SIGNAL(NewTypeCreated()), this, SLOT(updateNewsTypes()));
     connect(manageNewsDialog, SIGNAL(NewTypeCreated()), createNewsDialog, SLOT(updateTypes()));

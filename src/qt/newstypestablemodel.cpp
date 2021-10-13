@@ -70,6 +70,8 @@ QVariant NewsTypesTableModel::data(const QModelIndex &index, int role) const
             return object.url;
         }
     }
+    case URLRole:
+        return object.url;
     }
     return QVariant();
 }
@@ -166,4 +168,3 @@ bool NewsTypesTableModel::GetType(int nRow, NewsType& type) const
 
     return true;
 }
-

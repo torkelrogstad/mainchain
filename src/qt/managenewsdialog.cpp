@@ -5,19 +5,25 @@
 #include <qt/managenewsdialog.h>
 #include <qt/forms/ui_managenewsdialog.h>
 
+#include <QFile>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPoint>
+#include <QTextStream>
 
-#include <qt/newstypestablemodel.h>
+#include <qt/csvmodelwriter.h>
 #include <qt/guiutil.h>
+#include <qt/newstypestablemodel.h>
+#include <qt/newsqrdialog.h>
+#include <qt/platformstyle.h>
 
 #include <txdb.h>
 #include <validation.h>
 
-ManageNewsDialog::ManageNewsDialog(QWidget *parent) :
+ManageNewsDialog::ManageNewsDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::ManageNewsDialog)
+    ui(new Ui::ManageNewsDialog),
+    platformStyle(_platformStyle)
 {
     ui->setupUi(this);
 
@@ -28,12 +34,26 @@ ManageNewsDialog::ManageNewsDialog(QWidget *parent) :
 
     // Context menu
     QAction *shareAction = new QAction(tr("Copy sharing URL"), this);
+    QAction *qrAction = new QAction(tr("Show QR"), this);
+    QAction *removeAction = new QAction(tr("Delete"), this);
+
     contextMenu = new QMenu(this);
     contextMenu->setObjectName("contextMenuManageNews");
     contextMenu->addAction(shareAction);
+    contextMenu->addAction(qrAction);
+    contextMenu->addAction(removeAction);
 
     connect(ui->tableViewTypes, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
     connect(shareAction, SIGNAL(triggered()), this, SLOT(copyShareURL()));
+    connect(removeAction, SIGNAL(triggered()), this, SLOT(removeType()));
+    connect(qrAction, SIGNAL(triggered()), this, SLOT(showQR()));
+
+    ui->pushButtonImport->setIcon(platformStyle->SingleColorIcon(":/icons/open"));
+    ui->pushButtonExport->setIcon(platformStyle->SingleColorIcon(":/icons/export"));
+    ui->pushButtonPaste->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
+    ui->pushButtonAdd->setIcon(platformStyle->SingleColorIcon(":/icons/add"));
+    ui->pushButtonWrite->setIcon(platformStyle->SingleColorIcon(":/icons/add"));
+    ui->pushButtonDefaults->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
 }
 
 ManageNewsDialog::~ManageNewsDialog()
@@ -126,6 +146,114 @@ void ManageNewsDialog::on_pushButtonAdd_clicked()
         QMessageBox::Ok);
 }
 
+void ManageNewsDialog::on_pushButtonExport_clicked()
+{
+    if (!newsTypesModel)
+        return;
+
+    QString filename = GUIUtil::getSaveFileName(this,
+        tr("Export News Types"), QString(),
+        tr("Comma separated file (*.csv)"), nullptr);
+
+    if (filename.isNull())
+        return;
+
+    CSVModelWriter writer(filename);
+
+    // name, column, role
+    writer.setModel(newsTypesModel);
+    writer.addColumn(tr("URL"), 0, NewsTypesTableModel::URLRole);
+
+    if(!writer.write()) {
+        QMessageBox::critical(this, tr("Exporting Failed"),
+            tr("There was an error trying to export news types to %1\n").arg(filename),
+            QMessageBox::Ok);
+    }
+    else {
+        QMessageBox::information(this, tr("Exporting Successful"),
+            tr("News types successfully saved to %1\n").arg(filename),
+            QMessageBox::Ok);
+    }
+}
+
+void ManageNewsDialog::on_pushButtonImport_clicked()
+{
+    QString filename = GUIUtil::getOpenFileName(this, tr("Select news types file to open"), "", "", nullptr);
+    if (filename.isEmpty())
+        return;
+
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+        QMessageBox::critical(this, tr("Import Failed"),
+            tr("File cannot be opened!\n"),
+            QMessageBox::Ok);
+        return;
+    }
+
+    // Read
+    QTextStream in(&file);
+    QString str = in.readAll();
+    file.close();
+
+    // Split file by line into list
+    QStringList list = str.split("\n", QString::SkipEmptyParts);
+
+    // Remove first line of CSV file
+    list.removeFirst();
+
+    // Collect news types
+    std::vector<NewsType> vType;
+    for (const QString& str : list) {
+        NewsType type;
+        if (!type.SetURL(str.toStdString().substr(1, str.size() - 2))) {
+            QMessageBox::critical(this, tr("Import Failed"),
+                tr("File contains invalid URL: %1!\n").arg(str),
+                QMessageBox::Ok);
+            return;
+        }
+        vType.push_back(type);
+    }
+
+    // Save news types
+    for (const NewsType& type : vType)
+        popreturndb->WriteNewsType(type);
+
+    // Tell widgets we have updated custom types
+    newsTypesModel->updateModel();
+    Q_EMIT(NewTypeCreated());
+
+    QMessageBox::information(this, tr("Import Complete"),
+        tr("News types imported from file!\n"),
+        QMessageBox::Ok);
+}
+
+void ManageNewsDialog::on_pushButtonDefaults_clicked()
+{
+    if (!newsTypesModel)
+        return;
+
+    // Show confirmation dialog
+    int nRes = QMessageBox::question(this, tr("Confirm news types reset"),
+        tr("Are you sure you want to reset your news types? "
+           "This will delete all but the built-in news types."),
+        QMessageBox::Ok, QMessageBox::Cancel);
+
+    if (nRes == QMessageBox::Cancel)
+        return;
+
+    std::vector<NewsType> vType = newsTypesModel->GetTypes();
+    for (const NewsType& type : vType)
+        popreturndb->EraseNewsType(type.GetHash());
+
+    // Tell widgets we have updated custom types
+    newsTypesModel->updateModel();
+    Q_EMIT(NewTypeCreated());
+
+    QMessageBox::information(this, tr("News types reset!"),
+        tr("All news types have been reset!\n"),
+        QMessageBox::Ok);
+}
+
 void ManageNewsDialog::contextualMenu(const QPoint& point)
 {
     QModelIndex index = ui->tableViewTypes->indexAt(point);
@@ -154,6 +282,85 @@ void ManageNewsDialog::copyShareURL()
     QString url = "";
     if (newsTypesModel->GetURLAtRow(nRow, url))
         GUIUtil::setClipboard(url);
+}
+
+void ManageNewsDialog::showQR()
+{
+    if (!newsTypesModel)
+        return;
+
+    if (!ui->tableViewTypes->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewTypes->selectionModel()->selectedRows();
+    if (selection.isEmpty())
+        return;
+
+    QModelIndex index = selection.front();
+    if (!index.isValid())
+        return;
+
+    int nRow = index.row();
+
+    QString url = "";
+    if (!newsTypesModel->GetURLAtRow(nRow, url)) {
+        QMessageBox::critical(this, tr("Cannot show QR!"),
+            tr("Failed to locate news type URL!\n"),
+            QMessageBox::Ok);
+        return;
+    }
+
+    NewsQRDialog qrDialog;
+    qrDialog.SetURL(url);
+    qrDialog.exec();
+}
+
+void ManageNewsDialog::removeType()
+{
+    if (!newsTypesModel)
+        return;
+
+    if (!ui->tableViewTypes->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableViewTypes->selectionModel()->selectedRows();
+    if (selection.isEmpty())
+        return;
+
+    QModelIndex index = selection.front();
+    if (!index.isValid())
+        return;
+
+    int nRow = index.row();
+
+    QString url = "";
+    if (!newsTypesModel->GetURLAtRow(nRow, url))
+        return;
+
+    NewsType type;
+    if (!type.SetURL(url.toStdString())) {
+        QMessageBox::critical(this, tr("Cannot erase!"),
+            tr("Invalid news type URL!\n"),
+            QMessageBox::Ok);
+    }
+
+    // Show confirmation dialog
+    int nRes = QMessageBox::question(this, tr("Confirm erasing news type"),
+        tr("Are you sure you want to erase %1?").arg(QString::fromStdString(type.title)),
+        QMessageBox::Ok, QMessageBox::Cancel);
+
+    if (nRes == QMessageBox::Cancel)
+        return;
+
+    popreturndb->EraseNewsType(type.GetHash());
+
+    // Tell widgets we have updated custom types
+    newsTypesModel->updateModel();
+    Q_EMIT(NewTypeCreated());
+
+    QMessageBox::information(this, tr("News type erased!"),
+        tr("News type removed from database!\n"),
+        QMessageBox::Ok);
 }
 
 void ManageNewsDialog::setNewsTypesModel(NewsTypesTableModel* model)
