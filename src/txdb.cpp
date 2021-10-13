@@ -642,8 +642,8 @@ bool NewsType::SetURL(const std::string& strURL)
     if (strURL.size() < 12)
         return false;
 
-    size_t nFirst = strURL.find("{");
-    size_t nSecond = strURL.find("}");
+    const size_t nFirst = strURL.find("{");
+    const size_t nSecond = strURL.find("}");
 
     if (nFirst == std::string::npos || nSecond == std::string::npos)
         return false;
@@ -661,7 +661,7 @@ bool NewsType::SetURL(const std::string& strURL)
         return false;
     }
 
-    std::string strBytes = strURL.substr(nFirst + 1, nSecond - 2);
+    std::string strBytes = strURL.substr(nFirst + 1, 8);
     if (!IsHexNumber(strBytes))
         return false;
 
