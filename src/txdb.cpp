@@ -661,6 +661,9 @@ bool NewsType::SetURL(const std::string& strURL)
         return false;
     }
 
+    if (nDays == 0)
+        return false;
+
     std::string strBytes = strURL.substr(nFirst + 1, 8);
     if (!IsHexNumber(strBytes))
         return false;
