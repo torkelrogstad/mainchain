@@ -104,6 +104,20 @@ void ManageNewsDialog::on_pushButtonWrite_clicked()
     type.header = script;
     type.nDays = ui->spinBoxDays->value();
 
+    if (newsTypesModel->IsDefaultType(type.header)) {
+        QMessageBox::critical(this, tr("Failed to create news type"),
+            tr("Cannot re-create default news type!\n"),
+            QMessageBox::Ok);
+        return;
+    }
+
+    if (!newsTypesModel->IsHeaderUnique(type.header)) {
+        QMessageBox::critical(this, tr("Failed to create news type"),
+            tr("News type does not have unique header bytes!\n"),
+            QMessageBox::Ok);
+        return;
+    }
+
     // Save new type
     popreturndb->WriteNewsType(type);
 
@@ -131,6 +145,20 @@ void ManageNewsDialog::on_pushButtonAdd_clicked()
     if (!type.SetURL(url.toStdString())) {
         QMessageBox::critical(this, tr("Failed to add news type"),
             tr("Invalid news type URL!\n"),
+            QMessageBox::Ok);
+        return;
+    }
+
+    if (newsTypesModel->IsDefaultType(type.header)) {
+        QMessageBox::critical(this, tr("Failed to add news type"),
+            tr("Cannot re-add default news type!\n"),
+            QMessageBox::Ok);
+        return;
+    }
+
+    if (!newsTypesModel->IsHeaderUnique(type.header)) {
+        QMessageBox::critical(this, tr("Failed to add news type"),
+            tr("News type does not have unique header bytes!\n"),
             QMessageBox::Ok);
         return;
     }
