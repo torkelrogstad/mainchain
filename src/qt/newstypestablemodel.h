@@ -9,6 +9,7 @@
 #include <QList>
 
 class NewsType;
+class CScript;
 
 struct NewsTypesTableObject
 {
@@ -50,6 +51,9 @@ public:
 
     std::vector<NewsType> GetTypes() const;
     bool GetType(int row, NewsType& type) const;
+
+    bool IsHeaderUnique(const CScript& header) const;
+    bool IsDefaultType(const CScript& header) const;
 
 public Q_SLOTS:
     void updateModel();

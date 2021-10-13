@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QVariant>
 
+#include <script/script.h>
 #include <txdb.h>
 #include <validation.h>
 
@@ -16,8 +17,8 @@ Q_DECLARE_METATYPE(NewsTypesTableObject)
 
 std::vector<NewsTypesTableObject> vDefaultType
 {
-    NewsTypesTableObject("US Daily", "a1b1c1d1", 1, "1{a1b1c1d1}US Daily"),
-    NewsTypesTableObject("Japan Daily", "a2b2c2d2", 1, "1{a2b2c2d2}Japan Daily")
+    NewsTypesTableObject("US Daily", "a1a1a1a1", 1, "1{a1a1a1a1}US Daily"),
+    NewsTypesTableObject("Japan Daily", "a2a2a2a2", 1, "1{a2a2a2a2}Japan Daily")
 };
 
 NewsTypesTableModel::NewsTypesTableModel(QObject *parent) :
@@ -153,6 +154,7 @@ std::vector<NewsType> NewsTypesTableModel::GetTypes() const
     return vType;
 }
 
+
 bool NewsTypesTableModel::GetType(int nRow, NewsType& type) const
 {
     if (nRow < 0 || nRow >= model.size())
@@ -167,4 +169,38 @@ bool NewsTypesTableModel::GetType(int nRow, NewsType& type) const
         return false;
 
     return true;
+}
+
+bool NewsTypesTableModel::IsHeaderUnique(const CScript& header) const
+{
+    // Check if any of our news type have this header
+    std::vector<NewsType> vType;
+    for (int i = 0; i < model.size(); i++) {
+        if (!model[i].canConvert<NewsTypesTableObject>())
+            continue;
+
+        NewsTypesTableObject object = model[i].value<NewsTypesTableObject>();
+        NewsType type;
+        if (!type.SetURL(object.url.toStdString()))
+            continue;
+
+        if (header == type.header)
+            return false;
+    }
+
+    return true;
+}
+
+bool NewsTypesTableModel::IsDefaultType(const CScript& header) const
+{
+    // Check if any of the built in types have this header
+    for (const NewsTypesTableObject& object : vDefaultType) {
+        NewsType type;
+        if (!type.SetURL(object.url.toStdString()))
+            continue;
+
+        if (header == type.header)
+            return true;
+    }
+    return false;
 }

@@ -17,6 +17,7 @@
 #include <qt/newsqrdialog.h>
 #include <qt/platformstyle.h>
 
+#include <script/script.h>
 #include <txdb.h>
 #include <validation.h>
 
@@ -211,6 +212,12 @@ void ManageNewsDialog::on_pushButtonImport_clicked()
                 QMessageBox::Ok);
             return;
         }
+
+        if (newsTypesModel->IsDefaultType(type.header))
+            continue;
+        if (!newsTypesModel->IsHeaderUnique(type.header))
+            continue;
+
         vType.push_back(type);
     }
 
@@ -342,6 +349,14 @@ void ManageNewsDialog::removeType()
         QMessageBox::critical(this, tr("Cannot erase!"),
             tr("Invalid news type URL!\n"),
             QMessageBox::Ok);
+        return;
+    }
+
+    if (newsTypesModel->IsDefaultType(type.header)) {
+        QMessageBox::critical(this, tr("Cannot erase!"),
+            tr("Cannot erase default type!\n"),
+            QMessageBox::Ok);
+        return;
     }
 
     // Show confirmation dialog
