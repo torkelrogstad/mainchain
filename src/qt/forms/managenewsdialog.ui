@@ -138,7 +138,11 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QLineEdit" name="lineEditURL"/>
+          <widget class="QLineEdit" name="lineEditURL">
+           <property name="placeholderText">
+            <string>Enter URL Ex: 1{a1a1a1a1}US Daily</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QPushButton" name="pushButtonPaste">
@@ -196,17 +200,25 @@
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="lineEditTitle"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Header Bytes</string>
+        <widget class="QLineEdit" name="lineEditTitle">
+         <property name="placeholderText">
+          <string>Enter title</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="lineEditBytes"/>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Header Bytes (4 Hex chars to identify this news type)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEditBytes">
+         <property name="placeholderText">
+          <string>Enter header bytes Ex: FAFBFCFD</string>
+         </property>
+        </widget>
        </item>
        <item>
         <widget class="QLabel" name="label_6">
@@ -217,6 +229,12 @@
        </item>
        <item>
         <widget class="QSpinBox" name="spinBoxDays">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="suffix">
           <string> Day(s)</string>
          </property>
