@@ -35,7 +35,7 @@ ReceiveCoinsDialog::ReceiveCoinsDialog(const PlatformStyle *_platformStyle, QWid
     ui->pushButtonPaymentRequest->setIcon(platformStyle->SingleColorIcon(":/icons/receiving_addresses"));
 
     requestDialog = new PaymentRequestDialog(platformStyle);
-    //requestDialog->setParent(this, Qt::Window);
+    requestDialog->setParent(this, Qt::Window);
 
     generateAddress();
 }

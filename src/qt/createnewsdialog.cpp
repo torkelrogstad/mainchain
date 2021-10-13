@@ -50,7 +50,12 @@ void CreateNewsDialog::on_pushButtonCreate_clicked()
     QString strFee = BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, nFee, false, BitcoinUnits::separatorAlways);
 
     // Show confirmation dialog
-    // TODO
+    int nRes = QMessageBox::question(this, tr("Confirm news broadcast"),
+        tr("Are you sure you want to spend %1 to broadcast this news?").arg(strFee),
+        QMessageBox::Ok, QMessageBox::Cancel);
+
+    if (nRes == QMessageBox::Cancel)
+        return;
 
 #ifdef ENABLE_WALLET
     if (vpwallets.empty()) {
@@ -192,4 +197,3 @@ void CreateNewsDialog::setNewsTypesModel(NewsTypesTableModel* newsTypesModelIn)
     newsTypesModel = newsTypesModelIn;
     updateTypes();
 }
-
