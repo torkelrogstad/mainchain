@@ -195,6 +195,17 @@ void BlockIndexDetailsDialog::on_pushButtonLoadTransactions_clicked()
     ui->labelBlockInfo->setText(strInfo);
 
     ui->pushButtonMerkleTree->setEnabled(true);
+
+    // Extract and display witness commit hash
+    int commitpos = GetWitnessCommitmentIndex(block);
+    if (commitpos != -1) {
+        // Get the commitment hash (witness merkle root + nonce) and reverse it
+        std::vector<unsigned char> vch(&block.vtx[0]->vout[commitpos].scriptPubKey[6], &block.vtx[0]->vout[commitpos].scriptPubKey[38]);
+        std::reverse(vch.begin(), vch.end());
+        uint256 hash(vch);
+
+        ui->labelWitnessHash->setText(QString::fromStdString(hash.ToString()));
+    }
 }
 
 void BlockIndexDetailsDialog::on_tableWidgetTransactions_doubleClicked(const QModelIndex& i)
