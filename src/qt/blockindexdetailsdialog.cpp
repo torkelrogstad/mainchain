@@ -59,7 +59,7 @@ void BlockIndexDetailsDialog::SetBlockIndex(const CBlockIndex* index)
     nHeight = index->nHeight;
     hashBlock = index->GetBlockHash();
     cachedBlock.SetNull();
-    ui->labelBlockInfo->setText("#Tx: ? Block Size: ? (click \"Load Transactions\")");
+    ui->labelBlockInfo->setText("#Tx: ?    Block Size: ? (click \"Load Transactions\")");
     ui->pushButtonMerkleTree->setEnabled(false);
 
     // Show details on dialog
