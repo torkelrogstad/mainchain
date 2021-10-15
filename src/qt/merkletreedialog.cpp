@@ -11,9 +11,8 @@
 
 #include <sstream>
 
-static const char* strHelp = "-------------------------------\"\n"
-"## What is this screen showing?\n"
-"This display allows you to audit the \"hashMerkleRoot\" field. You can see each step of the process yourself.\n\n"
+static const char* strHelp =
+"This window allows you to audit the \"hashMerkleRoot\" field. You can see each step of the process yourself.\n\n"
 "         MerkleRoot = hashZ\n\n"
 "                hashZ\n"
 "               /    \\\n"
@@ -91,10 +90,9 @@ MerkleTreeDialog::~MerkleTreeDialog()
 
 void MerkleTreeDialog::SetTrees(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf)
 {
-    if (ui->checkBoxRCB->isChecked())
-        ui->textBrowser->setText(QString::fromStdString(RCBTreeString(vLeaf, vSegwitLeaf)));
-    else
-        ui->textBrowser->setText(QString::fromStdString(MerkleTreeString(vLeaf, vSegwitLeaf)));
+    ui->textBrowserTree->setText(QString::fromStdString(MerkleTreeString(vLeaf, ui->checkBoxRCB->isChecked())));
+    ui->textBrowserWTree->setText(QString::fromStdString(WitnessTreeString(vSegwitLeaf, ui->checkBoxRCB->isChecked())));
+    ui->textBrowserHelp->setText(QString::fromStdString(strHelp));
 
     vLeafCache = vLeaf;
     vSegwitLeafCache = vSegwitLeaf;
@@ -102,10 +100,8 @@ void MerkleTreeDialog::SetTrees(const std::vector<uint256>& vLeaf, const std::ve
 
 void MerkleTreeDialog::on_checkBoxRCB_stateChanged(int checked)
 {
-    if (checked)
-        ui->textBrowser->setText(QString::fromStdString(RCBTreeString(vLeafCache, vSegwitLeafCache)));
-    else
-        ui->textBrowser->setText(QString::fromStdString(MerkleTreeString(vLeafCache, vSegwitLeafCache)));
+    ui->textBrowserTree->setText(QString::fromStdString(MerkleTreeString(vLeafCache, ui->checkBoxRCB->isChecked())));
+    ui->textBrowserWTree->setText(QString::fromStdString(WitnessTreeString(vSegwitLeafCache, ui->checkBoxRCB->isChecked())));
 }
 
 std::vector<std::vector<uint256>> MerkleTree(const std::vector<uint256>& vLeaf)
@@ -169,102 +165,13 @@ std::vector<std::vector<uint256>> MerkleTree(const std::vector<uint256>& vLeaf)
     return vTree;
 }
 
-std::string MerkleTreeString(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf)
+std::vector<std::vector<std::string>> RCBTree(const std::vector<uint256>& vLeaf)
 {
     // Create Merkle Tree from TxIDs
     std::vector<std::vector<uint256>> vTree = MerkleTree(vLeaf);
 
-    // Create Segwit merkle tree from NO_WITNESS TxIDs
-    std::vector<std::vector<uint256>> vSegwitTree = MerkleTree(vSegwitLeaf);
-
-    if (vTree.empty() || vSegwitTree.empty())
-        return "";
-
-    // Format results
-
-    std::stringstream ss;
-
-    ss << "Merkle Tree for block header hashMerkleRoot:\n\n";
-
-    size_t nTreeLevel = vTree.size() - 1;
-    for (auto ritx = vTree.rbegin(); ritx != vTree.rend(); ritx++) {
-        ss << "Level " << nTreeLevel;
-
-        if (nTreeLevel == vTree.size() - 1)
-            ss << " Merkle Root:\n";
-        else
-        if (nTreeLevel == 0)
-            ss << " (TxID):\n";
-        else
-            ss << " :\n";
-
-        // Add hashes with a ',' between every group of 2
-        uint8_t nNode = 0;
-        for (const uint256& hash : *ritx) {
-            nNode++;
-
-            if (nNode == 2 && hash != ritx->back()) {
-                ss << hash.ToString() << ", ";
-            } else {
-                ss << hash.ToString() << " ";
-            }
-
-            if (nNode == 2)
-                nNode = 0;
-        }
-        ss << "\n\n";
-
-        nTreeLevel--;
-    }
-
-    ss << strHelp;
-
-    ss << "Merkle Tree for Segwit coinbase commitment merkle root hash:\n\n";
-
-    nTreeLevel = vSegwitTree.size() - 1;
-    for (auto ritx = vSegwitTree.rbegin(); ritx != vSegwitTree.rend(); ritx++) {
-        ss << "Level " << nTreeLevel;
-
-        if (nTreeLevel == vSegwitTree.size() - 1)
-            ss << " Segwit Merkle Root:\n";
-        else
-        if (nTreeLevel == 0)
-            ss << " (Segwit TxID):\n";
-        else
-            ss << " :\n";
-
-        // Add hashes with a ',' between every group of 2
-        uint8_t nNode = 0;
-        for (const uint256& hash : *ritx) {
-            nNode++;
-
-            if (nNode == 2 && hash != ritx->back()) {
-                ss << hash.ToString() << ", ";
-            } else {
-                ss << hash.ToString() << " ";
-            }
-
-            if (nNode == 2)
-                nNode = 0;
-        }
-        ss << "\n\n";
-
-        nTreeLevel--;
-    }
-
-    return ss.str();
-}
-
-std::string RCBTreeString(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf)
-{
-    // Create Merkle Tree from TxIDs
-    std::vector<std::vector<uint256>> vTree = MerkleTree(vLeaf);
-
-    // Create Segwit merkle tree from NO_WITNESS TxIDs
-    std::vector<std::vector<uint256>> vSegwitTree = MerkleTree(vSegwitLeaf);
-
-    if (vTree.empty() || vSegwitTree.empty())
-        return "";
+    if (vTree.size() <= 1)
+        return std::vector<std::vector<std::string>>();
 
     // Make all levels of the tree even
     for (size_t x = 0; x < vTree.size(); x++) {
@@ -272,11 +179,51 @@ std::string RCBTreeString(const std::vector<uint256>& vLeaf, const std::vector<u
             vTree[x].push_back(vTree[x].back());
     }
 
-    // Make all levels of the segwit tree even
-    for (size_t x = 0; x < vSegwitTree.size(); x++) {
-        if (vSegwitTree[x].size() % 2)
-            vSegwitTree[x].push_back(vSegwitTree[x].back());
+    std::vector<std::vector<std::string>> vTreeString;
+    vTreeString.resize(vTree.size());
+
+    // Format results
+    size_t nLevel = vTree.size() - 1;
+    for (auto ritx = vTree.rbegin(); ritx != vTree.rend(); ritx++) {
+        if (ritx->size() < 2) {
+            return std::vector<std::vector<std::string>>();
+        }
+
+        // Loop through the level, reversing and concatenating every 2 hashes
+        for (auto it = ritx->begin(); it != ritx->end(); it += 2) {
+            uint256 hash1 = *it;
+            uint256 hash2 = *(it + 1);
+
+            bool fLast = hash2 == ritx->back();
+
+            std::reverse(hash1.begin(), hash1.end());
+            std::reverse(hash2.begin(), hash2.end());
+
+            std::string str = "";
+            if (fLast)
+                str = hash1.ToString() + hash2.ToString() + "\n";
+            else
+                str = hash1.ToString() + hash2.ToString() + ",  ";
+
+            vTreeString[nLevel].push_back(str);
+        }
+        nLevel--;
     }
+    return vTreeString;
+}
+
+std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool fRCB)
+{
+    // Create Merkle Tree from TxIDs
+    std::vector<std::vector<uint256>> vTree = MerkleTree(vLeaf);
+
+    // Create RCB string tree
+    std::vector<std::vector<std::string>> vRCBTree;
+    if (fRCB)
+        vRCBTree = RCBTree(vLeaf);
+
+    if (vTree.empty())
+        return "";
 
     // Format results
 
@@ -296,40 +243,59 @@ std::string RCBTreeString(const std::vector<uint256>& vLeaf, const std::vector<u
         else
             ss << " :\n";
 
-        // Add merkle root unchanged
-        if (nTreeLevel == vTree.size() - 1) {
-            ss << ritx->front().ToString() << "\n\n";
-            nTreeLevel--;
-            continue;
+        ss << "     ";
+
+        // Add hashes with a ',' between every group of 2
+        uint8_t nNode = 0;
+        for (const uint256& hash : *ritx) {
+            nNode++;
+
+            if (nNode == 2 && hash != ritx->back()) {
+                ss << hash.ToString() << ", ";
+            } else {
+                ss << hash.ToString() << " ";
+            }
+
+            if (nNode == 2)
+                nNode = 0;
         }
 
-        if (ritx->size() < 2)
-            return "";
-
-        // Loop through the level, reversing and concatenating every 2 hashes
-        for (auto it = ritx->begin(); it != ritx->end(); it += 2) {
-            uint256 hash1 = *it;
-            uint256 hash2 = *(it + 1);
-
-            bool fLast = hash2 == ritx->back();
-
-            std::reverse(hash1.begin(), hash1.end());
-            std::reverse(hash2.begin(), hash2.end());
-
-            if (fLast)
-                ss << hash1.ToString() + hash2.ToString();
-            else
-                ss << hash1.ToString() + hash2.ToString() << ", ";
+        // Now add the RCB for this level
+        if (fRCB && nTreeLevel != vTree.size() - 1) {
+            ss << "\nRCB: ";
+            for (const std::string& str : vRCBTree[nTreeLevel]) {
+                ss << str;
+            }
+            ss << "\n";
+        } else {
+            ss << "\n\n";
         }
-        ss << "\n\n";
+
         nTreeLevel--;
     }
+    return ss.str();
+}
 
-    ss << strHelp;
+std::string WitnessTreeString(const std::vector<uint256>& vSegwitLeaf, bool fRCB)
+{
+    // Create Segwit merkle tree from NO_WITNESS TxIDs
+    std::vector<std::vector<uint256>> vSegwitTree = MerkleTree(vSegwitLeaf);
+
+    // Create RCB string tree
+    std::vector<std::vector<std::string>> vRCBTree;
+    if (fRCB)
+        vRCBTree = RCBTree(vSegwitLeaf);
+
+    if (vSegwitTree.empty())
+        return "";
+
+    // Format results
+
+    std::stringstream ss;
 
     ss << "Merkle Tree for Segwit coinbase commitment merkle root hash:\n\n";
 
-    nTreeLevel = vSegwitTree.size() - 1;
+    size_t nTreeLevel = vSegwitTree.size() - 1;
     for (auto ritx = vSegwitTree.rbegin(); ritx != vSegwitTree.rend(); ritx++) {
         ss << "Level " << nTreeLevel;
 
@@ -341,34 +307,35 @@ std::string RCBTreeString(const std::vector<uint256>& vLeaf, const std::vector<u
         else
             ss << " :\n";
 
-        // Add merkle root unchanged
-        if (nTreeLevel == vSegwitTree.size() - 1) {
-            ss << ritx->front().ToString() << "\n\n";
-            nTreeLevel--;
-            continue;
+        ss << "     ";
+
+        // Add hashes with a ',' between every group of 2
+        uint8_t nNode = 0;
+        for (const uint256& hash : *ritx) {
+            nNode++;
+
+            if (nNode == 2 && hash != ritx->back()) {
+                ss << hash.ToString() << ", ";
+            } else {
+                ss << hash.ToString() << " ";
+            }
+
+            if (nNode == 2)
+                nNode = 0;
         }
 
-        if (ritx->size() < 2)
-            return "";
-
-        // Loop through the level, reversing and concatenating every 2 hashes
-        for (auto it = ritx->begin(); it != ritx->end(); it += 2) {
-            uint256 hash1 = *it;
-            uint256 hash2 = *(it + 1);
-
-            bool fLast = hash2 == ritx->back();
-
-            std::reverse(hash1.begin(), hash1.end());
-            std::reverse(hash2.begin(), hash2.end());
-
-            if (fLast)
-                ss << hash1.ToString() + hash2.ToString();
-            else
-                ss << hash1.ToString() + hash2.ToString() << ", ";
+        // Now add the RCB for this level
+        if (fRCB && nTreeLevel != vSegwitTree.size() - 1) {
+            ss << "\nRCB: ";
+            for (const std::string& str : vRCBTree[nTreeLevel]) {
+                ss << str;
+            }
+            ss << "\n";
+        } else {
+            ss << "\n\n";
         }
-        ss << "\n\n";
+
         nTreeLevel--;
     }
-
     return ss.str();
 }

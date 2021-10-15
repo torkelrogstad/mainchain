@@ -36,7 +36,7 @@ public Q_SLOTS:
     void on_checkBoxRCB_stateChanged(int checked);
 };
 
-std::string MerkleTreeString(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf);
-std::string RCBTreeString(const std::vector<uint256>& vLeaf, const std::vector<uint256>& vSegwitLeaf);
+std::string MerkleTreeString(const std::vector<uint256>& vLeaf, bool fRCB);
+std::string WitnessTreeString(const std::vector<uint256>& vSegwitLeaf, bool fRCB);
 
 #endif // MERKLETREEDIALOG_H
