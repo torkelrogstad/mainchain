@@ -189,6 +189,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 
     ui->pushButtonCreateNews->setIcon(platformStyle->SingleColorIcon(":/icons/broadcastnews"));
     ui->pushButtonManageNews->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonGraffiti->setIcon(platformStyle->SingleColorIcon(":/icons/spray"));
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()

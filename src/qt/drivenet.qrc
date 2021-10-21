@@ -6,6 +6,7 @@
         <file alias="address-book">res/icons/address-book.png</file>
         <file alias="quit">res/icons/quit.png</file>
         <file alias="send">res/icons/send.png</file>
+        <file alias="spray">res/icons/spray.png</file>
         <file alias="calculator">res/icons/calculator.png</file>
         <file alias="connect_0">res/icons/connect0.png</file>
         <file alias="connect_1">res/icons/connect1.png</file>
