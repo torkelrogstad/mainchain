@@ -19,6 +19,7 @@ class OPReturnDialog;
 QT_BEGIN_NAMESPACE
 class QMenu;
 class QModelIndex;
+class QSortFilterProxyModel;
 QT_END_NAMESPACE
 
 class OPReturnDialog : public QDialog
@@ -38,6 +39,7 @@ private:
     OPReturnTableModel *opReturnModel = nullptr;
     const PlatformStyle *platformStyle = nullptr;
     QMenu *contextMenu;
+    QSortFilterProxyModel *proxyModel;
 
 private Q_SLOTS:
     void on_tableView_doubleClicked(const QModelIndex& index);

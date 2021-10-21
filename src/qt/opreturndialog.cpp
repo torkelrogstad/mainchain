@@ -15,6 +15,7 @@
 #include <QMessageBox>
 #include <QPoint>
 #include <QScrollBar>
+#include <QSortFilterProxyModel>
 
 OPReturnDialog::OPReturnDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
@@ -26,7 +27,10 @@ OPReturnDialog::OPReturnDialog(const PlatformStyle *_platformStyle, QWidget *par
     createOPReturnDialog = new CreateOPReturnDialog(_platformStyle, this);
     opReturnModel = new OPReturnTableModel(this);
 
-    ui->tableView->setModel(opReturnModel);
+    proxyModel = new QSortFilterProxyModel(this);
+    proxyModel->setSourceModel(opReturnModel);
+
+    ui->tableView->setModel(proxyModel);
 
     // Resize cells (in a backwards compatible way)
 #if QT_VERSION < 0x050000
@@ -69,6 +73,9 @@ OPReturnDialog::OPReturnDialog(const PlatformStyle *_platformStyle, QWidget *par
     ui->pushButtonCreate->setIcon(platformStyle->SingleColorIcon(":/icons/add"));
 
     opReturnModel->setDays(ui->spinBoxDays->value());
+
+    ui->tableView->setSortingEnabled(true);
+    ui->tableView->sortByColumn(0, Qt::DescendingOrder);
 }
 
 OPReturnDialog::~OPReturnDialog()

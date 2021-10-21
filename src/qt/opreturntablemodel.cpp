@@ -174,24 +174,9 @@ void OPReturnTableModel::UpdateModel()
         }
     }
 
-    // Sort by fees
-    SortByFees(vObj);
-
     beginInsertRows(QModelIndex(), 0, vObj.size() - 1);
     for (const OPReturnTableObject& o : vObj)
         model.append(QVariant::fromValue(o));
     endInsertRows();
 }
 
-struct CompareByFee
-{
-    bool operator()(const OPReturnTableObject& a, const OPReturnTableObject& b) const
-    {
-        return a.fees > b.fees;
-    }
-};
-
-void OPReturnTableModel::SortByFees(std::vector<OPReturnTableObject>& vData)
-{
-    std::sort(vData.begin(), vData.end(), CompareByFee());
-}

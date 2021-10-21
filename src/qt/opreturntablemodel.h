@@ -52,7 +52,6 @@ private:
     ClientModel *clientModel = nullptr;
 
     void UpdateModel();
-    void SortByFees(std::vector<OPReturnTableObject>& vData);
 
     int nDays;
 };
