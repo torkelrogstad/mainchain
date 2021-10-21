@@ -102,6 +102,7 @@ QT_FORMS_UI = \
   qt/forms/coincontroldialog.ui \
   qt/forms/coinsplitconfirmationdialog.ui \
   qt/forms/createnewsdialog.ui \
+  qt/forms/createopreturndialog.ui \
   qt/forms/editaddressdialog.ui \
   qt/forms/hashcalcdialog.ui \
   qt/forms/helpmessagedialog.ui \
@@ -113,6 +114,7 @@ QT_FORMS_UI = \
   qt/forms/newsqrdialog.ui \
   qt/forms/merkletreedialog.ui \
   qt/forms/miningdialog.ui \
+  qt/forms/opreturndialog.ui \
   qt/forms/overviewpage.ui \
   qt/forms/receivecoinsdialog.ui \
   qt/forms/receiverequestdialog.ui \
@@ -149,6 +151,7 @@ QT_MOC_CPP = \
   qt/moc_coincontroltreewidget.cpp \
   qt/moc_coinsplitconfirmationdialog.cpp \
   qt/moc_createnewsdialog.cpp \
+  qt/moc_createopreturndialog.cpp \
   qt/moc_csvmodelwriter.cpp \
   qt/moc_editaddressdialog.cpp \
   qt/moc_guiutil.cpp \
@@ -166,6 +169,8 @@ QT_MOC_CPP = \
   qt/moc_newsqrdialog.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
+  qt/moc_opreturndialog.cpp \
+  qt/moc_opreturntablemodel.cpp \
   qt/moc_optionsdialog.cpp \
   qt/moc_optionsmodel.cpp \
   qt/moc_overviewpage.cpp \
@@ -245,6 +250,7 @@ DRIVENET_QT_H = \
   qt/coincontroltreewidget.h \
   qt/coinsplitconfirmationdialog.h \
   qt/createnewsdialog.h \
+  qt/createopreturndialog.h \
   qt/csvmodelwriter.h \
   qt/editaddressdialog.h \
   qt/guiconstants.h \
@@ -264,6 +270,8 @@ DRIVENET_QT_H = \
   qt/networkstyle.h \
   qt/notificator.h \
   qt/openuridialog.h \
+  qt/opreturndialog.h \
+  qt/opreturntablemodel.h \
   qt/optionsdialog.h \
   qt/optionsmodel.h \
   qt/overviewpage.h \
@@ -462,6 +470,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/coincontroltreewidget.cpp \
   qt/coinsplitconfirmationdialog.cpp \
   qt/createnewsdialog.cpp \
+  qt/createopreturndialog.cpp \
   qt/editaddressdialog.cpp \
   qt/latestblocktablemodel.cpp \
   qt/managenewsdialog.cpp \
@@ -471,6 +480,8 @@ DRIVENET_QT_WALLET_CPP = \
   qt/newstypestablemodel.cpp \
   qt/newsqrdialog.cpp \
   qt/openuridialog.cpp \
+  qt/opreturndialog.cpp \
+  qt/opreturntablemodel.cpp \
   qt/overviewpage.cpp \
   qt/paymentrequestplus.cpp \
   qt/paymentrequestdialog.cpp \

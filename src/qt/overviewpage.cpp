@@ -17,6 +17,7 @@
 #include <qt/newstablemodel.h>
 #include <qt/newstypestablemodel.h>
 #include <qt/optionsmodel.h>
+#include <qt/opreturndialog.h>
 #include <qt/platformstyle.h>
 #include <qt/transactionfilterproxy.h>
 #include <qt/transactiontablemodel.h>
@@ -57,6 +58,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 
     manageNewsDialog = new ManageNewsDialog(platformStyle, this);
     createNewsDialog = new CreateNewsDialog(platformStyle, this);
+    opReturnDialog = new OPReturnDialog(platformStyle, this);
     connect(manageNewsDialog, SIGNAL(NewTypeCreated()), this, SLOT(updateNewsTypes()));
     connect(manageNewsDialog, SIGNAL(NewTypeCreated()), createNewsDialog, SLOT(updateTypes()));
 
@@ -90,7 +92,6 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->tableViewBlocks->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewNews1->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     ui->tableViewNews2->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
 #endif
 
     // Don't stretch last cell of horizontal header
@@ -104,7 +105,6 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     ui->tableViewBlocks->verticalHeader()->setVisible(false);
     ui->tableViewNews1->verticalHeader()->setVisible(false);
     ui->tableViewNews2->verticalHeader()->setVisible(false);
-
 
     // Left align the horizontal header text
     ui->tableViewBlocks->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
@@ -206,6 +206,11 @@ void OverviewPage::on_pushButtonManageNews_clicked()
     manageNewsDialog->show();
 }
 
+void OverviewPage::on_pushButtonGraffiti_clicked()
+{
+    opReturnDialog->show();
+}
+
 OverviewPage::~OverviewPage()
 {
     delete ui;
@@ -267,6 +272,7 @@ void OverviewPage::setClientModel(ClientModel *model)
 
         newsModel1->setClientModel(model);
         newsModel2->setClientModel(model);
+        opReturnDialog->setClientModel(model);
     }
 }
 

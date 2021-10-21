@@ -18,6 +18,7 @@ class ManageNewsDialog;
 class MemPoolTableModel;
 class NewsTableModel;
 class NewsTypesTableModel;
+class OPReturnDialog;
 class PlatformStyle;
 class SidechainWithdrawalTableModel;
 class TransactionFilterProxy;
@@ -68,6 +69,7 @@ private:
     NewsTableModel *newsModel1 = nullptr;
     NewsTableModel *newsModel2 = nullptr;
     NewsTypesTableModel *newsTypesTableModel = nullptr;
+    OPReturnDialog *opReturnDialog = nullptr;
     WalletModel *walletModel;
     CAmount currentBalance;
     CAmount currentUnconfirmedBalance;
@@ -87,6 +89,7 @@ private Q_SLOTS:
     void handleOutOfSyncWarningClicks();
     void on_pushButtonCreateNews_clicked();
     void on_pushButtonManageNews_clicked();
+    void on_pushButtonGraffiti_clicked();
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
     void on_tableViewMempool_doubleClicked(const QModelIndex& index);
     void on_tableViewNews1_doubleClicked(const QModelIndex& index);

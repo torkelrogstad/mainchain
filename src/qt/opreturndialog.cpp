@@ -1,0 +1,125 @@
+// Copyright (c) 2021 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include <qt/opreturndialog.h>
+#include <qt/forms/ui_opreturndialog.h>
+
+#include <qt/clientmodel.h>
+#include <qt/createopreturndialog.h>
+#include <qt/opreturntablemodel.h>
+
+#include <qt/platformstyle.h>
+
+#include <QMenu>
+#include <QMessageBox>
+#include <QPoint>
+#include <QScrollBar>
+
+OPReturnDialog::OPReturnDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::OPReturnDialog),
+    platformStyle(_platformStyle)
+{
+    ui->setupUi(this);
+
+    createOPReturnDialog = new CreateOPReturnDialog(_platformStyle, this);
+    opReturnModel = new OPReturnTableModel(this);
+
+    ui->tableView->setModel(opReturnModel);
+
+    // Resize cells (in a backwards compatible way)
+#if QT_VERSION < 0x050000
+    ui->tableView->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);
+#else
+    ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#endif
+
+    // Stretch last section
+    ui->tableView->horizontalHeader()->setStretchLastSection(true);
+
+    // Hide vertical header
+    ui->tableView->verticalHeader()->setVisible(false);
+
+    // Left align the horizontal header text
+    ui->tableView->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+
+    // Set horizontal scroll speed to per 3 pixels (very smooth, default is awful)
+    ui->tableView->horizontalHeader()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableView->horizontalHeader()->horizontalScrollBar()->setSingleStep(3); // 3 Pixels
+
+    // Disable word wrap
+    ui->tableView->setWordWrap(false);
+
+    // Select rows
+    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+    // Apply custom context menu
+    ui->tableView->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    QAction *showDetailsAction = new QAction(tr("Show full data decode"), this);
+    contextMenu = new QMenu(this);
+    contextMenu->setObjectName("contextMenuOPReturn");
+    contextMenu->addAction(showDetailsAction);
+
+    // Connect context menus
+    connect(ui->tableView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
+    connect(showDetailsAction, SIGNAL(triggered()), this, SLOT(showDetails()));
+
+    ui->pushButtonCreate->setIcon(platformStyle->SingleColorIcon(":/icons/add"));
+
+    opReturnModel->setDays(ui->spinBoxDays->value());
+}
+
+OPReturnDialog::~OPReturnDialog()
+{
+    delete ui;
+}
+
+void OPReturnDialog::setClientModel(ClientModel *model)
+{
+    if(model && opReturnModel)
+    {
+        opReturnModel->setClientModel(model);
+    }
+}
+
+void OPReturnDialog::on_tableView_doubleClicked(const QModelIndex& index)
+{
+    if (!index.isValid())
+        return;
+
+    QString strDecode = index.data(OPReturnTableModel::OPReturnRole).toString();
+
+    QMessageBox messageBox;
+    messageBox.setWindowTitle("OP_RETURN data");
+    messageBox.setText(strDecode);
+    messageBox.exec();
+}
+
+void OPReturnDialog::contextualMenu(const QPoint &point)
+{
+    QModelIndex index = ui->tableView->indexAt(point);
+    if (index.isValid())
+        contextMenu->popup(ui->tableView->viewport()->mapToGlobal(point));
+}
+
+void OPReturnDialog::showDetails()
+{
+    if (!ui->tableView->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows();
+    if (!selection.isEmpty())
+        on_tableView_doubleClicked(selection.front());
+}
+
+void OPReturnDialog::on_pushButtonCreate_clicked()
+{
+    createOPReturnDialog->show();
+}
+
+void OPReturnDialog::on_spinBoxDays_valueChanged(int nDays)
+{
+    opReturnModel->setDays(nDays);
+}
