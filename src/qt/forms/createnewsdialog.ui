@@ -15,13 +15,6 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>News:</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QComboBox" name="comboBoxCategory"/>
    </item>
    <item>

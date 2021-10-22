@@ -120,8 +120,12 @@ void CreateNewsDialog::on_pushButtonCreate_clicked()
 void CreateNewsDialog::on_pushButtonHelp_clicked()
 {
     QMessageBox messageBox;
-    messageBox.setWindowTitle("Help!");
-    messageBox.setText("help");
+    messageBox.setWindowTitle("News Help");
+    QString str = tr("With this page you can pay a fee to broadcast news on any topic. "
+                     "Clicking \"Broadcast\" will create a transaction with an OP_RETURN "
+                     "output that encodes the text you have entered. Anyone subscribed to "
+                     "the topic will see posts filtered by time and sorted by fee amount.");
+    messageBox.setText(str);
     messageBox.exec();
 }
 
