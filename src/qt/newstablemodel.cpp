@@ -62,10 +62,25 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
         }
         // Decode
         if (col == 2) {
-            if (object.decode.size() > NEWS_HEADLINE_CHARS)
-                return QString::fromStdString(object.decode).left(NEWS_HEADLINE_CHARS) + "...";
-            else
-                return QString::fromStdString(object.decode);
+            // Display up to NEWS_HEADLINE_CHARS or until newline
+            QString str = "";
+            bool fNewline = false;
+            for (size_t x = 0; x < object.decode.size(); x++) {
+                if (x == NEWS_HEADLINE_CHARS)
+                    break;
+
+                if (object.decode[x] == '\n' || object.decode[x] == '\r') {
+                    fNewline = true;
+                    break;
+                }
+
+                str += object.decode[x];
+            }
+
+            if (fNewline || object.decode.size() > NEWS_HEADLINE_CHARS)
+                str += "...";
+
+            return str;
         }
     }
     case Qt::TextAlignmentRole:
