@@ -116,7 +116,7 @@ QVariant NewsTableModel::headerData(int section, Qt::Orientation orientation, in
             case 1:
                 return QString("Time");
             case 2:
-                return QString("Decode");
+                return QString("Headline");
             }
         }
     }
