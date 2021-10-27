@@ -23,6 +23,7 @@ struct OPReturnTableObject
     int nTime;
     std::string decode;
     std::string fees;
+    int feeAmount;
 };
 
 class OPReturnTableModel : public QAbstractTableModel

@@ -34,6 +34,7 @@ QT_BEGIN_NAMESPACE
 class QDateTime;
 class QMenu;
 class QModelIndex;
+class QSortFilterProxyModel;
 class QTimer;
 QT_END_NAMESPACE
 
@@ -81,6 +82,8 @@ private:
     QMenu *contextMenuNews2;
     QMenu *contextMenuMempool;
     QMenu *contextMenuBlocks;
+    QSortFilterProxyModel *proxyModelNews1;
+    QSortFilterProxyModel *proxyModelNews2;
 
 private Q_SLOTS:
     void updateDisplayUnit();

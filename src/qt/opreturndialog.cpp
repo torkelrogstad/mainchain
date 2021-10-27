@@ -29,6 +29,7 @@ OPReturnDialog::OPReturnDialog(const PlatformStyle *_platformStyle, QWidget *par
 
     proxyModel = new QSortFilterProxyModel(this);
     proxyModel->setSourceModel(opReturnModel);
+    proxyModel->setSortRole(Qt::EditRole);
 
     ui->tableView->setModel(proxyModel);
 

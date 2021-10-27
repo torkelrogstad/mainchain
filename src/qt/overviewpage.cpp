@@ -27,6 +27,7 @@
 #include <QMenu>
 #include <QPoint>
 #include <QScrollBar>
+#include <QSortFilterProxyModel>
 
 #include <txdb.h>
 #include <validation.h>
@@ -68,13 +69,31 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     latestBlockModel = new LatestBlockTableModel(this);
     ui->tableViewBlocks->setModel(latestBlockModel);
 
+
+
     newsModel1 = new NewsTableModel(this);
     newsModel1->setNewsTypesModel(newsTypesTableModel);
-    ui->tableViewNews1->setModel(newsModel1);
+
+    proxyModelNews1 = new QSortFilterProxyModel(this);
+    proxyModelNews1->setSourceModel(newsModel1);
+    proxyModelNews1->setSortRole(Qt::EditRole);
+
+    ui->tableViewNews1->setModel(proxyModelNews1);
 
     newsModel2 = new NewsTableModel(this);
     newsModel2->setNewsTypesModel(newsTypesTableModel);
-    ui->tableViewNews2->setModel(newsModel2);
+
+    proxyModelNews2 = new QSortFilterProxyModel(this);
+    proxyModelNews2->setSourceModel(newsModel2);
+    proxyModelNews2->setSortRole(Qt::EditRole);
+
+    ui->tableViewNews2->setModel(proxyModelNews2);
+
+    ui->tableViewNews1->setSortingEnabled(true);
+    ui->tableViewNews1->sortByColumn(0, Qt::DescendingOrder);
+
+    ui->tableViewNews2->setSortingEnabled(true);
+    ui->tableViewNews2->sortByColumn(0, Qt::DescendingOrder);
 
     blockIndexDialog = new BlockIndexDetailsDialog(this);
 

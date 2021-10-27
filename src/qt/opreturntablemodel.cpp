@@ -79,6 +79,21 @@ QVariant OPReturnTableModel::data(const QModelIndex &index, int role) const
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
+    case Qt::EditRole:
+    {
+        // Fees
+        if (col == 0) {
+            return object.feeAmount;
+        }
+        // Time
+        if (col == 1) {
+            return object.nTime;
+        }
+        // Decode
+        if (col == 2) {
+            return QString::fromStdString(object.decode);
+        }
+    }
     case OPReturnRole:
     {
         return QString::fromStdString(object.decode);
@@ -169,6 +184,7 @@ void OPReturnTableModel::UpdateModel()
 
             object.decode = strDecode;
             object.fees = FormatMoney(d.fees);
+            object.feeAmount = d.fees;
 
             vObj.push_back(object);
         }
@@ -179,4 +195,3 @@ void OPReturnTableModel::UpdateModel()
         model.append(QVariant::fromValue(o));
     endInsertRows();
 }
-

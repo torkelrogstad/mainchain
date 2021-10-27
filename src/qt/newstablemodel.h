@@ -24,6 +24,7 @@ struct NewsTableObject
     int nTime;
     std::string decode;
     std::string fees;
+    int feeAmount;
 };
 
 static const size_t NEWS_HEADLINE_CHARS = 64;
