@@ -132,6 +132,12 @@ void HashCalcDialog::on_radioButtonHex_toggled(bool fChecked)
         UpdateOutput();
     }
 
+    if (fChecked) {
+        ui->plainTextEdit->setPlaceholderText("Enter Hex");
+    } else {
+        ui->plainTextEdit->setPlaceholderText("Enter plain text");
+    }
+
     ui->pushButtonFlip->setEnabled(fChecked);
 }
 
