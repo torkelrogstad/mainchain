@@ -1959,7 +1959,7 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
 
     UniValue ret(UniValue::VARR);
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("nsidechains", data.vWTPrimeStatus.size()));
+    obj.push_back(Pair("nsidechains", (unsigned int)data.vWTPrimeStatus.size()));
     ret.push_back(obj);
     for (auto& x : data.vWTPrimeStatus) {
         for (auto& y : x) {
@@ -2048,7 +2048,7 @@ UniValue getopreturndata(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("txid", d.txid.ToString()));
         obj.push_back(Pair("script", ScriptToAsmStr(d.script)));
-        obj.push_back(Pair("size", d.nSize));
+        obj.push_back(Pair("size", (unsigned int)d.nSize));
         obj.push_back(Pair("fees", FormatMoney(d.fees)));
 
         std::string strDecode;
