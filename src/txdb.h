@@ -181,7 +181,7 @@ struct OPReturnData
 {
     uint256 txid;
     CScript script;
-    size_t nSize;
+    unsigned int nSize;
     CAmount fees;
 
     ADD_SERIALIZE_METHODS
@@ -204,7 +204,7 @@ struct NewsType
     // Number of days news in this category is collected and ranked before
     // staring a new period. If the number is 7 then the last 7 days of this
     // news type should be ranked and displayed on the news table at a time.
-    size_t nDays;
+    unsigned int nDays;
 
     ADD_SERIALIZE_METHODS
 
