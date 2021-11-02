@@ -150,37 +150,34 @@ void CreateNewsDialog::on_plainTextEdit_textChanged()
     else
         ui->labelCharsRemaining->setText(QString::number(NEWS_HEADLINE_CHARS - strText.size()));
 
-    // Highlight characters when there are too many to fit in the headline
-    // or after a newline is added.
+    // Where the headline ends
+    size_t nHeadlineEnd = 0;
 
-    // Highlight characters if we've gone over the limit
-    if (strText.size() > NEWS_HEADLINE_CHARS) {
-        QTextCursor cursor(ui->plainTextEdit->document());
-
-        QTextCharFormat highlight;
-        highlight.setBackground(Qt::red);
-
-        cursor.setPosition(NEWS_HEADLINE_CHARS, QTextCursor::MoveAnchor);
-        cursor.setPosition(strText.size(), QTextCursor::KeepAnchor);
-        cursor.setCharFormat(highlight);
-    }
-
-    // Check for any newlines and if we find one before the character
-    // limit then highlight
+    // Check for any newlines
+    bool fNewLine = false;
     for (size_t i = 0; i < strText.size(); i++) {
         if (strText[i] == '\n' || strText[i] == '\r') {
-            QTextCursor cursor(ui->plainTextEdit->document());
-
-            QTextCharFormat highlight;
-            highlight.setBackground(Qt::red);
-
-            cursor.setPosition(i, QTextCursor::MoveAnchor);
-            cursor.setPosition(strText.size(), QTextCursor::KeepAnchor);
-            cursor.setCharFormat(highlight);
-
             ui->labelCharsRemaining->setText(QString::number(0));
+            nHeadlineEnd = i;
+            fNewLine = true;
+            break;
         }
     }
+
+    if (fNewLine)
+        nHeadlineEnd = nHeadlineEnd < NEWS_HEADLINE_CHARS ? nHeadlineEnd : NEWS_HEADLINE_CHARS;
+    else
+        nHeadlineEnd = strText.size() < NEWS_HEADLINE_CHARS ? strText.size() : NEWS_HEADLINE_CHARS;
+
+    // Highlight characters that will fit into the headline
+    cursor = QTextCursor(ui->plainTextEdit->document());
+
+    QTextCharFormat highlight;
+    highlight.setBackground(Qt::green);
+
+    cursor.setPosition(0, QTextCursor::MoveAnchor);
+    cursor.setPosition(nHeadlineEnd, QTextCursor::KeepAnchor);
+    cursor.setCharFormat(highlight);
 }
 
 void CreateNewsDialog::updateTypes()
