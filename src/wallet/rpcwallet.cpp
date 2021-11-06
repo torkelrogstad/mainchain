@@ -3626,9 +3626,9 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strError);
     }
 
-    // Reject deposits to SIDECHAIN_WTPRIME_RETURN_DEST
-    if (strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
-        std::string strError = "Invalid sidechain address. Cannot be SIDECHAIN_WTPRIME_RETURN_DEST. Choose a different address and try again,";
+    // Reject deposits to SIDECHAIN_WITHDRAWAL_RETURN_DEST
+    if (strDest == SIDECHAIN_WITHDRAWAL_RETURN_DEST) {
+        std::string strError = "Invalid sidechain address. Cannot be SIDECHAIN_WITHDRAWAL_RETURN_DEST. Choose a different address and try again,";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strError);
     }

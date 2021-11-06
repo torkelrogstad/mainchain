@@ -28,9 +28,9 @@ struct SidechainBlockData;
 struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
-struct SidechainWTPrimeState;
-struct SidechainSpentWTPrime;
-struct SidechainFailedWTPrime;
+struct SidechainWithdrawalState;
+struct SidechainSpentWithdrawal;
+struct SidechainFailedWithdrawal;
 
 class SidechainDB
 {
@@ -48,14 +48,14 @@ public:
     /** Add deposit(s) to cache */
     void AddDeposits(const std::vector<SidechainDeposit>& vDeposit);
 
-    /** Add a new WT^ to SCDB */
-    bool AddWTPrime(uint8_t nSidechain, const uint256& hashWTPrime, int nHeight, bool fDebug = false);
+    /** Add a new withdrawal bundle to SCDB */
+    bool AddWithdrawal(uint8_t nSidechain, const uint256& hash, int nHeight, bool fDebug = false);
 
-    /** Add spent WT^(s) to SCDB */
-    void AddSpentWTPrimes(const std::vector<SidechainSpentWTPrime>& vSpent);
+    /** Add spent withdrawals to SCDB */
+    void AddSpentWithdrawals(const std::vector<SidechainSpentWithdrawal>& vSpent);
 
-    /** Add failed WT^(s) to SCDB */
-    void AddFailedWTPrimes(const std::vector<SidechainFailedWTPrime>& vFailed);
+    /** Add failed withdrawals to SCDB */
+    void AddFailedWithdrawals(const std::vector<SidechainFailedWithdrawal>& vFailed);
 
     /** Remove failed BMM request from cache once it has been abandoned */
     void BMMAbandoned(const uint256& txid);
@@ -75,11 +75,11 @@ public:
     /** Add sidechain-to-be-activated hash to cache */
     void CacheSidechainHashToAck(const uint256& u);
 
-    /** Add WT^ to the in-memory cache */
-    bool CacheWTPrime(const CTransaction& tx, const uint8_t nSidechain);
+    /** Add withdrawal transaction to the in-memory cache */
+    bool CacheWithdrawalTx(const CTransaction& tx, const uint8_t nSidechain);
 
-    /** Check SCDB WT^ verification status */
-    bool CheckWorkScore(uint8_t nSidechain, const uint256& hashWTPrime, bool fDebug = false) const;
+    /** Check SCDB withdrawal verification status */
+    bool CheckWorkScore(uint8_t nSidechain, const uint256& hash, bool fDebug = false) const;
 
     /** Clear out the cached list of removed sidechain deposit transactions */
     void ClearRemovedDeposits();
@@ -109,9 +109,9 @@ public:
     /** Return the CTIP (critical transaction index pair) for all sidechains */
     std::map<uint8_t, SidechainCTIP> GetCTIP() const;
 
-    bool GetCachedWTPrime(const uint256& hashWTPrime, CMutableTransaction& mtx) const;
+    bool GetCachedWithdrawalTx(const uint256& hash, CMutableTransaction& mtx) const;
 
-    /** Return vector of cached custom sidechain WT^ votes */
+    /** Return vector of cached custom withdrawal votes */
     std::vector<SidechainCustomVote> GetCustomVoteCache() const;
 
     /** Return vector of cached deposits for nSidechain. */
@@ -124,7 +124,7 @@ public:
     uint256 GetHashBlockLastSeen();
 
     /** For testing purposes - return the hash of everything that SCDB is
-     * tracking instead of just WT^ state as GetSCDBHash() does.
+     * tracking instead of just withdrawal state as GetSCDBHash() does.
      * This includes members used for consensus as well as user data like
      * which sidechain(s) they have set votes for and their own sidechain
      * proposals. */
@@ -134,7 +134,7 @@ public:
     uint256 GetSCDBHash() const;
 
     /** Return what the SCDB hash would be if the updates are applied */
-    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWTPrimeState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fRemoveExpired = false) const;
+    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWithdrawalState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWithdrawal = {}, bool fRemoveExpired = false) const;
 
     /** Get the sidechain that relates to nSidechain if it exists */
     bool GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const;
@@ -154,29 +154,29 @@ public:
     /** Get list of sidechains that we have set to ACK */
     std::vector<uint256> GetSidechainsToActivate() const;
 
-    /** Get a list of WT^(s) spent in a given block */
-    std::vector<SidechainSpentWTPrime> GetSpentWTPrimesForBlock(const uint256& hashBlock) const;
+    /** Get a list of withdrawals spent in a given block */
+    std::vector<SidechainSpentWithdrawal> GetSpentWithdrawalsForBlock(const uint256& hashBlock) const;
 
-    /** Get status of nSidechain's WT^(s) (public for unit tests) */
-    std::vector<SidechainWTPrimeState> GetState(uint8_t nSidechain) const;
+    /** Get status of nSidechain's withdrawals (public for unit tests) */
+    std::vector<SidechainWithdrawalState> GetState(uint8_t nSidechain) const;
 
-    std::vector<std::vector<SidechainWTPrimeState>> GetState() const;
+    std::vector<std::vector<SidechainWithdrawalState>> GetState() const;
 
-    /** Return cached but uncommitted WT^ transaction's hash(s) for nSidechain */
-    std::vector<uint256> GetUncommittedWTPrimeCache(uint8_t nSidechain) const;
+    /** Return cached but uncommitted withdrawal transaction hash(s) for nSidechain */
+    std::vector<uint256> GetUncommittedWithdrawalCache(uint8_t nSidechain) const;
 
-    /** Returns SCDB WT^ state with single vote type applied to all of the most
-     * recent WT^(s) in the cache */
-    std::vector<SidechainWTPrimeState> GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWTPrime) const;
+    /** Returns SCDB withdrawal state with single vote type applied to all of
+     * the most recent withdrawal for each sidechain in the cache */
+    std::vector<SidechainWithdrawalState> GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWithdrawal) const;
 
-    /** Return cached WT^ transaction(s) */
-    std::vector<std::pair<uint8_t, CMutableTransaction>> GetWTPrimeCache() const;
+    /** Return cached withdrawal transaction(s) */
+    std::vector<std::pair<uint8_t, CMutableTransaction>> GetWithdrawalTxCache() const;
 
-    /** Return cached spent WT^(s) as a vector for dumping to disk */
-    std::vector<SidechainSpentWTPrime> GetSpentWTPrimeCache() const;
+    /** Return cached spent withdrawals as a vector for dumping to disk */
+    std::vector<SidechainSpentWithdrawal> GetSpentWithdrawalCache() const;
 
-    /** Return cached failed WT^(s) as a vector for dumping to disk */
-    std::vector<SidechainFailedWTPrime> GetFailedWTPrimeCache() const;
+    /** Return cached failed withdrawals^ as a vector for dumping to disk */
+    std::vector<SidechainFailedWithdrawal> GetFailedWithdrawalCache() const;
 
     /** Is there anything being tracked by the SCDB? */
     bool HasState() const;
@@ -188,17 +188,17 @@ public:
     /** Return true if the deposit transaction is cached */
     bool HaveDepositCached(const uint256& txid) const;
 
-    /** Return true if the WT^ has been spent */
-    bool HaveSpentWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const;
+    /** Return true if the withdrawal has been spent */
+    bool HaveSpentWithdrawal(const uint256& hash, const uint8_t nSidechain) const;
 
-    /** Return true if the WT^ failed */
-    bool HaveFailedWTPrime(const uint256& hashWTPrime, const uint8_t nSidechain) const;
+    /** Return true if the withdrawal failed */
+    bool HaveFailedWithdrawal(const uint256& hash, const uint8_t nSidechain) const;
 
-    /** Return true if the full WT^ CTransaction is cached */
-    bool HaveWTPrimeCached(const uint256& hashWTPrime) const;
+    /** Return true if the withdrawal tx is cached */
+    bool HaveWithdrawalTxCached(const uint256& hash) const;
 
-    /** Check if SCDB is tracking the work score of a WT^ */
-    bool HaveWTPrimeWorkScore(const uint256& hashWTPrime, uint8_t nSidechain) const;
+    /** Check if SCDB is tracking the work score of a withdrawal */
+    bool HaveWorkScore(const uint256& hash, uint8_t nSidechain) const;
 
     /** Check if a sidechain slot number has active sidechain */
     bool IsSidechainActive(uint8_t nSidechain) const;
@@ -208,30 +208,30 @@ public:
      * pending sidechain proposal. */
     bool IsSidechainUnique(const Sidechain& sidechain) const;
 
-    /* Remove WT^(s) that are too old to pass with their current score */
-    void RemoveExpiredWTPrimes();
+    /* Remove withdrawals that are too old to pass with their current score */
+    void RemoveExpiredWithdrawals();
 
     /** Remove sidechain-to-be-activated hash from cache, because the user
      * changed their mind */
     void RemoveSidechainHashToAck(const uint256& u);
 
     /** Reset SCDB and clear out all data tracked by SidechainDB */
-    void ResetWTPrimeState();
+    void ResetWithdrawalState();
 
-    /** Clear out the WT^ custom vote cache */
-    void ResetWTPrimeVotes();
+    /** Clear out the custom vote cache */
+    void ResetWithdrawalVotes();
 
     /** Reset everything */
     void Reset();
 
-    /** Spend a WT^ (if we can) */
-    bool SpendWTPrime(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, const int nTx, bool fJustCheck = false,  bool fDebug = false);
+    /** Spend a withdrawal bundle (if we can) */
+    bool SpendWithdrawal(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, const int nTx, bool fJustCheck = false,  bool fDebug = false);
 
     /** Get SidechainDeposit from deposit CTransaction. Part of SCDB because
      * we need the list of active sidechains to find deposit outputs. */
     bool TxnToDeposit(const CTransaction& tx, const int nTx, const uint256& hashBlock, SidechainDeposit& deposit);
 
-    /** Print SCDB WT^ verification status */
+    /** Print SCDB withdrawal verification status */
     std::string ToString() const;
 
     /** Check the updates in a block and then apply them */
@@ -240,18 +240,18 @@ public:
     /** Undo the changes to SCDB of a block - for block is disconnection */
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
 
-    /** Update / add multiple SCDB WT^(s) to SCDB */
-    bool UpdateSCDBIndex(const std::vector<SidechainWTPrimeState>& vNewScores, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWTPrime = {}, bool fSkipDec = false, bool fRemoveExpired = false);
+    /** Update / add multiple withdrawals to SCDB */
+    bool UpdateSCDBIndex(const std::vector<SidechainWithdrawalState>& vNewScores, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWithdrawal = {}, bool fSkipDec = false, bool fRemoveExpired = false);
 
     /** Read the SCDB hash in a new block and try to synchronize our SCDB by
      * testing possible work score updates until the SCDB hash of our SCDB
      * matches the one from the new block. Return false if no match found. */
-    bool UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, const std::vector<SidechainWTPrimeState>& vScores = {}, const std::map<uint8_t, uint256>& mapNewWTPrime = {});
+    bool UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, const std::vector<SidechainWithdrawalState>& vScores = {}, const std::map<uint8_t, uint256>& mapNewWithdrawal = {});
 
 private:
     /**
-     * Submit default vote for all sidechain WT^(s). Used when a new block does
-     * not contain a valid update. */
+     * Apply default abstain vote for all sidechain withdrawals. Used when a new
+     * block does not contain a valid update. */
     void ApplyDefaultUpdate();
 
     /** Apply the changes in a block to SCDB */
@@ -298,20 +298,20 @@ private:
      * which should be included in the next block that this node mines. */
     std::vector<Sidechain> vSidechainProposal;
 
-    /** Cache of potential WT^ transactions
+    /** Cache of potential withdrawal transactions
      * TODO consider refactoring to use CTransactionRef */
-    std::vector<std::pair<uint8_t, CMutableTransaction>> vWTPrimeCache;
+    std::vector<std::pair<uint8_t, CMutableTransaction>> vWithdrawalTxCache;
 
-    /** Tracks verification status of WT^(s)
+    /** Tracks verification status of withdrawals
      * x = nSidechain
-     * y = state of WT^(s) for nSidechain */
-    std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
+     * y = state of withdrawals for nSidechain */
+    std::vector<std::vector<SidechainWithdrawalState>> vWithdrawalStatus;
 
-    /** Map of spent WT^(s) key: block hash value: Spent WT^(s) from block */
-    std::map<uint256, std::vector<SidechainSpentWTPrime>> mapSpentWTPrime;
+    /** Map of spent withdrawals. Key: block hash Value: Spent withdrawals from block */
+    std::map<uint256, std::vector<SidechainSpentWithdrawal>> mapSpentWithdrawal;
 
-    /** Map of failed WT^(s) key: WT^ hash value: Spent WT^ data **/
-    std::map<uint256, SidechainFailedWTPrime> mapFailedWTPrime;
+    /** Map of failed withdrawals. Key: withdrawal hash Value: spent withdrawal */
+    std::map<uint256, SidechainFailedWithdrawal> mapFailedWithdrawal;
 
     /** List of BMM request txid that the miner removed from the mempool. */
     std::set<uint256> setRemovedBMM;
@@ -322,17 +322,17 @@ private:
     /** List of sidechain deposits that were removed from the mempool for one
      * of a few reasons. The deposit could have been replaced by another deposit
      * that made it to the mempool first, spending the same CTIP. Or the deposit
-     * may have been in the mempool when a WT^ payout was created, spending the
-     * same CTIP as the deposit. */
+     * may have been in the mempool when a withdrawal payout was created,
+     * spending the same CTIP as the deposit. */
     std::vector<uint256> vRemovedDeposit;
 
 };
 
-/** Read encoded sum of WT fees from WT^ output script */
-bool DecodeWTFees(const CScript& script, CAmount& amount);
+/** Read encoded sum of withdrawal fees output script */
+bool DecodeWithdrawalFees(const CScript& script, CAmount& amount);
 
 /** Read an SCDB update script and return new scores by reference if valid */
-bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vOldScores, std::vector<SidechainWTPrimeState>& vNewScores);
+bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<SidechainWithdrawalState>& vNewScores);
 
 /** Sort deposits by CTIP UTXO spending order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);

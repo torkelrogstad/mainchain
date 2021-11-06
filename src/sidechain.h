@@ -16,13 +16,16 @@
 //static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 201;
 //static const int SIDECHAIN_ACTIVATION_PERIOD = 2016;
 
-// These are temporary WT^ verification values to speed things up during testing
+// These are temporary withdrawal bundle verification values for testing
 
-//! The number of blocks that a WT^ has to acheieve minimum work score votes
-static const int SIDECHAIN_VERIFICATION_PERIOD = 263;
+//! Blocks that a withdrawal bundle has to acheieve minimum work score
+static const int SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD = 263;
 
-//! The minimum workscore votes for a WT^ to be paid out.
-static const int SIDECHAIN_MIN_WORKSCORE = 131;
+//! The minimum workscore votes for a withdrawal bundle to be paid out.
+static const int SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE = 131;
+
+//! The destination string for the change of a withdrawal bundle
+static const std::string SIDECHAIN_WITHDRAWAL_RETURN_DEST = "D";
 
 //! Max number of failures (blocks without commits) for a sidechain to activate
 static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 2;
@@ -31,7 +34,7 @@ static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 2;
 static const int SIDECHAIN_ACTIVATION_PERIOD = 20;
 
 //! The number of blocks in a sidechain replacement period
-static const int SIDECHAIN_REPLACEMENT_PERIOD = SIDECHAIN_MIN_WORKSCORE;
+static const int SIDECHAIN_REPLACEMENT_PERIOD = SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE;
 
 //! The number of sidechains which may be active at once
 static const int SIDECHAIN_ACTIVATION_MAX_ACTIVE = 256;
@@ -44,9 +47,6 @@ static const int SIDECHAIN_VERSION_MAX = 0;
 
 //! The key for sidechain block data in ldb
 static const char DB_SIDECHAIN_BLOCK_OP = 'S';
-
-//! The destination string for the change of a WT^
-static const std::string SIDECHAIN_WTPRIME_RETURN_DEST = "D";
 
 struct Sidechain {
     bool fActive;
@@ -171,22 +171,20 @@ struct SidechainDeposit {
     }
 };
 
+// Custom votes for withdrawal bundles set by user
 static const char SCDB_UPVOTE = 'u';
 static const char SCDB_DOWNVOTE = 'd';
 static const char SCDB_ABSTAIN = 'a';
-
-// A vote set by the user to specify custom votes for particular WT^(s) - Used
-// by the miner to pass minimal data GenerateSCDBUpdateScript()
 struct SidechainCustomVote
 {
-    char vote; // SCDB_UPVOTE, SCDB_DOWNVOTE or SCDB_ABSTAIN
-    uint8_t nSidechain;
-    uint256 hashWTPrime;
+    char vote;          // SCDB_UPVOTE, SCDB_DOWNVOTE or SCDB_ABSTAIN
+    uint8_t nSidechain; // Withdrawal bundle sidechain number
+    uint256 hash;       // Withdrawal bundle hash
 
     bool operator==(const SidechainCustomVote& v) const
     {
         return (vote == v.vote && nSidechain == v.nSidechain
-                && hashWTPrime == v.hashWTPrime);
+                && hash== v.hash);
     }
 
     ADD_SERIALIZE_METHODS
@@ -195,19 +193,19 @@ struct SidechainCustomVote
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(vote);
         READWRITE(nSidechain);
-        READWRITE(hashWTPrime);
+        READWRITE(hash);
     }
 };
 
-struct SidechainWTPrimeState {
+struct SidechainWithdrawalState {
     uint8_t nSidechain;
     uint16_t nBlocksLeft;
     uint16_t nWorkScore;
-    uint256 hashWTPrime;
+    uint256 hash;
 
     bool IsNull() const;
     uint256 GetHash() const;
-    bool operator==(const SidechainWTPrimeState& a) const;
+    bool operator==(const SidechainWithdrawalState& a) const;
     std::string ToString() const;
 
     // For hash calculation
@@ -218,13 +216,13 @@ struct SidechainWTPrimeState {
         READWRITE(nSidechain);
         READWRITE(nBlocksLeft);
         READWRITE(nWorkScore);
-        READWRITE(hashWTPrime);
+        READWRITE(hash);
     }
 };
 
-struct SidechainSpentWTPrime {
+struct SidechainSpentWithdrawal {
     uint8_t nSidechain;
-    uint256 hashWTPrime;
+    uint256 hash;
     uint256 hashBlock;
 
     ADD_SERIALIZE_METHODS
@@ -232,21 +230,21 @@ struct SidechainSpentWTPrime {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nSidechain);
-        READWRITE(hashWTPrime);
+        READWRITE(hash);
         READWRITE(hashBlock);
     }
 };
 
-struct SidechainFailedWTPrime {
+struct SidechainFailedWithdrawal {
     uint8_t nSidechain;
-    uint256 hashWTPrime;
+    uint256 hash;
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nSidechain);
-        READWRITE(hashWTPrime);
+        READWRITE(hash);
     }
 };
 
@@ -285,8 +283,8 @@ struct SidechainObj {
  * SCDB data for a block - database object
  */
 struct SidechainBlockData: public SidechainObj {
-    std::vector<std::vector<SidechainWTPrimeState>> vWTPrimeStatus;
-    std::vector<SidechainSpentWTPrime> vSpentWTPrime;
+    std::vector<std::vector<SidechainWithdrawalState>> vWithdrawalStatus;
+    std::vector<SidechainSpentWithdrawal> vSpent;
     std::vector<SidechainActivationStatus> vActivationStatus;
     std::vector<Sidechain> vSidechain;
     uint256 hashMT;
@@ -299,8 +297,8 @@ struct SidechainBlockData: public SidechainObj {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(sidechainop);
-        READWRITE(vWTPrimeStatus);
-        READWRITE(vSpentWTPrime);
+        READWRITE(vWithdrawalStatus);
+        READWRITE(vSpent);
         READWRITE(vActivationStatus);
         READWRITE(vSidechain);
         READWRITE(hashMT);

@@ -55,7 +55,7 @@ MiningDialog::MiningDialog(const PlatformStyle *_platformStyle, QWidget *parent)
     ui->pushButtonStartMining->setIcon(platformStyle->SingleColorIcon(":/icons/tx_mined"));
     ui->pushButtonStopMining->setIcon(platformStyle->SingleColorIcon(":/icons/quit"));
     ui->pushButtonAddRemove->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
-    ui->pushButtonWTPrimeVote->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonWithdrawalVote->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
 
     Update();
 }
@@ -211,9 +211,9 @@ void MiningDialog::on_pushButtonAddRemove_clicked()
     Q_EMIT ActivationDialogRequested();
 }
 
-void MiningDialog::on_pushButtonWTPrimeVote_clicked()
+void MiningDialog::on_pushButtonWithdrawalVote_clicked()
 {
-    Q_EMIT WTPrimeDialogRequested();
+    Q_EMIT WithdrawalDialogRequested();
 }
 
 void MiningDialog::on_checkBoxAbandonFailedBMM_toggled(bool fChecked)

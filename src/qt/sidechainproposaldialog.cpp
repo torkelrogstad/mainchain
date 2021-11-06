@@ -92,7 +92,7 @@ void SidechainProposalDialog::on_toolButtonSoftwareHashes_clicked()
     // TODO move text into static const
     QMessageBox::information(this, tr("DriveNet - information"),
         tr("These help users find the sidechain node software. "
-           "Only this software can filter out invalid WT^s. \n\n"
+           "Only this software can filter out invalid withdrawals. \n\n"
            "These fields are optional but highly recommended."),
         QMessageBox::Ok);
 }

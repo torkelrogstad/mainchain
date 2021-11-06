@@ -11,7 +11,7 @@ QT_END_NAMESPACE
 struct SidechainWithdrawalTableObject
 {
     QString sidechain;
-    QString hashWTPrime;
+    QString hash;
     uint16_t nAcks;
     uint32_t nAge;
     uint32_t nMaxAge;

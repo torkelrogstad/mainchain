@@ -180,8 +180,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         connect(miningDialog, SIGNAL(ActivationDialogRequested()),
                 walletFrame, SLOT(showSidechainActivationDialog()));
 
-        connect(miningDialog, SIGNAL(WTPrimeDialogRequested()),
-                walletFrame, SLOT(showSidechainWTPrimeDialog()));
+        connect(miningDialog, SIGNAL(WithdrawalDialogRequested()),
+                walletFrame, SLOT(showSidechainWithdrawalDialog()));
 
     } else
 #endif // ENABLE_WALLET

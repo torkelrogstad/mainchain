@@ -127,7 +127,7 @@ QT_FORMS_UI = \
   qt/forms/sidechaintabledialog.ui \
   qt/forms/sidechainpage.ui \
   qt/forms/sidechainproposaldialog.ui \
-  qt/forms/sidechainwtprimedialog.ui \
+  qt/forms/sidechainwithdrawaldialog.ui \
   qt/forms/signverifymessagedialog.ui \
   qt/forms/transactiondescdialog.ui \
   qt/forms/transactionreplaydialog.ui \
@@ -186,7 +186,7 @@ QT_MOC_CPP = \
   qt/moc_sendcoinsdialog.cpp \
   qt/moc_sendcoinsentry.cpp \
   qt/moc_sidechainactivationtablemodel.cpp \
-  qt/moc_wtprimevotetablemodel.cpp \
+  qt/moc_withdrawalvotetablemodel.cpp \
   qt/moc_sidechainactivationdialog.cpp \
   qt/moc_sidechaindetailsdialog.cpp \
   qt/moc_sidechainproposaldialog.cpp \
@@ -195,7 +195,7 @@ QT_MOC_CPP = \
   qt/moc_sidechainescrowtablemodel.cpp \
   qt/moc_sidechainpage.cpp \
   qt/moc_sidechainwithdrawaltablemodel.cpp \
-  qt/moc_sidechainwtprimedialog.cpp \
+  qt/moc_sidechainwithdrawaldialog.cpp \
   qt/moc_signverifymessagedialog.cpp \
   qt/moc_splashscreen.cpp \
   qt/moc_trafficgraphwidget.cpp \
@@ -289,7 +289,7 @@ DRIVENET_QT_H = \
   qt/sendcoinsdialog.h \
   qt/sendcoinsentry.h \
   qt/sidechainactivationtablemodel.h \
-  qt/wtprimevotetablemodel.h \
+  qt/withdrawalvotetablemodel.h \
   qt/sidechainactivationdialog.h \
   qt/sidechaindetailsdialog.h \
   qt/sidechaindepositconfirmationdialog.h \
@@ -298,7 +298,7 @@ DRIVENET_QT_H = \
   qt/sidechainescrowtablemodel.h \
   qt/sidechainpage.h \
   qt/sidechainwithdrawaltablemodel.h \
-  qt/sidechainwtprimedialog.h \
+  qt/sidechainwithdrawaldialog.h \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
   qt/trafficgraphwidget.h \
@@ -493,7 +493,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/sendcoinsdialog.cpp \
   qt/sendcoinsentry.cpp \
   qt/sidechainactivationtablemodel.cpp \
-  qt/wtprimevotetablemodel.cpp \
+  qt/withdrawalvotetablemodel.cpp \
   qt/sidechainactivationdialog.cpp \
   qt/sidechaindetailsdialog.cpp \
   qt/sidechaindepositconfirmationdialog.cpp \
@@ -501,7 +501,7 @@ DRIVENET_QT_WALLET_CPP = \
   qt/sidechaintabledialog.cpp \
   qt/sidechainpage.cpp \
   qt/sidechainproposaldialog.cpp \
-  qt/sidechainwtprimedialog.cpp \
+  qt/sidechainwithdrawaldialog.cpp \
   qt/sidechainwithdrawaltablemodel.cpp \
   qt/signverifymessagedialog.cpp \
   qt/transactiondesc.cpp \

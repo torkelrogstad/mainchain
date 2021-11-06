@@ -2,29 +2,29 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SIDECHAINWTPRIMEDIALOG_H
-#define SIDECHAINWTPRIMEDIALOG_H
+#ifndef SIDECHAINWITHDRAWALDIALOG_H
+#define SIDECHAINWITHDRAWALDIALOG_H
 
 #include <QDialog>
 
 class PlatformStyle;
-class WTPrimeVoteTableModel;
+class WithdrawalVoteTableModel;
 
 namespace Ui {
-class SidechainWTPrimeDialog;
+class SidechainWithdrawalDialog;
 }
 
 QT_BEGIN_NAMESPACE
 class QTimer;
 QT_END_NAMESPACE
 
-class SidechainWTPrimeDialog : public QDialog
+class SidechainWithdrawalDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit SidechainWTPrimeDialog(const PlatformStyle *platformStyle, QWidget *parent = nullptr);
-    ~SidechainWTPrimeDialog();
+    explicit SidechainWithdrawalDialog(const PlatformStyle *platformStyle, QWidget *parent = nullptr);
+    ~SidechainWithdrawalDialog();
 
 public Q_SLOTS:
     void on_pushButtonUpvote_clicked();
@@ -40,9 +40,9 @@ public Q_SLOTS:
     void Update();
 
 private:
-    Ui::SidechainWTPrimeDialog *ui;
+    Ui::SidechainWithdrawalDialog *ui;
 
-    WTPrimeVoteTableModel *wtPrimeVoteModel = nullptr;
+    WithdrawalVoteTableModel *withdrawalVoteModel = nullptr;
 
     const PlatformStyle *platformStyle;
 
@@ -50,4 +50,4 @@ private:
 
 };
 
-#endif // SIDECHAINWTPRIMEDIALOG_H
+#endif // SIDECHAINWITHDRAWALDIALOG_H

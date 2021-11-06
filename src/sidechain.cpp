@@ -77,25 +77,25 @@ std::string SidechainCTIP::ToString() const
     return ss.str();
 }
 
-bool SidechainWTPrimeState::IsNull() const
+bool SidechainWithdrawalState::IsNull() const
 {
-    return (hashWTPrime.IsNull());
+    return (hash.IsNull());
 }
 
-bool SidechainWTPrimeState::operator==(const SidechainWTPrimeState& a) const
+bool SidechainWithdrawalState::operator==(const SidechainWithdrawalState& a) const
 {
     return (a.nSidechain == nSidechain &&
-            a.hashWTPrime == hashWTPrime);
+            a.hash== hash);
 }
 
-std::string SidechainWTPrimeState::ToString() const
+std::string SidechainWithdrawalState::ToString() const
 {
     std::stringstream ss;
     ss << "hash=" << GetHash().ToString() << std::endl;
     ss << "nsidechain=" << (unsigned int)nSidechain << std::endl;
     ss << "nBlocksLeft=" << (unsigned int)nBlocksLeft << std::endl;
     ss << "nWorkScore=" << (unsigned int)nWorkScore << std::endl;
-    ss << "hashWTPrime=" << hashWTPrime.ToString() << std::endl;
+    ss << "hash=" << hash.ToString() << std::endl;
     return ss.str();
 }
 
@@ -148,7 +148,7 @@ uint256 Sidechain::GetHash() const
     return SerializeHash(*this);
 }
 
-uint256 SidechainWTPrimeState::GetHash() const
+uint256 SidechainWithdrawalState::GetHash() const
 {
     return SerializeHash(*this);
 }

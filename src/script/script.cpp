@@ -283,7 +283,7 @@ bool CScript::IsSCDBHashMerkleRootCommit(uint256& hashMerkleRoot) const
     return true;
 }
 
-bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime, uint8_t& nSidechain) const
+bool CScript::IsWithdrawalHashCommit(uint256& hash, uint8_t& nSidechain) const
 {
     // Check script size
     size_t size = this->size();
@@ -298,10 +298,10 @@ bool CScript::IsWTPrimeHashCommit(uint256& hashWTPrime, uint8_t& nSidechain) con
             (*this)[4] != 0x43)
         return false;
 
-    hashWTPrime = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    hash= uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
     nSidechain = (*this)[37];
 
-    if (hashWTPrime.IsNull())
+    if (hash.IsNull())
         return false;
 
     return true;

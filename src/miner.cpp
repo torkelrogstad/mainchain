@@ -195,29 +195,29 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (fDrivechainEnabled)
         vActiveSidechain = scdb.GetActiveSidechains();
 
-    // If a WT^ has sufficient workscore and this block isn't the last in the
+    // If a Withdrawal has sufficient workscore and this block isn't the last in the
     // verification period, create the payout transaction. We will add any
     // generated payout transactions to the block later.
     //
-    // Keep track of which sidechains will have a WT^ in this block. We will
+    // Keep track of which sidechains will have a Withdrawal in this block. We will
     // need this when deciding what transactions to add from the mempool.
-    std::set<uint8_t> setSidechainsWithWTPrime;
-    // Keep track of the created WT^(s) to be added to the block later
-    std::vector<CMutableTransaction> vWTPrime;
+    std::set<uint8_t> setSidechainsWithWithdrawal;
+    // Keep track of the created Withdrawal(s) to be added to the block later
+    std::vector<CMutableTransaction> vWithdrawal;
     // Keep track of mainchain fees
-    CAmount nWTPrimeFees = 0;
+    CAmount nWithdrawalFees = 0;
     if (fDrivechainEnabled) {
         for (const Sidechain& s : vActiveSidechain) {
             CMutableTransaction wtx;
             CAmount nFee = 0;
-            bool fCreated = CreateWTPrimePayout(s.nSidechain, wtx, nFee);
+            bool fCreated = CreateWithdrawalPayout(s.nSidechain, wtx, nFee);
             if (fCreated && wtx.vout.size() && wtx.vin.size()) {
-                LogPrintf("%s: Created WT^ payout for sidechain: %u with: %u outputs!\ntxid: %s.\n",
+                LogPrintf("%s: Created Withdrawal payout for sidechain: %u with: %u outputs!\ntxid: %s.\n",
                         __func__, s.nSidechain, wtx.vout.size(), wtx.GetHash().ToString());
-                vWTPrime.push_back(wtx);
-                setSidechainsWithWTPrime.insert(s.nSidechain);
+                vWithdrawal.push_back(wtx);
+                setSidechainsWithWithdrawal.insert(s.nSidechain);
 
-                nWTPrimeFees += nFee;
+                nWithdrawalFees += nFee;
             }
         }
     }
@@ -225,7 +225,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
     bool fNeedCriticalFeeTx = false;
-    addPackageTxs(nPackagesSelected, nDescendantsUpdated, fDrivechainEnabled, fNeedCriticalFeeTx, setSidechainsWithWTPrime);
+    addPackageTxs(nPackagesSelected, nDescendantsUpdated, fDrivechainEnabled, fNeedCriticalFeeTx, setSidechainsWithWithdrawal);
 
     int64_t nTime1 = GetTimeMicros();
 
@@ -240,58 +240,58 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // Coinbase subsidy + fees
-    coinbaseTx.vout[0].nValue = nWTPrimeFees + nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    coinbaseTx.vout[0].nValue = nWithdrawalFees + nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
 
     // Add coinbase to block
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
 
-    // TODO make selection of WT^(s) to accept / commit interactive - GUI
-    // Commit WT^(s) which we have received locally
-    std::map<uint8_t /* nSidechain */, uint256 /* hashWTPrime */> mapNewWTPrime;
+    // TODO make selection of Withdrawal(s) to accept / commit interactive - GUI
+    // Commit Withdrawal(s) which we have received locally
+    std::map<uint8_t /* nSidechain */, uint256 /* hash withdrawal*/> mapNewWithdrawal;
     for (const Sidechain& s : vActiveSidechain) {
-        std::vector<uint256> vHash = scdb.GetUncommittedWTPrimeCache(s.nSidechain);
+        std::vector<uint256> vHash = scdb.GetUncommittedWithdrawalCache(s.nSidechain);
 
         if (vHash.empty())
             continue;
 
-        const uint256& hashWTPrime = vHash.back();
+        const uint256& hash = vHash.back();
 
-        // Make sure that the WT^ hasn't previously been spent or failed.
-        // We don't want to re-include WT^(s) that have previously failed or
+        // Make sure that the Withdrawal hasn't previously been spent or failed.
+        // We don't want to re-include Withdrawal(s) that have previously failed or
         // already were approved.
-        if (scdb.HaveFailedWTPrime(hashWTPrime, s.nSidechain))
+        if (scdb.HaveFailedWithdrawal(hash, s.nSidechain))
             continue;
-        if (scdb.HaveSpentWTPrime(hashWTPrime, s.nSidechain))
+        if (scdb.HaveSpentWithdrawal(hash, s.nSidechain))
             continue;
 
-        // For now, if there are fresh (uncommited, unknown to SCDB) WT^(s)
+        // For now, if there are fresh (uncommited, unknown to SCDB) Withdrawal(s)
         // we will commit the most recent in the block we are generating.
-        GenerateWTPrimeHashCommitment(*pblock, hashWTPrime, s.nSidechain, chainparams.GetConsensus());
+        GenerateWithdrawalHashCommitment(*pblock, hash, s.nSidechain, chainparams.GetConsensus());
 
-        // Keep track of new WT^(s) by nSidechain for later
-        mapNewWTPrime[s.nSidechain] = hashWTPrime;
+        // Keep track of new Withdrawal(s) by nSidechain for later
+        mapNewWithdrawal[s.nSidechain] = hash;
     }
 
-    // Handle WT^ updates & generate SCDB MT hash
+    // Handle Withdrawal updates & generate SCDB MT hash
     if (fDrivechainEnabled) {
-        if (scdb.HasState() || mapNewWTPrime.size()) {
+        if (scdb.HasState() || mapNewWithdrawal.size()) {
             uint256 hashSCDB;
-            std::vector<SidechainWTPrimeState> vNewWTPrime;
+            std::vector<SidechainWithdrawalState> vNewWithdrawal;
             std::vector<SidechainCustomVote> vCustomVote;
-            // Add new WT^(s)
-            std::map<uint8_t, uint256>::const_iterator it = mapNewWTPrime.begin();
-            while (it != mapNewWTPrime.end()) {
-                SidechainWTPrimeState wtPrime;
-                wtPrime.nSidechain = it->first;
-                wtPrime.hashWTPrime = it->second;
-                wtPrime.nWorkScore = 1;
+            // Add new Withdrawal(s)
+            std::map<uint8_t, uint256>::const_iterator it = mapNewWithdrawal.begin();
+            while (it != mapNewWithdrawal.end()) {
+                SidechainWithdrawalState state;
+                state.nSidechain = it->first;
+                state.hash = it->second;
+                state.nWorkScore = 1;
 
-                wtPrime.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
+                state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
 
-                vNewWTPrime.push_back(wtPrime);
+                vNewWithdrawal.push_back(state);
 
-                LogPrintf("%s: Miner added new WT^: %s at height %u.\n", __func__, wtPrime.hashWTPrime.ToString(), nHeight);
+                LogPrintf("%s: Miner added new Withdrawal: %s at height %u.\n", __func__, state.hash.ToString(), nHeight);
 
                 it++;
             }
@@ -299,23 +299,20 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             // Note that custom votes have priority, and if custom votes are
             // set we ignore the default votes.
             //
-            // TODO if custom votes are set disable the defaultwtprimevote
-            // combobox on the GUI and add a label with a note
-
             // Apply user's custom votes
             //
-            // Check if the user has set any custom WT^ votes. They can set
-            // custom upvotes, downvotes or abstain by specifying the WT^
+            // Check if the user has set any custom Withdrawal votes. They can set
+            // custom upvotes, downvotes or abstain by specifying the Withdrawal
             // hash as a command line param and via GUI.
             //
             // This vector has all of the users vote settings. Some of
-            // them could be old / for WT^(s) that don't exist yet. We will
+            // them could be old / for Withdrawal(s) that don't exist yet. We will
             // add votes that can actually be applied to vCustomVote.
             std::vector<SidechainCustomVote> vUserVote = scdb.GetCustomVoteCache();
 
             // This will store the new votes we are making - based on either
             // default or custom votes
-            std::vector<SidechainWTPrimeState> vWTPrimeVote;
+            std::vector<SidechainWithdrawalState> vVote;
 
             // If there are custom votes apply them, otherwise check if a
             // default is set
@@ -325,18 +322,18 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                 // Apply users custom votes, and save the custom votes for later
                 // when we generate update bytes
                 for (const Sidechain& s : vActiveSidechain) {
-                    std::vector<SidechainWTPrimeState> vState = scdb.GetState(s.nSidechain);
-                    for (const SidechainWTPrimeState& wt : vState) {
-                        // Check if this WT^ has a custom vote setting
+                    std::vector<SidechainWithdrawalState> vState = scdb.GetState(s.nSidechain);
+                    for (const SidechainWithdrawalState& wt : vState) {
+                        // Check if this Withdrawal has a custom vote setting
                         for (const SidechainCustomVote& vote : vUserVote) {
-                            if (wt.hashWTPrime == vote.hashWTPrime &&
+                            if (wt.hash == vote.hash &&
                                     wt.nSidechain == vote.nSidechain)
                             {
                                 // Add custom vote to final vector
                                 vCustomVote.push_back(vote);
 
-                                // Add to vWTPrimeVote
-                                SidechainWTPrimeState wtState = wt;
+                                // Add to vVote
+                                SidechainWithdrawalState wtState = wt;
 
                                 if (vote.vote == SCDB_UPVOTE) {
                                     wtState.nWorkScore++;
@@ -347,15 +344,15 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                                         wtState.nWorkScore--;
                                 }
 
-                                vWTPrimeVote.push_back(wtState);
+                                vVote.push_back(wtState);
                             }
                         }
                     }
                 }
             } else {
-                // Check if the user has set a default WT^ vote
+                // Check if the user has set a default Withdrawal vote
                 std::string strDefaultVote = "";
-                strDefaultVote = gArgs.GetArg("-defaultwtprimevote", "");
+                strDefaultVote = gArgs.GetArg("-defaultwithdrawalvote", "");
 
                 char vote = SCDB_ABSTAIN;
 
@@ -368,20 +365,20 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                 }
 
                 // Get new scores with default votes applied
-                vWTPrimeVote = scdb.GetLatestStateWithVote(vote, mapNewWTPrime);
+                vVote = scdb.GetLatestStateWithVote(vote, mapNewWithdrawal);
             }
 
-            // Add new WT^(s) to the list
-            for (const SidechainWTPrimeState& wt : vNewWTPrime)
-                vWTPrimeVote.push_back(wt);
+            // Add new Withdrawal(s) to the list
+            for (const SidechainWithdrawalState& wt : vNewWithdrawal)
+                vVote.push_back(wt);
 
-            hashSCDB = scdb.GetSCDBHashIfUpdate(vWTPrimeVote, nHeight, mapNewWTPrime, true /* fRemoveExpired */);
+            hashSCDB = scdb.GetSCDBHashIfUpdate(vVote, nHeight, mapNewWithdrawal, true /* fRemoveExpired */);
 
             if (!hashSCDB.IsNull()) {
                 // Generate SCDB merkle root hash commitment
                 GenerateSCDBHashMerkleRootCommitment(*pblock, hashSCDB, chainparams.GetConsensus());
 
-                // The miner should be passing only the new WT^(s) when checking
+                // The miner should be passing only the new Withdrawal(s) when checking
                 // MT update here.
                 //
                 // If UpdateSCDBMatchMT doesn't work with just that - which
@@ -389,18 +386,18 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                 // generate SCDB update bytes.
                 //
                 // Test parsing and pass the result of ParseSCDBUpdateScript +
-                // the new WT^(s) into UpdateSCDBMatchMT to check that it works
-                // with the bytes & new WT^ info.
+                // the new Withdrawal(s) into UpdateSCDBMatchMT to check that it works
+                // with the bytes & new Withdrawal info.
                 //
-                // Nodes connecting the block will add the new WT^(s) to their
+                // Nodes connecting the block will add the new Withdrawal(s) to their
                 // db but they wont have the rest of the score changes without
                 // parsing the update bytes in this scenario.
 
                 // Check if we need to generate update bytes
                 SidechainDB scdbCopy = scdb;
-                if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vNewWTPrime, mapNewWTPrime)) {
+                if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vNewWithdrawal, mapNewWithdrawal)) {
                     // Get SCDB state
-                    std::vector<std::vector<SidechainWTPrimeState>> vState;
+                    std::vector<std::vector<SidechainWithdrawalState>> vState;
                     for (const Sidechain& s : vActiveSidechain) {
                         vState.push_back(scdb.GetState(s.nSidechain));
                     }
@@ -409,18 +406,18 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     GenerateSCDBUpdateScript(*pblock, script, vState, vCustomVote, chainparams.GetConsensus());
 
                     // Make sure that we can read the update bytes
-                    std::vector<SidechainWTPrimeState> vParsed;
+                    std::vector<SidechainWithdrawalState> vParsed;
                     if (!ParseSCDBUpdateScript(script, vState, vParsed)) {
                         LogPrintf("%s: Miner failed to parse its own update bytes at height %u.\n", __func__, nHeight);
                         throw std::runtime_error(strprintf("%s: Miner failed to parse its own update bytes at height %u.\n",
                                     __func__, nHeight));
                     }
-                    // Add new WT^(s) to the list
-                    for (const SidechainWTPrimeState& wt : vNewWTPrime)
+                    // Add new Withdrawal(s) to the list
+                    for (const SidechainWithdrawalState& wt : vNewWithdrawal)
                         vParsed.push_back(wt);
 
                     // Finally, check if we can update with update bytes
-                    if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vParsed, mapNewWTPrime)) {
+                    if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vParsed, mapNewWithdrawal)) {
                         LogPrintf("%s: Miner failed to update with bytes at height %u.\n", __func__, nHeight);
                         throw std::runtime_error(strprintf("%s: Miner failed update with its own update bytes at height %u.\n",
                                     __func__, nHeight));
@@ -483,9 +480,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
 
     // TODO reserve room when selecting txns so that there's always space for
-    // the WT^(s)
-    // Add WT^(s) that we created earlier to the block
-    for (const CMutableTransaction& mtx : vWTPrime) {
+    // the Withdrawal(s)
+    // Add Withdrawal(s) that we created earlier to the block
+    for (const CMutableTransaction& mtx : vWithdrawal) {
         pblock->vtx.push_back(MakeTransactionRef(std::move(mtx)));
     }
 
@@ -641,11 +638,11 @@ int BlockAssembler::UpdatePackagesForAdded(const CTxMemPool::setEntries& already
     return nDescendantsUpdated;
 }
 
-bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx, CAmount& nFees)
+bool BlockAssembler::CreateWithdrawalPayout(uint8_t nSidechain, CMutableTransaction& tx, CAmount& nFees)
 {
     // TODO log all false returns
 
-    // The WT^ that will be created
+    // The Withdrawal that will be created
     CMutableTransaction mtx;
     mtx.nVersion = 2;
 
@@ -662,65 +659,65 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     if (!scdb.GetSidechain(nSidechain, sidechain))
         return false;
 
-    // Select the highest scoring B-WT^ for sidechain
+    // Select the highest scoring wthdrawal for sidechain
     uint256 hashBest = uint256();
     uint16_t scoreBest = 0;
-    std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
-    for (const SidechainWTPrimeState& state : vState) {
+    std::vector<SidechainWithdrawalState> vState = scdb.GetState(nSidechain);
+    for (const SidechainWithdrawalState& state : vState) {
         if (state.nWorkScore > scoreBest || scoreBest == 0) {
-            hashBest = state.hashWTPrime;
+            hashBest = state.hash;
             scoreBest = state.nWorkScore;
         }
     }
     if (hashBest == uint256())
         return false;
 
-    // Does the selected B-WT^ have sufficient work score?
-    if (scoreBest < SIDECHAIN_MIN_WORKSCORE)
+    // Does the selected withdrawal have sufficient work score?
+    if (scoreBest < SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE)
         return false;
 
-    // Copy outputs from B-WT^
-    std::vector<std::pair<uint8_t, CMutableTransaction>> vWTPrime = scdb.GetWTPrimeCache();
-    for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrime) {
+    // Copy outputs from withdrawal tx
+    std::vector<std::pair<uint8_t, CMutableTransaction>> vTx = scdb.GetWithdrawalTxCache();
+    for (const std::pair<uint8_t, CMutableTransaction>& pair : vTx) {
         if (pair.second.GetHash() == hashBest) {
             for (const CTxOut& out : pair.second.vout)
                 mtx.vout.push_back(out);
             break;
         }
     }
-    // WT^ should have at least the encoded dest output, encoded fee output,
+    // Withdrawal should have at least the encoded dest output, encoded fee output,
     // and change return output.
     if (mtx.vout.size() < 3)
         return false;
 
-    // Get the mainchain fee amount from the second WT^ output which encodes the
-    // sum of WT fees.
+    // Get the mainchain fee amount from the second Withdrawal output which encodes the
+    // sum of withdrawal fees.
     CAmount amountRead = 0;
-    if (!DecodeWTFees(mtx.vout[1].scriptPubKey, amountRead)) {
-        LogPrintf("%s: Failed to decode WT fees!\n", __func__);
+    if (!DecodeWithdrawalFees(mtx.vout[1].scriptPubKey, amountRead)) {
+        LogPrintf("%s: Failed to decode withdrawal fees!\n", __func__);
         return false;
     }
     nFees = amountRead;
 
-    // Calculate the amount to be withdrawn by WT^
+    // Calculate the amount to be withdrawn by Withdrawal
     CAmount amountWithdrawn = CAmount(0);
     for (const CTxOut& out : mtx.vout) {
         if (out.scriptPubKey != sidechain.scriptPubKey)
             amountWithdrawn += out.nValue;
     }
 
-    // Add mainchain fees from WT(s)
+    // Add mainchain fees from withdrawal
     amountWithdrawn += nFees;
 
     // Get sidechain change return script. We will pay the sidechain the change
-    // left over from this WT^. This WT^ transaction will look like a normal
+    // left over from this Withdrawal. This Withdrawal transaction will look like a normal
     // sidechain deposit but with more outputs and the destination string will
-    // be SIDECHAIN_WTPRIME_RETURN_DEST.
+    // be SIDECHAIN_WITHDRAWAL_RETURN_DEST.
     CScript sidechainScript;
     if (!scdb.GetSidechainScript(nSidechain, sidechainScript))
         return false;
 
-    // Note: WT^ change return must be the final output
+    // Note: Withdrawal change return must be the final output
     // Add placeholder change return as the final output.
     mtx.vout.push_back(CTxOut(0, sidechainScript));
 
@@ -731,7 +728,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
 
     mtx.vin.push_back(CTxIn(ctip.out));
 
-    LogPrintf("%s: WT^ will spend CTIP: %s : %u.\n", __func__,
+    LogPrintf("%s: Withdrawal will spend CTIP: %s : %u.\n", __func__,
             ctip.out.hash.ToString(), ctip.out.n);
 
     // Start calculating amount returning to sidechain
@@ -760,7 +757,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     tempKeystore.AddKey(privKey);
     const CKeyStore& keystoreConst = tempKeystore;
 
-    // Sign WT^ SCUTXO input
+    // Sign Withdrawal SCUTXO input
     const CTransaction& txToSign = mtx;
     TransactionSignatureCreator creator(&keystoreConst, &txToSign, 0, returnAmount - amountWithdrawn);
     SignatureData sigdata;
@@ -771,7 +768,7 @@ bool BlockAssembler::CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction
     mtx.vin[0].scriptSig = sigdata.scriptSig;
 #endif
 
-    // Check to make sure that all of the outputs in this WT^ are unknown / new
+    // Check to make sure that all of the outputs in this Withdrawal are unknown / new
     for (size_t o = 0; o < mtx.vout.size(); o++) {
         if (pcoinsTip->HaveCoin(COutPoint(mtx.GetHash(), o))) {
             return false;
@@ -819,7 +816,7 @@ void BlockAssembler::SortForBlock(const CTxMemPool::setEntries& package, CTxMemP
 // Each time through the loop, we compare the best transaction in
 // mapModifiedTxs with the next transaction in the mempool to decide what
 // transaction package to work on next.
-void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, bool fDrivechainEnabled, bool& fNeedCriticalFeeTx, const std::set<uint8_t>& setSidechainsWithWTPrime)
+void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, bool fDrivechainEnabled, bool& fNeedCriticalFeeTx, const std::set<uint8_t>& setSidechainsWithWithdrawal)
 {
     // mapModifiedTx will store sorted packages after they are modified
     // because some of their txs are already in the block
@@ -842,9 +839,9 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
 
     while (mi != mempool.mapTx.get<ancestor_score>().end() || !mapModifiedTx.empty())
     {
-        // Don't add deposits to the same block as a WT^ for this sidechain
+        // Don't add deposits to the same block as a Withdrawal for this sidechain
         if (mi->GetSidechainDeposit() &&
-                setSidechainsWithWTPrime.count(mi->GetSidechainNumber())) {
+                setSidechainsWithWithdrawal.count(mi->GetSidechainNumber())) {
             ++mi;
             continue;
         }

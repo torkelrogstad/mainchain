@@ -68,7 +68,7 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), transactionView, SLOT(focusTransaction(QModelIndex)));
     connect(overviewPage, SIGNAL(outOfSyncWarningClicked()), this, SLOT(requestedSyncWarningInfo()));
 
-    // Clicking on a WT^ on the overview sends the user to the WT^ table of the sidechain page
+    // Clicking on a Withdrawal on the overview sends the user to the Withdrawal table of the sidechain page
     connect(overviewPage, SIGNAL(SidechainWTClicked()), sidechainPage, SLOT(gotoWTPage()));
 
     // Double-clicking on a transaction on the transaction history page shows details
@@ -91,7 +91,7 @@ void WalletView::setBitcoinGUI(BitcoinGUI *gui)
         // Clicking on a transaction on the overview page simply sends you to transaction history page
         connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), gui, SLOT(gotoHistoryPage()));
 
-        // Clicking on a WT^ on the overview page sends the user to the sidechain page
+        // Clicking on a Withdrawal on the overview page sends the user to the sidechain page
         connect(overviewPage, SIGNAL(SidechainWTClicked()), gui, SLOT(gotoSidechainPage()));
 
         // Receive and report messages
@@ -359,8 +359,8 @@ void WalletView::showSidechainActivationDialog()
         sidechainPage->ShowActivationDialog();
 }
 
-void WalletView::showSidechainWTPrimeDialog()
+void WalletView::showSidechainWithdrawalDialog()
 {
     if (sidechainPage)
-        sidechainPage->ShowWTPrimeDialog();
+        sidechainPage->ShowWithdrawalDialog();
 }

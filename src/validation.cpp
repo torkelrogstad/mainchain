@@ -587,7 +587,7 @@ void GetSidechainValues(const CCoinsView& coins, const CTransaction &tx, CAmount
     }
 }
 
-bool CheckBWTHash(const uint256& hashWTPrime, const CTransaction &tx)
+bool CheckBlindHash(const uint256& hash, const CTransaction &tx)
 {
     CMutableTransaction mtx = tx;
 
@@ -595,7 +595,7 @@ bool CheckBWTHash(const uint256& hashWTPrime, const CTransaction &tx)
     mtx.vin.clear();
     mtx.vout.pop_back();
 
-    if (mtx.GetHash() == hashWTPrime)
+    if (mtx.GetHash() == hash)
         return true;
 
     return false;
@@ -687,8 +687,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         if (amtSidechainUTXO > amtReturning) {
             // M6 Withdrawal
 
-            // Block sidechain withdrawals (WT^(s)) from the memory pool.
-            // When a WT^ has sufficient workscore it can be added to a block
+            // Block sidechain withdrawals (Withdrawal(s)) from the memory pool.
+            // When a Withdrawal has sufficient workscore it can be added to a block
             // by miners. Workscore is verified when the block is connected.
             return state.DoS(100, false, REJECT_INVALID, "sidechain-withdraw-loose");
         } else if (amtReturning > amtSidechainUTXO) {
@@ -735,8 +735,8 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                         return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-getop-failed");
 
                     std::string strDest((const char*)vch.data(), vch.size());
-                    if (strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
-                        return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-sidechain-wtprime-return-dest");
+                    if (strDest == SIDECHAIN_WITHDRAWAL_RETURN_DEST)
+                        return state.DoS(0, false, REJECT_INVALID, "sidechain-deposit-invalid-dest-sidechain-withdrawal-return-dest");
 
                     fDestOutput = true;
                 }
@@ -2158,7 +2158,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     std::vector<PrecomputedTransactionData> txdata;
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
     std::vector<std::tuple<CTransaction, int, uint256>> vDepositTx;
-    std::vector<std::tuple<uint8_t, CTransaction, int>> vWTPrimeToSpend;
+    std::vector<std::tuple<uint8_t, CTransaction, int>> vWithdrawalToSpend;
     std::vector<OPReturnData> vOPReturnData;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
@@ -2269,11 +2269,11 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
          */
 
         if (drivechainsEnabled && fSidechainInputs) {
-            // We must get the B-WT^ hash as work is applied to
-            // WT^ before inputs and the change output are known.
-            uint256 hashBWT;
-            if (!tx.GetBWTHash(hashBWT))
-                return error("ConnectBlock(): WT^ (full id): %s has invalid format", tx.GetHash().ToString());
+            // We must get the Withdrawal hash as work is applied to
+            // Withdrawal before inputs and the change output are known.
+            uint256 hashBlind;
+            if (!tx.GetBlindHash(hashBlind))
+                return error("ConnectBlock(): Withdrawal (full id): %s has invalid format", tx.GetHash().ToString());
 
             // Get values to and from sidechain
             CAmount amtSidechainUTXO = CAmount(0);
@@ -2283,12 +2283,12 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             GetSidechainValues(view, tx, amtSidechainUTXO, amtUserInput, amtReturning, amtWithdrawn);
 
             if (amtSidechainUTXO > amtReturning) {
-                // Note that we are just checking that the WT^ can be spent,
+                // Note that we are just checking that the Withdrawal can be spent,
                 // and then tracking it to spend later in the function
-                if (scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, i, true /* fJustCheck */, true /* fDebug */)) {
-                    vWTPrimeToSpend.push_back(std::make_tuple(nSidechain, tx, i));
+                if (scdb.SpendWithdrawal(nSidechain, block.GetHash(), tx, i, true /* fJustCheck */, true /* fDebug */)) {
+                    vWithdrawalToSpend.push_back(std::make_tuple(nSidechain, tx, i));
                 } else {
-                    return error("ConnectBlock(): Spend WT^ failed (blind WT^ hash : txid): %s : %s", hashBWT.ToString(), tx.GetHash().ToString());
+                    return error("ConnectBlock(): Spend Withdrawal failed (blind Withdrawal hash : txid): %s : %s", hashBlind.ToString(), tx.GetHash().ToString());
                 }
             }
         }
@@ -2341,24 +2341,24 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                 LogPrintf("%s: Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
                 return error("%s: Deposits invalid from block: %s", __func__, block.GetHash().ToString());
             }
-            // Skip WT^ change return deposit, handled by SCDB::SpendWTPrime
-            if (deposit.strDest == SIDECHAIN_WTPRIME_RETURN_DEST)
+            // Skip Withdrawal change return deposit, handled by SCDB::SpendWithdrawal
+            if (deposit.strDest == SIDECHAIN_WITHDRAWAL_RETURN_DEST)
                 continue;
             vDeposit.push_back(deposit);
         }
         scdb.AddDeposits(vDeposit);
     }
 
-    if (drivechainsEnabled && vWTPrimeToSpend.size()) {
-        for (size_t i = 0; i < vWTPrimeToSpend.size(); i++) {
-            uint8_t nSidechain = std::get<0>(vWTPrimeToSpend[i]);
-            const CTransaction tx = std::get<1>(vWTPrimeToSpend[i]);
-            int nTx = std::get<2>(vWTPrimeToSpend[i]);
+    if (drivechainsEnabled && vWithdrawalToSpend.size()) {
+        for (size_t i = 0; i < vWithdrawalToSpend.size(); i++) {
+            uint8_t nSidechain = std::get<0>(vWithdrawalToSpend[i]);
+            const CTransaction tx = std::get<1>(vWithdrawalToSpend[i]);
+            int nTx = std::get<2>(vWithdrawalToSpend[i]);
 
-            uint256 hashBWT;
-            tx.GetBWTHash(hashBWT);
-            if (!scdb.SpendWTPrime(nSidechain, block.GetHash(), tx, nTx, fJustCheck, true /* fDebug */)) {
-                return error("ConnectBlock(): Final spend WT^ failed (blind WT^ hash : txid): %s : %s.\n nSidechain: %u\n", hashBWT.ToString(), tx.GetHash().ToString(), nSidechain);
+            uint256 hashBlind;
+            tx.GetBlindHash(hashBlind);
+            if (!scdb.SpendWithdrawal(nSidechain, block.GetHash(), tx, nTx, fJustCheck, true /* fDebug */)) {
+                return error("ConnectBlock(): Final spend Withdrawal failed (blind Withdrawal hash : txid): %s : %s.\n nSidechain: %u\n", hashBlind.ToString(), tx.GetHash().ToString(), nSidechain);
             }
         }
     }
@@ -2394,7 +2394,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     // only a list of sidechain hashes per block. Then if we need to re-activate
     // an old sidechain we can look it up by hash.
     SidechainBlockData data;
-    data.vWTPrimeStatus = scdb.GetState();
+    data.vWithdrawalStatus = scdb.GetState();
     data.vActivationStatus = scdb.GetSidechainActivationStatus();
     data.vSidechain = scdb.GetSidechains();
 
@@ -3653,11 +3653,11 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, const uint8_t nSidechain, const Consensus::Params& consensusParams)
+void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain, const Consensus::Params& consensusParams)
 {
     /*
      * M3
-     * Drivechain WT^ commit message "Propose Withdrawal".
+     * Drivechain Withdrawal commit message "Propose Withdrawal".
      * BIP: 300 & 301
      */
 
@@ -3676,8 +3676,8 @@ void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, co
     out.scriptPubKey[3] = 0xA9;
     out.scriptPubKey[4] = 0x43;
 
-    // Add WT^ hash
-    memcpy(&out.scriptPubKey[5], &hashWTPrime, 32);
+    // Add Withdrawal hash
+    memcpy(&out.scriptPubKey[5], &hash, 32);
 
     // Add nSidechain
     out.scriptPubKey[37] = nSidechain;
@@ -3732,7 +3732,7 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, c
 }
 
 
-void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
+void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
 {
     // Check for activation of Drivechains
     if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
@@ -3752,18 +3752,18 @@ void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<
 
     // TODO refactor : change container of vUserVotes so we don't loop
 
-    // Loop through each sidechain's current WT^ scores
-    for (const std::vector<SidechainWTPrimeState>& s : vScores) {
+    // Loop through each sidechain's current Withdrawal scores
+    for (const std::vector<SidechainWithdrawalState>& s : vScores) {
         for (size_t i = 0; i < s.size(); i++) {
-            // Check if there is a vote set for this WT^
+            // Check if there is a vote set for this Withdrawal
             for (const SidechainCustomVote& v : vUserVotes) {
-                // Check if any vote options are set for this sidechain's WT^(s)
-                if (v.nSidechain == s[i].nSidechain && v.hashWTPrime == s[i].hashWTPrime) {
+                // Check if any vote options are set for this sidechain's Withdrawal(s)
+                if (v.nSidechain == s[i].nSidechain && v.hash == s[i].hash) {
                     if (v.vote == SCDB_UPVOTE || v.vote == SCDB_DOWNVOTE) {
                         // Add vote to script
                         out.scriptPubKey << (v.vote == SCDB_UPVOTE ? SC_OP_UPVOTE : SC_OP_DOWNVOTE);
                         if (i > 0) {
-                            // Add WT^ index to script if needed
+                            // Add Withdrawal index to script if needed
                             out.scriptPubKey << CScriptNum(i);
                         }
                         break;
@@ -5608,17 +5608,17 @@ void DumpDepositCache()
     LogPrintf("%s: Wrote %u\n", __func__, count);
 }
 
-bool LoadWTPrimeCache(bool fReindex)
+bool LoadWithdrawalCache(bool fReindex)
 {
-    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat";
+    fs::path path = GetDataDir() / "drivechain" / "withdrawal.dat";
     CAutoFile filein(fsbridge::fopen(path, "rb"), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull()) {
         return true;
     }
 
-    std::vector<std::pair<uint8_t, CTransactionRef>> vWTPrime;
-    std::vector<SidechainSpentWTPrime> vSpent;
-    std::vector<SidechainFailedWTPrime> vFailed;
+    std::vector<std::pair<uint8_t, CTransactionRef>> vWithdrawal;
+    std::vector<SidechainSpentWithdrawal> vSpent;
+    std::vector<SidechainFailedWithdrawal> vFailed;
     try {
         uint64_t nVersion;
         filein >> nVersion;
@@ -5633,14 +5633,14 @@ bool LoadWTPrimeCache(bool fReindex)
             filein >> nSidechain;
             CTransactionRef tx;
             filein >> tx;
-            vWTPrime.push_back(std::make_pair(nSidechain, tx));
+            vWithdrawal.push_back(std::make_pair(nSidechain, tx));
         }
 
         if (!fReindex) {
             int nSpent = 0;
             filein >> nSpent;
             for (int i = 0; i < nSpent; i++) {
-                SidechainSpentWTPrime spent;
+                SidechainSpentWithdrawal spent;
                 filein >> spent;
                 vSpent.push_back(spent);
             }
@@ -5648,7 +5648,7 @@ bool LoadWTPrimeCache(bool fReindex)
             int nFailed = 0;
             filein >> nFailed;
             for (int i = 0; i < nFailed; i++) {
-                SidechainFailedWTPrime failed;
+                SidechainFailedWithdrawal failed;
                 filein >> failed;
                 vFailed.push_back(failed);
             }
@@ -5661,31 +5661,31 @@ bool LoadWTPrimeCache(bool fReindex)
 
     // Add to SCDB
 
-    for (const std::pair<uint8_t, CTransactionRef>& pair : vWTPrime) {
-        if (!scdb.CacheWTPrime(*pair.second.get(), pair.first))
+    for (const std::pair<uint8_t, CTransactionRef>& pair : vWithdrawal) {
+        if (!scdb.CacheWithdrawalTx(*pair.second.get(), pair.first))
             return false;
     }
 
     if (!fReindex) {
-        scdb.AddSpentWTPrimes(vSpent);
-        scdb.AddFailedWTPrimes(vFailed);
+        scdb.AddSpentWithdrawals(vSpent);
+        scdb.AddFailedWithdrawals(vFailed);
     }
 
     return true;
 }
 
-void DumpWTPrimeCache()
+void DumpWithdrawalCache()
 {
-    std::vector<std::pair<uint8_t, CMutableTransaction>> vWTPrime = scdb.GetWTPrimeCache();
-    std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
-    std::vector<SidechainFailedWTPrime> vFailed = scdb.GetFailedWTPrimeCache();
+    std::vector<std::pair<uint8_t, CMutableTransaction>> vWithdrawal = scdb.GetWithdrawalTxCache();
+    std::vector<SidechainSpentWithdrawal> vSpent = scdb.GetSpentWithdrawalCache();
+    std::vector<SidechainFailedWithdrawal> vFailed = scdb.GetFailedWithdrawalCache();
 
-    int nWTPrime = vWTPrime.size();
+    int nWithdrawal = vWithdrawal.size();
     int nSpent = vSpent.size();
     int nFailed = vFailed.size();
 
-    // Write the WT^ raw tx cache & spent WT^ cache
-    fs::path path = GetDataDir() / "drivechain" / "wtprime.dat.new";
+    // Write the Withdrawal raw tx cache & spent Withdrawal cache
+    fs::path path = GetDataDir() / "drivechain" / "withdrawal.dat.new";
     CAutoFile fileout(fsbridge::fopen(path, "wb"), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull()) {
         return;
@@ -5694,19 +5694,19 @@ void DumpWTPrimeCache()
     try {
         fileout << SCDB_DUMP_VERSION; // version required to read
 
-        fileout << nWTPrime; // Number of WT^(s) in file
-        for (const std::pair<uint8_t, CMutableTransaction>& pair : vWTPrime) {
+        fileout << nWithdrawal; // Number of Withdrawal(s) in file
+        for (const std::pair<uint8_t, CMutableTransaction>& pair : vWithdrawal) {
             fileout << pair.first;
             fileout << MakeTransactionRef(pair.second);
         }
 
-        fileout << nSpent; // Number of spent WT^(s) in file
-        for (const SidechainSpentWTPrime& s : vSpent) {
+        fileout << nSpent; // Number of spent Withdrawal(s) in file
+        for (const SidechainSpentWithdrawal& s : vSpent) {
             fileout << s;
         }
 
-        fileout << nFailed; // Number of failed WT^(s) in file
-        for (const SidechainFailedWTPrime& f : vFailed) {
+        fileout << nFailed; // Number of failed Withdrawal(s) in file
+        for (const SidechainFailedWithdrawal& f : vFailed) {
             fileout << f;
         }
     }
@@ -5717,9 +5717,9 @@ void DumpWTPrimeCache()
 
     FileCommit(fileout.Get());
     fileout.fclose();
-    RenameOver(GetDataDir() / "drivechain" / "wtprime.dat.new", GetDataDir() /  "drivechain" / "wtprime.dat");
+    RenameOver(GetDataDir() / "drivechain" / "withdrawal.dat.new", GetDataDir() /  "drivechain" / "withdrawal.dat");
 
-    LogPrintf("%s: Wrote %u WT^, %u spent, %u failed\n", __func__, nWTPrime, nSpent, nFailed);
+    LogPrintf("%s: Wrote %u Withdrawal, %u spent, %u failed\n", __func__, nWithdrawal, nSpent, nFailed);
 }
 
 bool LoadBMMCache()
@@ -6005,7 +6005,7 @@ void DumpSCDBCache()
     // Dump SidechainDB, sidechain activation & optional caches
     DumpDepositCache();
     DumpCustomVoteCache();
-    DumpWTPrimeCache();
+    DumpWithdrawalCache();
     DumpSidechainProposalCache();
     DumpSidechainActivationHashCache();
     DumpBMMCache();

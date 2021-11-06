@@ -1,4 +1,4 @@
-#include <qt/wtprimevotetablemodel.h>
+#include <qt/withdrawalvotetablemodel.h>
 
 #include <sidechain.h>
 #include <sidechaindb.h>
@@ -14,9 +14,9 @@
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 
-Q_DECLARE_METATYPE(WTPrimeVoteTableObject)
+Q_DECLARE_METATYPE(WithdrawalVoteTableObject)
 
-WTPrimeVoteTableModel::WTPrimeVoteTableModel(QObject *parent) :
+WithdrawalVoteTableModel::WithdrawalVoteTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
     // This timer will be fired repeatedly to update the model
@@ -25,17 +25,17 @@ WTPrimeVoteTableModel::WTPrimeVoteTableModel(QObject *parent) :
     pollTimer->start(MODEL_UPDATE_DELAY);
 }
 
-int WTPrimeVoteTableModel::rowCount(const QModelIndex & /*parent*/) const
+int WithdrawalVoteTableModel::rowCount(const QModelIndex & /*parent*/) const
 {
     return model.size();
 }
 
-int WTPrimeVoteTableModel::columnCount(const QModelIndex & /*parent*/) const
+int WithdrawalVoteTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
     return 3;
 }
 
-QVariant WTPrimeVoteTableModel::data(const QModelIndex &index, int role) const
+QVariant WithdrawalVoteTableModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid()) {
         return false;
@@ -44,10 +44,10 @@ QVariant WTPrimeVoteTableModel::data(const QModelIndex &index, int role) const
     int row = index.row();
     int col = index.column();
 
-    if (!model.at(row).canConvert<WTPrimeVoteTableObject>())
+    if (!model.at(row).canConvert<WithdrawalVoteTableObject>())
         return QVariant();
 
-    WTPrimeVoteTableObject object = model.at(row).value<WTPrimeVoteTableObject>();
+    WithdrawalVoteTableObject object = model.at(row).value<WithdrawalVoteTableObject>();
 
     switch (role) {
     case Qt::DisplayRole:
@@ -69,7 +69,7 @@ QVariant WTPrimeVoteTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return object.nSidechain;
         }
-        // Hash of WT^
+        // Hash
         if (col == 2) {
             return object.hash;
         }
@@ -78,7 +78,7 @@ QVariant WTPrimeVoteTableModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-QVariant WTPrimeVoteTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant WithdrawalVoteTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole) {
         if (orientation == Qt::Horizontal) {
@@ -88,30 +88,30 @@ QVariant WTPrimeVoteTableModel::headerData(int section, Qt::Orientation orientat
             case 1:
                 return QString("SC Number");
             case 2:
-                return QString("WT^ Hash");
+                return QString("Withdrawal Hash");
             }
         }
     }
     return QVariant();
 }
 
-void WTPrimeVoteTableModel::UpdateModel()
+void WithdrawalVoteTableModel::UpdateModel()
 {
     // TODO there are many ways to improve the efficiency of this
 
-    // Get all of the current WT^(s) into one vector
+    // Get all of the current Withdrawal(s) into one vector
     std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
-    std::vector<SidechainWTPrimeState> vWTPrime;
+    std::vector<SidechainWithdrawalState> vState;
     for (const Sidechain& s : vSidechain) {
-        std::vector<SidechainWTPrimeState> vState = scdb.GetState(s.nSidechain);
-        vWTPrime.insert(vWTPrime.end(), vState.begin(), vState.end());
+        std::vector<SidechainWithdrawalState> vState = scdb.GetState(s.nSidechain);
+        vState.insert(vState.end(), vState.begin(), vState.end());
     }
 
     // Get users votes
     std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
 
     bool fCustomVotes = vCustomVote.size();
-    std::string strDefaultVote = gArgs.GetArg("-defaultwtprimevote", "abstain");
+    std::string strDefaultVote = gArgs.GetArg("-defaultwithdrawalvote", "abstain");
 
     char defaultVote;
     if (strDefaultVote == "upvote")
@@ -122,31 +122,31 @@ void WTPrimeVoteTableModel::UpdateModel()
     else
         defaultVote = SCDB_ABSTAIN;
 
-    // Look for updates to WT^(s) & their vote already cached by the model and
+    // Look for updates to Withdrawal(s) & their vote already cached by the model and
     // update our model / view.
     //
-    // Also look for WT^(s) which have been removed, and remove them from our
+    // Also look for Withdrawal(s) which have been removed, and remove them from our
     // model / view.
-    std::vector<WTPrimeVoteTableObject> vRemoved;
+    std::vector<WithdrawalVoteTableObject> vRemoved;
     for (int i = 0; i < model.size(); i++) {
-        if (!model[i].canConvert<WTPrimeVoteTableObject>())
+        if (!model[i].canConvert<WithdrawalVoteTableObject>())
             return;
 
-        WTPrimeVoteTableObject object = model[i].value<WTPrimeVoteTableObject>();
+        WithdrawalVoteTableObject object = model[i].value<WithdrawalVoteTableObject>();
 
         bool fFound = false;
 
-        // Check if the WT^ should still be in the table and make sure we set
+        // Check if the Withdrawal should still be in the table and make sure we set
         // it with the current vote
-        for (const SidechainWTPrimeState& s : vWTPrime) {
+        for (const SidechainWithdrawalState& s : vState) {
             // Check if we need to update the vote type
-            if (s.hashWTPrime == uint256S(object.hash.toStdString())
+            if (s.hash == uint256S(object.hash.toStdString())
                         && s.nSidechain == object.nSidechain) {
                 fFound = true;
                 if (fCustomVotes) {
                     // Check for updates to custom votes
                     for (const SidechainCustomVote& v : vCustomVote) {
-                        if (v.nSidechain == s.nSidechain && v.hashWTPrime == s.hashWTPrime) {
+                        if (v.nSidechain == s.nSidechain && v.hash == s.hash) {
                             if (object.vote != v.vote) {
                                 // Update the vote type
                                 object.vote = v.vote;
@@ -183,12 +183,12 @@ void WTPrimeVoteTableModel::UpdateModel()
 
     // Loop through the model and remove deleted votes
     for (int i = 0; i < model.size(); i++) {
-        if (!model[i].canConvert<WTPrimeVoteTableObject>())
+        if (!model[i].canConvert<WithdrawalVoteTableObject>())
             return;
 
-        WTPrimeVoteTableObject object = model[i].value<WTPrimeVoteTableObject>();
+        WithdrawalVoteTableObject object = model[i].value<WithdrawalVoteTableObject>();
 
-        for (const WTPrimeVoteTableObject& v : vRemoved) {
+        for (const WithdrawalVoteTableObject& v : vRemoved) {
             if (v.hash == object.hash && v.nSidechain == object.nSidechain) {
                 beginRemoveRows(QModelIndex(), i, i);
                 model[i] = model.back();
@@ -198,18 +198,18 @@ void WTPrimeVoteTableModel::UpdateModel()
         }
     }
 
-    // Check for new WT^(s)
-    std::vector<SidechainWTPrimeState> vNew;
-    for (const SidechainWTPrimeState& s : vWTPrime) {
+    // Check for new Withdrawal(s)
+    std::vector<SidechainWithdrawalState> vNew;
+    for (const SidechainWithdrawalState& s : vState) {
         bool fFound = false;
 
         for (const QVariant& qv : model) {
-            if (!qv.canConvert<WTPrimeVoteTableObject>())
+            if (!qv.canConvert<WithdrawalVoteTableObject>())
                 return;
 
-            WTPrimeVoteTableObject object = qv.value<WTPrimeVoteTableObject>();
+            WithdrawalVoteTableObject object = qv.value<WithdrawalVoteTableObject>();
 
-            if (s.hashWTPrime == uint256S(object.hash.toStdString())
+            if (s.hash == uint256S(object.hash.toStdString())
                     && s.nSidechain == object.nSidechain)
                 fFound = true;
         }
@@ -220,12 +220,12 @@ void WTPrimeVoteTableModel::UpdateModel()
     if (vNew.empty())
         return;
 
-    // Add new WT^(s) if we need to - with correct vote type
+    // Add new Withdrawal(s) if we need to - with correct vote type
     beginInsertRows(QModelIndex(), model.size(), model.size() + vNew.size() - 1);
-    for (const SidechainWTPrimeState& s : vNew) {
-        WTPrimeVoteTableObject object;
+    for (const SidechainWithdrawalState& s : vNew) {
+        WithdrawalVoteTableObject object;
 
-        // If custom votes are set, check to see if one is set for this WT^ and
+        // If custom votes are set, check to see if one is set for this Withdrawal and
         // if not set SCDB_ABSTAIN. If custom votes are not set, use the current
         // default vote
         if (fCustomVotes) {
@@ -233,7 +233,7 @@ void WTPrimeVoteTableModel::UpdateModel()
             // update the vote type if foudn
             object.vote = SCDB_ABSTAIN;
             for (const SidechainCustomVote& v : vCustomVote) {
-                if (v.hashWTPrime == s.hashWTPrime && v.nSidechain == s.nSidechain) {
+                if (v.hash == s.hash && v.nSidechain == s.nSidechain) {
                     object.vote = v.vote;
                 }
             }
@@ -241,23 +241,23 @@ void WTPrimeVoteTableModel::UpdateModel()
             object.vote = defaultVote;
         }
 
-        // Insert new WT^ into table
-        object.hash = QString::fromStdString(s.hashWTPrime.ToString());
+        // Insert new Withdrawal into table
+        object.hash = QString::fromStdString(s.hash.ToString());
         object.nSidechain = s.nSidechain;
         model.append(QVariant::fromValue(object));
     }
     endInsertRows();
 }
 
-bool WTPrimeVoteTableModel::GetWTPrimeInfoAtRow(int row, uint256& hash, unsigned int& nSidechain) const
+bool WithdrawalVoteTableModel::GetWithdrawalInfoAtRow(int row, uint256& hash, unsigned int& nSidechain) const
 {
     if (row >= model.size())
         return false;
 
-    if (!model[row].canConvert<WTPrimeVoteTableObject>())
+    if (!model[row].canConvert<WithdrawalVoteTableObject>())
         return false;
 
-    WTPrimeVoteTableObject object = model[row].value<WTPrimeVoteTableObject>();
+    WithdrawalVoteTableObject object = model[row].value<WithdrawalVoteTableObject>();
 
     hash = uint256S(object.hash.toStdString());
     nSidechain = object.nSidechain;

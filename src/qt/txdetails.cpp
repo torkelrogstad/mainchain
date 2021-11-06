@@ -19,7 +19,7 @@ enum TopLevelIndex {
     INDEX_WITNESS_COMMIT,
     INDEX_CRITICAL_HASH,
     INDEX_SCDB_MT_HASH,
-    INDEX_WTPRIME_HASH,
+    INDEX_WITHDRAWAL_HASH,
     INDEX_SC_PROPOSAL,
     INDEX_SC_ACK,
     INDEX_SCDB_UPDATE,
@@ -87,8 +87,8 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     // Witness program
     int nWitVersion = -1;
     std::vector<unsigned char> vWitProgram;
-    // WT^ hash commit
-    uint256 hashWTPrime = uint256();
+    // Withdrawal hash commit
+    uint256 hashWithdrawal = uint256();
     uint8_t nSidechain = 0;
     // Sidechain activation commit
     uint256 hashSidechain = uint256();
@@ -106,7 +106,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
         nWitVersion = -1;
         vWitProgram.clear();
 
-        hashWTPrime.SetNull();
+        hashWithdrawal.SetNull();
 
         nSidechain = 0;
         hashSidechain.SetNull();
@@ -166,13 +166,13 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             AddTreeItem(INDEX_SCDB_MT_HASH, subItem);
         }
         else
-        if (scriptPubKey.IsWTPrimeHashCommit(hashWTPrime, nSidechain)) {
-            // Create a WT^ hash commit item
+        if (scriptPubKey.IsWithdrawalHashCommit(hashWithdrawal, nSidechain)) {
+            // Create a Withdrawal hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "New WT^ Hash Commit for SC# " + QString::number(nSidechain)
-                    + " : " + QString::fromStdString(hashWTPrime.ToString()));
-            AddTreeItem(INDEX_WTPRIME_HASH, subItem);
+            subItem->setText(1, "New Withdrawal Hash Commit for SC# " + QString::number(nSidechain)
+                    + " : " + QString::fromStdString(hashWithdrawal.ToString()));
+            AddTreeItem(INDEX_WITHDRAWAL_HASH, subItem);
         }
         else
         if (scriptPubKey.IsSidechainProposalCommit()) {
@@ -255,8 +255,8 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
         if (index == INDEX_SCDB_MT_HASH)
             topItem->setText(0, "SCDB Merkle Tree Hash");
         else
-        if (index == INDEX_WTPRIME_HASH)
-            topItem->setText(0, "New WT^ Hash");
+        if (index == INDEX_WITHDRAWAL_HASH)
+            topItem->setText(0, "New Withdrawal Hash");
         else
         if (index == INDEX_SC_PROPOSAL)
             topItem->setText(0, "Sidechain Proposal");

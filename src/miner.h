@@ -170,7 +170,7 @@ private:
     /** Add transactions based on feerate including unconfirmed ancestors
       * Increments nPackagesSelected / nDescendantsUpdated with corresponding
       * statistics from the package selection (for logging statistics). */
-    void addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, bool fDrivechainEnabled, bool& fNeedCriticalFeeTx, const std::set<uint8_t>& setSidechainsWithWTPrime);
+    void addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated, bool fDrivechainEnabled, bool& fNeedCriticalFeeTx, const std::set<uint8_t>& setSidechainsWithWithdrawal);
 
     // helper functions for addPackageTxs()
     /** Remove confirmed (inBlock) entries from given set */
@@ -193,8 +193,8 @@ private:
     int UpdatePackagesForAdded(const CTxMemPool::setEntries& alreadyAdded, indexed_modified_transaction_set &mapModifiedTx);
 
     // SidechainDB
-    /** Returns a WT^ payout transaction for nSidechain if there is one */
-    bool CreateWTPrimePayout(uint8_t nSidechain, CMutableTransaction& tx, CAmount& nFees);
+    /** Create withdrawal payout transaction for nSidechain if needed */
+    bool CreateWithdrawalPayout(uint8_t nSidechain, CMutableTransaction& tx, CAmount& nFees);
 };
 
 /** Miner functions restored from Bitcoin 0.12 */

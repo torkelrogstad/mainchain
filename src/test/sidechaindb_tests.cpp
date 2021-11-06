@@ -20,7 +20,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-CScript EncodeWTFees(const CAmount& amount)
+CScript EncodeWithdrawalFees(const CAmount& amount)
 {
     CDataStream s(SER_NETWORK, PROTOCOL_VERSION);
     s << amount;
@@ -55,62 +55,61 @@ bool ActivateTestSidechain(SidechainDB& scdbTest, int nHeight = 0)
     return ActivateSidechain(scdbTest, proposal, nHeight);
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_wtprime)
+BOOST_AUTO_TEST_CASE(sidechaindb_withdrawal)
 {
-    // Test creating a WT^ and approving it with enough workscore
+    // Test creating a withdrawal and approving it with enough workscore
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    uint256 hashWTTest = GetRandHash();
+    uint256 hash = GetRandHash();
 
-    SidechainWTPrimeState wtTest;
-    wtTest.hashWTPrime = hashWTTest;
-    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wtTest.nSidechain = 0;
+    SidechainWithdrawalState state;
+    state.hash= hash;
+    state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state.nSidechain = 0;
     int nHeight = 0;
-    for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
-        wtTest.nWorkScore = i;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wtTest}));
+    for (int i = 1; i <= SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
+        state.nWorkScore = i;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState>{state}));
         nHeight++;
     }
 
-    // WT^ 0 should pass with valid workscore
-    BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest));
+    // Withdrawal should pass with valid workscore
+    BOOST_CHECK(scdbTest.CheckWorkScore(0, hash));
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
+BOOST_AUTO_TEST_CASE(sidechaindb_mutli_withdraw_one_expires)
 {
-    // Test multiple verification periods, approve multiple WT^s on the
-    // same sidechain
+    // Test multiple verification periods, approve multiple withdrawals on the
+    // same sidechain and let one withdrawal expire.
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    // WT^ hash for first period
-    uint256 hashWTTest1 = GetRandHash();
+    // Withdrawal hash for first period
+    uint256 hash1 = GetRandHash();
 
     // Verify first transaction, check work score
-    SidechainWTPrimeState wt1;
-    wt1.hashWTPrime = hashWTTest1;
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt1.nSidechain = 0;
+    SidechainWithdrawalState state1;
+    state1.hash = hash1;
+    state1.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state1.nSidechain = 0;
     int nHeight = 0;
-    int nBlocksLeft = wt1.nBlocksLeft + 1;
-    for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
-        std::vector<SidechainWTPrimeState> vWT;
-        wt1.nWorkScore = i;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}));
+    int nBlocksLeft = state1.nBlocksLeft + 1;
+    for (int i = 1; i <= SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
+        state1.nWorkScore = i;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState> {state1}));
         nHeight++;
         nBlocksLeft--;
     }
-    BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest1));
+    BOOST_CHECK(scdbTest.CheckWorkScore(0, hash1));
 
-    // Keep updating until the first WT^ expires
+    // Keep updating until the first withdrawal expires
     while (nBlocksLeft >= 0) {
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState> {wt1}, false, std::map<uint8_t, uint256>(), false, true));
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState> {state1}, false, std::map<uint8_t, uint256>(), false, true));
         nHeight++;
         nBlocksLeft--;
     }
@@ -123,141 +122,141 @@ BOOST_AUTO_TEST_CASE(sidechaindb_MultipleWTPrimes_one_expires)
     mtx.vin[0].scriptSig = CScript() << 486604799;
     mtx.vout.push_back(CTxOut(50 * CENT, CScript() << OP_RETURN));
 
-    // WT^ hash for second period
-    uint256 hashWTTest2 = GetRandHash();
+    // Withdrawal hash for second period
+    uint256 hash2 = GetRandHash();
 
-    // Add new WT^
-    std::vector<SidechainWTPrimeState> vWT;
-    SidechainWTPrimeState wt2;
-    wt2.hashWTPrime = hashWTTest2;
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt2.nSidechain = 0;
-    wt2.nWorkScore = 1;
-    vWT.push_back(wt2);
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
-    BOOST_CHECK(!scdbTest.CheckWorkScore(0, hashWTTest2));
+    // Add new withdrawal
+    std::vector<SidechainWithdrawalState> vState;
+    SidechainWithdrawalState state2;
+    state2.hash = hash2;
+    state2.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state2.nSidechain = 0;
+    state2.nWorkScore = 1;
+    vState.push_back(state2);
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vState));
+    BOOST_CHECK(!scdbTest.CheckWorkScore(0, hash2));
 
-    // Verify that scdbTest has updated to correct WT^
-    const std::vector<SidechainWTPrimeState> vState = scdbTest.GetState(0);
-    BOOST_CHECK(vState.size() == 1 && vState[0].hashWTPrime == hashWTTest2);
+    // Verify that scdbTest has updated to correct withdrawal
+    vState = scdbTest.GetState(0);
+    BOOST_CHECK(vState.size() == 1 && vState[0].hash == hash2);
 
     // Give second transaction sufficient workscore and check work score
     nHeight = 0;
-    for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
-        std::vector<SidechainWTPrimeState> vWT;
-        wt2.nWorkScore = i;
-        vWT.push_back(wt2);
-        scdbTest.UpdateSCDBIndex(vWT);
+    for (int i = 1; i <= SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
+        state2.nWorkScore = i;
+        scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState>{state2});
         nHeight++;
     }
-    BOOST_CHECK(scdbTest.CheckWorkScore(0, hashWTTest2));
+    BOOST_CHECK(scdbTest.CheckWorkScore(0, hash2));
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_MT_single)
 {
     // Merkle tree based scdbTest update test with only scdbTest data (no LD)
-    // in the tree, and a single WT^ to be updated.
+    // in the tree, and a single withdrawal to be updated.
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    // Create scdbTest with initial WT^
-    std::vector<SidechainWTPrimeState> vWT;
+    // Create scdbTest with initial withdrawal
+    std::vector<SidechainWithdrawalState> vState;
 
-    SidechainWTPrimeState wt;
-    wt.hashWTPrime = GetRandHash();
-    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt.nWorkScore = 1;
-    wt.nSidechain = 0;
+    SidechainWithdrawalState state;
+    state.hash= GetRandHash();
+    state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state.nWorkScore = 1;
+    state.nSidechain = 0;
 
-    vWT.push_back(wt);
-    scdbTest.UpdateSCDBIndex(vWT);
+    vState.push_back(state);
+    scdbTest.UpdateSCDBIndex(vState);
 
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    vWT.clear();
-    wt.nWorkScore++;
-    vWT.push_back(wt);
-    scdbTestCopy.UpdateSCDBIndex(vWT);
+    vState.clear();
+    state.nWorkScore++;
+    vState.push_back(state);
+    scdbTestCopy.UpdateSCDBIndex(vState);
 
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleSC)
 {
-    // TODO fix, does not actually have multiple sidechains
+    // TODO finish: does not actually test multiple sidechains
+    //
     // Merkle tree based scdbTest update test with multiple sidechains that each
-    // have one WT^ to update. Only one WT^ out of the three will be updated.
-    // This test ensures that nBlocksLeft is properly decremented even when a
-    // WT^'s score is unchanged.
+    // have one withdrawal to update. Only one withdrawal out of the three will
+    // be updated. This test ensures that nBlocksLeft is properly decremented
+    // even when a withdrawal's score is unchanged.
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    // Add initial WT^s to scdbTest
-    SidechainWTPrimeState wtTest;
-    wtTest.hashWTPrime = GetRandHash();
-    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wtTest.nSidechain = 0;
-    wtTest.nWorkScore = 1;
+    // Add initial withdrawals to scdbTest
+    SidechainWithdrawalState state;
+    state.hash= GetRandHash();
+    state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state.nSidechain = 0;
+    state.nWorkScore = 1;
 
-    std::vector<SidechainWTPrimeState> vWT;
-    vWT.push_back(wtTest);
+    std::vector<SidechainWithdrawalState> vState;
+    vState.push_back(state);
 
-    scdbTest.UpdateSCDBIndex(vWT);
+    scdbTest.UpdateSCDBIndex(vState);
 
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    wtTest.nWorkScore++;
+    state.nWorkScore++;
 
-    vWT.clear();
-    vWT.push_back(wtTest);
+    vState.clear();
+    vState.push_back(state);
 
-    scdbTestCopy.UpdateSCDBIndex(vWT);
+    scdbTestCopy.UpdateSCDBIndex(vState);
 
     // Use MT hash prediction to update the original scdbTest
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_MT_multipleWT)
+BOOST_AUTO_TEST_CASE(sidechaindb_MT_multiple_withdrawal)
 {
-    // TODO fix, does not actually have multiple sidechains
-    // Merkle tree based scdbTest update test with multiple sidechains and multiple
-    // WT^(s) being updated. This tests that MT based scdbTest update will work if
-    // work scores are updated for more than one sidechain per block.
+    // TODO finish: does not actually have multiple sidechains
+    // Merkle tree based scdbTest update test with multiple sidechains and
+    // multiple withdrawals being updated. This tests that MT based scdbTest
+    // update will work if work scores are updated for more than one sidechain
+    // per block.
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    // Add initial WT^s to scdbTest
-    SidechainWTPrimeState wtTest;
-    wtTest.hashWTPrime = GetRandHash();
-    wtTest.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wtTest.nSidechain = 0;
-    wtTest.nWorkScore = 1;
+    // Add initial withdrawal to scdbTest
+    SidechainWithdrawalState state;
+    state.hash = GetRandHash();
+    state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state.nSidechain = 0;
+    state.nWorkScore = 1;
 
-    std::vector<SidechainWTPrimeState> vWT;
-    vWT.push_back(wtTest);
+    std::vector<SidechainWithdrawalState> vState;
+    vState.push_back(state);
 
-    scdbTest.UpdateSCDBIndex(vWT);
+    scdbTest.UpdateSCDBIndex(vState);
 
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    wtTest.nWorkScore++;
+    state.nWorkScore++;
 
-    vWT.clear();
-    vWT.push_back(wtTest);
+    vState.clear();
+    vState.push_back(state);
 
-    scdbTestCopy.UpdateSCDBIndex(vWT);
+    scdbTestCopy.UpdateSCDBIndex(vState);
 
     // Use MT hash prediction to update the original scdbTest
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
@@ -421,10 +420,9 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_multi_deposits_multi_sidechain)
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
+BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_withdrawal)
 {
-    // Create a deposit (and CTIP) for a single sidechain,
-    // and then spend it with a WT^
+    // Create a deposit (and CTIP) for a single sidechain and then spend it
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
@@ -475,46 +473,46 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime)
     BOOST_CHECK(ctip.out.hash == mtx.GetHash());
     BOOST_CHECK(ctip.out.n == 1);
 
-    // Create a WT^ that spends the CTIP
+    // Create a withdrawal that spends the CTIP
     CMutableTransaction wmtx;
     wmtx.nVersion = 2;
     wmtx.vin.push_back(CTxIn(ctip.out.hash, ctip.out.n));
-    wmtx.vout.push_back(CTxOut(CAmount(0), CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST) )));
-    wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWTFees(1 * CENT)));
+    wmtx.vout.push_back(CTxOut(CAmount(0), CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WITHDRAWAL_RETURN_DEST) )));
+    wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWithdrawalFees(1 * CENT)));
     wmtx.vout.push_back(CTxOut(25 * CENT, GetScriptForDestination(pubkey.GetID())));
     wmtx.vout.push_back(CTxOut(24 * CENT, sidechainScript));
 
     // Give it sufficient work score
-    SidechainWTPrimeState wt;
+    SidechainWithdrawalState state;
     uint256 hashBlind;
-    BOOST_CHECK(CTransaction(wmtx).GetBWTHash(hashBlind));
-    wt.hashWTPrime = hashBlind;
-    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt.nSidechain = 0;
+    BOOST_CHECK(CTransaction(wmtx).GetBlindHash(hashBlind));
+    state.hash = hashBlind;
+    state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state.nSidechain = 0;
     int nHeight = 0;
-    for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
-        wt.nWorkScore = i;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wt}, nHeight));
+    for (int i = 1; i <= SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
+        state.nWorkScore = i;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState>{state}, nHeight));
         nHeight++;
     }
 
-    // WT^ 0 should pass with valid workscore
+    // The withdrawal should have valid workscore
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashBlind));
 
-    // Spend the WT^
-    BOOST_CHECK(scdbTest.SpendWTPrime(0, GetRandHash(), wmtx, 1));
+    // Spend the withdrawal
+    BOOST_CHECK(scdbTest.SpendWithdrawal(0, GetRandHash(), wmtx, 1));
 
-    // Check that the CTIP has been updated to the return amount from the WT^
+    // Check that the CTIP has been updated to the change amount
     SidechainCTIP ctipFinal;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctipFinal));
     BOOST_CHECK(ctipFinal.out.hash == wmtx.GetHash());
     BOOST_CHECK(ctipFinal.out.n == 3);
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
+BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_withdrawal_then_deposit)
 {
-    // Create a deposit (and CTIP) for a single sidechain, and then spend it
-    // with a WT^. After doing that, create another deposit.
+    // Create a deposit (and CTIP) for a single sidechain, and then spend it.
+    // After doing that, create another deposit.
     SidechainDB scdbTest;
 
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
@@ -565,36 +563,36 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     BOOST_CHECK(ctip.out.hash == mtx.GetHash());
     BOOST_CHECK(ctip.out.n == 1);
 
-    // Create a WT^ that spends the CTIP
+    // Create a withdrawal that spends the CTIP
     CMutableTransaction wmtx;
     wmtx.nVersion = 2;
     wmtx.vin.push_back(CTxIn(ctip.out.hash, ctip.out.n));
-    wmtx.vout.push_back(CTxOut(CAmount(0), CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WTPRIME_RETURN_DEST) )));
-    wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWTFees(1 * CENT)));
+    wmtx.vout.push_back(CTxOut(CAmount(0), CScript() << OP_RETURN << ParseHex(HexStr(SIDECHAIN_WITHDRAWAL_RETURN_DEST) )));
+    wmtx.vout.push_back(CTxOut(CAmount(0), EncodeWithdrawalFees(1 * CENT)));
     wmtx.vout.push_back(CTxOut(25 * CENT, GetScriptForDestination(pubkey.GetID())));
     wmtx.vout.push_back(CTxOut(24 * CENT, sidechainScript));
 
     // Give it sufficient work score
-    SidechainWTPrimeState wt;
+    SidechainWithdrawalState state;
     uint256 hashBlind;
-    BOOST_CHECK(CTransaction(wmtx).GetBWTHash(hashBlind));
-    wt.hashWTPrime = hashBlind;
-    wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt.nSidechain = 0;
+    BOOST_CHECK(CTransaction(wmtx).GetBlindHash(hashBlind));
+    state.hash= hashBlind;
+    state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state.nSidechain = 0;
     int nHeight = 0;
-    for (int i = 1; i <= SIDECHAIN_MIN_WORKSCORE; i++) {
-        wt.nWorkScore = i;
-        scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{wt}, nHeight);
+    for (int i = 1; i <= SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
+        state.nWorkScore = i;
+        scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState>{state}, nHeight);
         nHeight++;
     }
 
-    // WT^ 0 should pass with valid workscore (100/100)
+    // Withdrawal should have valid workscore
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hashBlind));
 
-    // Spend the WT^
-    BOOST_CHECK(scdbTest.SpendWTPrime(0, GetRandHash(), wmtx, 1));
+    // Spend the withdrawal
+    BOOST_CHECK(scdbTest.SpendWithdrawal(0, GetRandHash(), wmtx, 1));
 
-    // Check that the CTIP has been updated to the return amount from the WT^
+    // Check that the CTIP has been updated to the return amount
     SidechainCTIP ctipFinal;
     BOOST_CHECK(scdbTest.GetCTIP(0, ctipFinal));
     BOOST_CHECK(ctipFinal.out.hash == wmtx.GetHash());
@@ -626,7 +624,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_spend_wtprime_then_deposit)
     // Check if we cached it
     vDeposit.clear();
     vDeposit = scdbTest.GetDeposits(0);
-    // Should now have 3 deposits cached (first deposit, WT^, this deposit)
+    // Should now have 3 deposits cached (first deposit, withdrawal change,
+    // this deposit)
     BOOST_CHECK(vDeposit.size() == 3 && vDeposit.back().tx == mtx2);
 
     // Compare with scdbTest CTIP
@@ -646,12 +645,12 @@ BOOST_AUTO_TEST_CASE(IsSCDBHashMerkleRootCommit)
     // TODO
 }
 
-BOOST_AUTO_TEST_CASE(IsWTPrimeHashCommit)
+BOOST_AUTO_TEST_CASE(IsWithdrawalHashCommit)
 {
     // TODO test invalid
-    // Test WT^ hash commitments for nSidechain 0-255 with random WT^ hashes
+    // Test hash commitments for nSidechain 0-255 with random withdrawal hashes
     for (unsigned int i = 0; i < 256; i++) {
-        uint256 hashWTPrime = GetRandHash();
+        uint256 hash = GetRandHash();
         uint8_t nSidechain = i;
 
         CBlock block;
@@ -659,13 +658,13 @@ BOOST_AUTO_TEST_CASE(IsWTPrimeHashCommit)
         mtx.vin.resize(1);
         mtx.vin[0].prevout.SetNull();
         block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-        GenerateWTPrimeHashCommitment(block, hashWTPrime, nSidechain, Params().GetConsensus());
+        GenerateWithdrawalHashCommitment(block, hash, nSidechain, Params().GetConsensus());
 
-        uint256 hashWTPrimeFromCommit;
+        uint256 hashFromCommit;
         uint8_t nSidechainFromCommit;
-        BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsWTPrimeHashCommit(hashWTPrimeFromCommit, nSidechainFromCommit));
+        BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsWithdrawalHashCommit(hashFromCommit, nSidechainFromCommit));
 
-        BOOST_CHECK(hashWTPrime == hashWTPrimeFromCommit);
+        BOOST_CHECK(hash == hashFromCommit);
         BOOST_CHECK(nSidechain == nSidechainFromCommit);
     }
 }
@@ -740,7 +739,7 @@ BOOST_AUTO_TEST_CASE(IsSidechainUpdateBytes)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
     CScript script;
-    GenerateSCDBUpdateScript(block, script, std::vector<std::vector<SidechainWTPrimeState>>{}, std::vector<SidechainCustomVote>{}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, std::vector<std::vector<SidechainWithdrawalState>>{}, std::vector<SidechainCustomVote>{}, Params().GetConsensus());
 
     BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBUpdate());
 }
@@ -748,8 +747,8 @@ BOOST_AUTO_TEST_CASE(IsSidechainUpdateBytes)
 BOOST_AUTO_TEST_CASE(update_helper_basic)
 {
     // A test of the minimal functionality of generating and parsing an SCDB
-    // update script. Two sidechains with one WT^ each. Abstain WT^ of sidechain
-    // 0 and downvote WT^ of sidechain 1.
+    // update script. Two sidechains with one withdrawal each.
+    // Abstain withdrawal of sidechain 0 and downvote for sidechain 1.
     SidechainDB scdbTest;
 
     // Activate first sidechain (default test sidechain)
@@ -775,24 +774,24 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 2);
 
-    // Add initial WT^s to scdbTest
-    SidechainWTPrimeState wt1;
-    wt1.hashWTPrime = GetRandHash();
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt1.nSidechain = 0; // For first sidechain
-    wt1.nWorkScore = 1;
+    // Add initial withdrawals to scdbTest
+    SidechainWithdrawalState state1;
+    state1.hash = GetRandHash();
+    state1.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state1.nSidechain = 0; // For first sidechain
+    state1.nWorkScore = 1;
 
-    SidechainWTPrimeState wt2;
-    wt2.hashWTPrime = GetRandHash();
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt2.nSidechain = 1; // For second sidechain
-    wt2.nWorkScore = 1;
+    SidechainWithdrawalState state2;
+    state2.hash = GetRandHash();
+    state2.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state2.nSidechain = 1; // For second sidechain
+    state2.nWorkScore = 1;
 
-    std::vector<SidechainWTPrimeState> vWT;
-    vWT.push_back(wt1);
-    vWT.push_back(wt2);
+    std::vector<SidechainWithdrawalState> vState;
+    vState.push_back(state1);
+    vState.push_back(state2);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vState));
     BOOST_CHECK(scdbTest.GetState(0).size() == 1);
     BOOST_CHECK(scdbTest.GetState(1).size() == 1);
 
@@ -800,22 +799,22 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    // No change to WT^ 1 means it will have a default abstain vote
-    wt2.nWorkScore--;
+    // No change to withdrawal 1 means it will have a default abstain vote
+    state2.nWorkScore--;
 
-    vWT.clear();
-    vWT.push_back(wt1);
-    vWT.push_back(wt2);
+    vState.clear();
+    vState.push_back(state1);
+    vState.push_back(state2);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vState));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 
-    // Create custom vote for WT^ 2
+    // Create custom vote for withdrawal 2
     SidechainCustomVote vote;
     vote.nSidechain = 1;
-    vote.hashWTPrime = wt2.hashWTPrime;
+    vote.hash = state2.hash;
     vote.vote = SCDB_DOWNVOTE;
 
     // Generate an update script
@@ -825,7 +824,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
-    std::vector<std::vector<SidechainWTPrimeState>> vOldScores;
+    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -835,8 +834,8 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
-    std::vector<SidechainWTPrimeState> vNew;
-    std::vector<std::vector<SidechainWTPrimeState>> vOld;
+    std::vector<SidechainWithdrawalState> vNew;
+    std::vector<std::vector<SidechainWithdrawalState>> vOld;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOld.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -848,41 +847,42 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
 BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
 {
     // A test of the minimal functionality of generating and parsing an SCDB
-    // update script. One sidechain with three WT^(s). Upvote the middle WT^
+    // update script. One sidechain with three withdrawals.
+    // Upvote the middle withdrawal.
     SidechainDB scdbTest;
 
     // Activate sidechain (default test sidechain)
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    // Add initial WT^s to scdbTest
-    SidechainWTPrimeState wt1;
-    wt1.hashWTPrime = GetRandHash();
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt1.nSidechain = 0;
-    wt1.nWorkScore = 1;
+    // Add initial withdrawals to scdbTest
+    SidechainWithdrawalState state1;
+    state1.hash = GetRandHash();
+    state1.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state1.nSidechain = 0;
+    state1.nWorkScore = 1;
 
-    SidechainWTPrimeState wt2;
-    wt2.hashWTPrime = GetRandHash();
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt2.nSidechain = 0;
-    wt2.nWorkScore = 1;
+    SidechainWithdrawalState state2;
+    state2.hash = GetRandHash();
+    state2.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state2.nSidechain = 0;
+    state2.nWorkScore = 1;
 
-    SidechainWTPrimeState wt3;
-    wt3.hashWTPrime = GetRandHash();
-    wt3.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt3.nSidechain = 0;
-    wt3.nWorkScore = 1;
+    SidechainWithdrawalState state3;
+    state3.hash = GetRandHash();
+    state3.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state3.nSidechain = 0;
+    state3.nWorkScore = 1;
 
-    std::vector<SidechainWTPrimeState> vWT;
-    vWT.push_back(wt1);
-    vWT.push_back(wt2);
-    vWT.push_back(wt3);
+    std::vector<SidechainWithdrawalState> vState;
+    vState.push_back(state1);
+    vState.push_back(state2);
+    vState.push_back(state3);
 
-    for (const SidechainWTPrimeState& wt : vWT) {
-        std::map<uint8_t, uint256> mapNewWTPrime;
-        mapNewWTPrime[wt.nSidechain] = wt.hashWTPrime;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{ wt }, false, mapNewWTPrime));
+    for (const SidechainWithdrawalState& state : vState) {
+        std::map<uint8_t, uint256> mapNewWithdrawal;
+        mapNewWithdrawal[state.nSidechain] = state.hash;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState>{ state }, false, mapNewWithdrawal));
     }
 
     BOOST_CHECK(scdbTest.GetState(0).size() == 3);
@@ -892,20 +892,20 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
 
     // Update the scdbTest copy to get a new MT hash
 
-    wt2.nWorkScore = 1;
+    state2.nWorkScore = 1;
 
-    vWT.clear();
-    vWT.push_back(wt2);
+    vState.clear();
+    vState.push_back(state2);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vState));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 
-    // Create custom vote for WT^ 2
+    // Create custom vote for withdrawal 2
     SidechainCustomVote vote;
     vote.nSidechain = 0;
-    vote.hashWTPrime = wt2.hashWTPrime;
+    vote.hash = state2.hash;
     vote.vote = SCDB_UPVOTE;
 
     // Generate an update script
@@ -915,7 +915,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
-    std::vector<std::vector<SidechainWTPrimeState>> vOldScores;
+    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -925,8 +925,8 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
-    std::vector<SidechainWTPrimeState> vNew;
-    std::vector<std::vector<SidechainWTPrimeState>> vOld;
+    std::vector<SidechainWithdrawalState> vNew;
+    std::vector<std::vector<SidechainWithdrawalState>> vOld;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOld.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -938,48 +938,48 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
 BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
 {
     // A test of the minimal functionality of generating and parsing an SCDB
-    // update script. One sidechain with four WT^(s). Upvote the third WT^.
+    // update script. One sidechain with four withdrawals. Upvote the third.
     SidechainDB scdbTest;
 
     // Activate sidechain (default test sidechain)
     BOOST_CHECK(ActivateTestSidechain(scdbTest));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
 
-    // Add initial WT^s to scdbTest
-    SidechainWTPrimeState wt1;
-    wt1.hashWTPrime = GetRandHash();
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt1.nSidechain = 0;
-    wt1.nWorkScore = 1;
+    // Add initial withdrawals to scdbTest
+    SidechainWithdrawalState state1;
+    state1.hash = GetRandHash();
+    state1.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state1.nSidechain = 0;
+    state1.nWorkScore = 1;
 
-    SidechainWTPrimeState wt2;
-    wt2.hashWTPrime = GetRandHash();
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt2.nSidechain = 0;
-    wt2.nWorkScore = 1;
+    SidechainWithdrawalState state2;
+    state2.hash = GetRandHash();
+    state2.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state2.nSidechain = 0;
+    state2.nWorkScore = 1;
 
-    SidechainWTPrimeState wt3;
-    wt3.hashWTPrime = GetRandHash();
-    wt3.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt3.nSidechain = 0;
-    wt3.nWorkScore = 1;
+    SidechainWithdrawalState state3;
+    state3.hash = GetRandHash();
+    state3.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state3.nSidechain = 0;
+    state3.nWorkScore = 1;
 
-    SidechainWTPrimeState wt4;
-    wt4.hashWTPrime = GetRandHash();
-    wt4.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt4.nSidechain = 0;
-    wt4.nWorkScore = 1;
+    SidechainWithdrawalState state4;
+    state4.hash = GetRandHash();
+    state4.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state4.nSidechain = 0;
+    state4.nWorkScore = 1;
 
-    std::vector<SidechainWTPrimeState> vWT;
-    vWT.push_back(wt1);
-    vWT.push_back(wt2);
-    vWT.push_back(wt3);
-    vWT.push_back(wt4);
+    std::vector<SidechainWithdrawalState> vState;
+    vState.push_back(state1);
+    vState.push_back(state2);
+    vState.push_back(state3);
+    vState.push_back(state4);
 
-    for (const SidechainWTPrimeState& wt : vWT) {
-        std::map<uint8_t, uint256> mapNewWTPrime;
-        mapNewWTPrime[wt.nSidechain] = wt.hashWTPrime;
-        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWTPrimeState>{ wt }, false, mapNewWTPrime));
+    for (const SidechainWithdrawalState& state : vState) {
+        std::map<uint8_t, uint256> mapNewWithdrawal;
+        mapNewWithdrawal[state.nSidechain] = state.hash;
+        BOOST_CHECK(scdbTest.UpdateSCDBIndex(std::vector<SidechainWithdrawalState>{ state }, false, mapNewWithdrawal));
     }
 
     BOOST_CHECK(scdbTest.GetState(0).size() == 4);
@@ -989,20 +989,20 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
 
     // Update the scdbTest copy to get a new MT hash
 
-    wt3.nWorkScore = 1;
+    state3.nWorkScore = 1;
 
-    vWT.clear();
-    vWT.push_back(wt3);
+    vState.clear();
+    vState.push_back(state3);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vState));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 
-    // Create custom vote for WT^ 2
+    // Create custom vote for withdrawal 2
     SidechainCustomVote vote;
     vote.nSidechain = 0;
-    vote.hashWTPrime = wt3.hashWTPrime;
+    vote.hash = state3.hash;
     vote.vote = SCDB_UPVOTE;
 
     // Generate an update script
@@ -1012,7 +1012,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
-    std::vector<std::vector<SidechainWTPrimeState>> vOldScores;
+    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -1022,8 +1022,8 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
-    std::vector<SidechainWTPrimeState> vNew;
-    std::vector<std::vector<SidechainWTPrimeState>> vOld;
+    std::vector<SidechainWithdrawalState> vNew;
+    std::vector<std::vector<SidechainWithdrawalState>> vOld;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOld.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -1034,8 +1034,8 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
 
 BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
 {
-    // SCDB update script test with custom votes for more than one WT^ and
-    // three active sidechains but still only one WT^ per sidechain.
+    // SCDB update script test with custom votes for more than one withdrawal
+    // and three active sidechains but still only one withdrawal per sidechain.
     SidechainDB scdbTest;
 
     // Activate first sidechain (default test sidechain)
@@ -1074,31 +1074,31 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 
-    // Add initial WT^s to scdbTest
-    SidechainWTPrimeState wt1;
-    wt1.hashWTPrime = GetRandHash();
-    wt1.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt1.nSidechain = 0; // For first sidechain
-    wt1.nWorkScore = 1;
+    // Add initial withdrawals to scdbTest
+    SidechainWithdrawalState state1;
+    state1.hash = GetRandHash();
+    state1.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state1.nSidechain = 0; // For first sidechain
+    state1.nWorkScore = 1;
 
-    SidechainWTPrimeState wt2;
-    wt2.hashWTPrime = GetRandHash();
-    wt2.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt2.nSidechain = 1; // For second sidechain
-    wt2.nWorkScore = 1;
+    SidechainWithdrawalState state2;
+    state2.hash = GetRandHash();
+    state2.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state2.nSidechain = 1; // For second sidechain
+    state2.nWorkScore = 1;
 
-    SidechainWTPrimeState wt3;
-    wt3.hashWTPrime = GetRandHash();
-    wt3.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt3.nSidechain = 2; // For third sidechain
-    wt3.nWorkScore = 1;
+    SidechainWithdrawalState state3;
+    state3.hash = GetRandHash();
+    state3.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state3.nSidechain = 2; // For third sidechain
+    state3.nWorkScore = 1;
 
-    std::vector<SidechainWTPrimeState> vWT;
-    vWT.push_back(wt1);
-    vWT.push_back(wt2);
-    vWT.push_back(wt3);
+    std::vector<SidechainWithdrawalState> vState;
+    vState.push_back(state1);
+    vState.push_back(state2);
+    vState.push_back(state3);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vState));
     BOOST_CHECK(scdbTest.GetState(0).size() == 1);
     BOOST_CHECK(scdbTest.GetState(1).size() == 1);
     BOOST_CHECK(scdbTest.GetState(2).size() == 1);
@@ -1107,31 +1107,31 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    // No change to WT^ 1 means it will have a default abstain vote
+    // No change to withdrawal 1 means it will have a default abstain vote
 
-    wt2.nWorkScore--;
-    wt3.nWorkScore++;
+    state2.nWorkScore--;
+    state3.nWorkScore++;
 
-    vWT.clear();
-    vWT.push_back(wt1);
-    vWT.push_back(wt2);
-    vWT.push_back(wt3);
+    vState.clear();
+    vState.push_back(state1);
+    vState.push_back(state2);
+    vState.push_back(state3);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vState));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 
-    // Create custom vote for WT^ 2
+    // Create custom vote for withdrawal 2
     SidechainCustomVote vote;
     vote.nSidechain = 1;
-    vote.hashWTPrime = wt2.hashWTPrime;
+    vote.hash = state2.hash;
     vote.vote = SCDB_DOWNVOTE;
 
-    // Create custom vote for WT^ 3
+    // Create custom vote for withdrawal 3
     SidechainCustomVote vote2;
     vote2.nSidechain = 2;
-    vote2.hashWTPrime = wt3.hashWTPrime;
+    vote2.hash = state3.hash;
     vote2.vote = SCDB_UPVOTE;
 
     // Generate an update script
@@ -1141,7 +1141,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
-    std::vector<std::vector<SidechainWTPrimeState>> vOldScores;
+    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -1151,8 +1151,8 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
-    std::vector<SidechainWTPrimeState> vNew;
-    std::vector<std::vector<SidechainWTPrimeState>> vOld;
+    std::vector<SidechainWithdrawalState> vNew;
+    std::vector<std::vector<SidechainWithdrawalState>> vOld;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOld.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -1163,10 +1163,10 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash(), vNew));
 }
 
-BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
+BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_withdraw)
 {
-    // SCDB update script test with custom votes for more than one WT^ and
-    // three active sidechains with multiple WT^(s) per sidechain.
+    // SCDB update script test with custom votes for more than one withdrawal
+    // and three active sidechains with multiple withdrawals per sidechain.
     SidechainDB scdbTest;
 
     // Activate first sidechain (default test sidechain)
@@ -1205,31 +1205,31 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0, true));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 
-    // Add initial WT^s to scdbTest
-    SidechainWTPrimeState wt1a;
-    wt1a.hashWTPrime = GetRandHash();
-    wt1a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt1a.nSidechain = 0; // For first sidechain
-    wt1a.nWorkScore = 1;
+    // Add initial withdrawals to scdbTest
+    SidechainWithdrawalState state1a;
+    state1a.hash = GetRandHash();
+    state1a.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state1a.nSidechain = 0; // For first sidechain
+    state1a.nWorkScore = 1;
 
-    SidechainWTPrimeState wt2a;
-    wt2a.hashWTPrime = GetRandHash();
-    wt2a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt2a.nSidechain = 1; // For second sidechain
-    wt2a.nWorkScore = 1;
+    SidechainWithdrawalState state2a;
+    state2a.hash = GetRandHash();
+    state2a.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state2a.nSidechain = 1; // For second sidechain
+    state2a.nWorkScore = 1;
 
-    SidechainWTPrimeState wt3a;
-    wt3a.hashWTPrime = GetRandHash();
-    wt3a.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt3a.nSidechain = 2; // For third sidechain
-    wt3a.nWorkScore = 1;
+    SidechainWithdrawalState state3a;
+    state3a.hash = GetRandHash();
+    state3a.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state3a.nSidechain = 2; // For third sidechain
+    state3a.nWorkScore = 1;
 
-    std::vector<SidechainWTPrimeState> vWT;
-    vWT.push_back(wt1a);
-    vWT.push_back(wt2a);
-    vWT.push_back(wt3a);
+    std::vector<SidechainWithdrawalState> vState;
+    vState.push_back(state1a);
+    vState.push_back(state2a);
+    vState.push_back(state3a);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vState));
     BOOST_CHECK(scdbTest.GetState(0).size() == 1);
     BOOST_CHECK(scdbTest.GetState(1).size() == 1);
     BOOST_CHECK(scdbTest.GetState(2).size() == 1);
@@ -1238,32 +1238,32 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     SidechainDB scdbTestCopy = scdbTest;
 
     // Update the scdbTest copy to get a new MT hash
-    wt3a.nWorkScore++;
+    state3a.nWorkScore++;
 
-    vWT.clear();
-    vWT.push_back(wt3a);
+    vState.clear();
+    vState.push_back(state3a);
 
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vState));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash()));
 
-    // Create custom vote for WT^ 1
+    // Create custom vote for withdrawal 1
     SidechainCustomVote vote;
     vote.nSidechain = 0;
-    vote.hashWTPrime = wt1a.hashWTPrime;
+    vote.hash = state1a.hash;
     vote.vote = SCDB_DOWNVOTE;
 
-    // Create custom vote for WT^ 2
+    // Create custom vote for withdrawal 2
     SidechainCustomVote vote1;
     vote1.nSidechain = 1;
-    vote1.hashWTPrime = wt2a.hashWTPrime;
+    vote1.hash = state2a.hash;
     vote1.vote = SCDB_DOWNVOTE;
 
-    // Create custom vote for WT^ 3
+    // Create custom vote for withdrawal 3
     SidechainCustomVote vote2;
     vote2.nSidechain = 2;
-    vote2.hashWTPrime = wt3a.hashWTPrime;
+    vote2.hash = state3a.hash;
     vote2.vote = SCDB_UPVOTE;
 
     // Generate an update script
@@ -1273,7 +1273,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
-    std::vector<std::vector<SidechainWTPrimeState>> vOldScores;
+    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -1283,8 +1283,8 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     BOOST_CHECK(script.IsSCDBUpdate());
 
     // Use ParseUpdateScript from validation to read it
-    std::vector<SidechainWTPrimeState> vNew;
-    std::vector<std::vector<SidechainWTPrimeState>> vOld;
+    std::vector<SidechainWithdrawalState> vNew;
+    std::vector<std::vector<SidechainWithdrawalState>> vOld;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         vOld.push_back(scdbTest.GetState(s.nSidechain));
     }
@@ -1294,31 +1294,31 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
 
     BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(2, scdbTestCopy.GetSCDBHash(), vNew));
 
-    // Now add more WT^(s) to the existing sidechains
-    SidechainWTPrimeState wt1b;
-    wt1b.hashWTPrime = GetRandHash();
-    wt1b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt1b.nSidechain = 0; // For first sidechain
-    wt1b.nWorkScore = 1;
+    // Now add more withdrawals to the existing sidechains
+    SidechainWithdrawalState state1b;
+    state1b.hash = GetRandHash();
+    state1b.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state1b.nSidechain = 0; // For first sidechain
+    state1b.nWorkScore = 1;
 
-    SidechainWTPrimeState wt2b;
-    wt2b.hashWTPrime = GetRandHash();
-    wt2b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt2b.nSidechain = 1; // For second sidechain
-    wt2b.nWorkScore = 1;
+    SidechainWithdrawalState state2b;
+    state2b.hash = GetRandHash();
+    state2b.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state2b.nSidechain = 1; // For second sidechain
+    state2b.nWorkScore = 1;
 
-    SidechainWTPrimeState wt3b;
-    wt3b.hashWTPrime = GetRandHash();
-    wt3b.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-    wt3b.nSidechain = 2; // For third sidechain
-    wt3b.nWorkScore = 1;
+    SidechainWithdrawalState state3b;
+    state3b.hash = GetRandHash();
+    state3b.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+    state3b.nSidechain = 2; // For third sidechain
+    state3b.nWorkScore = 1;
 
-    vWT.clear();
-    vWT.push_back(wt1b);
-    vWT.push_back(wt2b);
-    vWT.push_back(wt3b);
+    vState.clear();
+    vState.push_back(state1b);
+    vState.push_back(state2b);
+    vState.push_back(state3b);
 
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vState));
     BOOST_CHECK(scdbTest.GetState(0).size() == 2);
     BOOST_CHECK(scdbTest.GetState(1).size() == 2);
     BOOST_CHECK(scdbTest.GetState(2).size() == 2);
@@ -1326,30 +1326,30 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_wtprime)
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy2 = scdbTest;
 
-    wt3b.nWorkScore++;
+    state3b.nWorkScore++;
 
-    vWT.clear();
-    vWT.push_back(wt3b);
+    vState.clear();
+    vState.push_back(state3b);
 
-    BOOST_CHECK(scdbTestCopy2.UpdateSCDBIndex(vWT));
+    BOOST_CHECK(scdbTestCopy2.UpdateSCDBIndex(vState));
 
     // MT hash prediction should fail here without update script
     BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(4, scdbTestCopy2.GetSCDBHash()));
 
-    // Create custom votes for WT^s
+    // Create custom votes for withdrawals
     SidechainCustomVote vote3;
     vote3.nSidechain = 0;
-    vote3.hashWTPrime = wt1a.hashWTPrime;
+    vote3.hash = state1a.hash;
     vote3.vote = SCDB_DOWNVOTE;
 
     SidechainCustomVote vote4;
     vote4.nSidechain = 1;
-    vote4.hashWTPrime = wt2a.hashWTPrime;
+    vote4.hash = state2a.hash;
     vote4.vote = SCDB_DOWNVOTE;
 
     SidechainCustomVote vote5;
     vote5.nSidechain = 2;
-    vote5.hashWTPrime = wt3b.hashWTPrime;
+    vote5.hash = state3b.hash;
     vote5.vote = SCDB_UPVOTE;
 
     // Generate an update script
@@ -1412,21 +1412,21 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     // Check that the maximum number have been activated
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
 
-    // Add one WT^ to SCDB for each sidechain
+    // Add one withdrawal to SCDB for each sidechain
     int nBlock = 0;
-    std::vector<SidechainWTPrimeState> vWT;
+    std::vector<SidechainWithdrawalState> vState;
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
-        // Create WT^
-        SidechainWTPrimeState wt;
-        wt.hashWTPrime = GetRandHash();
-        wt.nBlocksLeft = SIDECHAIN_VERIFICATION_PERIOD - 1;
-        wt.nSidechain = s.nSidechain;
-        wt.nWorkScore = 1;
+        // Create withdrawal
+        SidechainWithdrawalState state;
+        state.hash = GetRandHash();
+        state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
+        state.nSidechain = s.nSidechain;
+        state.nWorkScore = 1;
 
-        vWT.push_back(wt);
+        vState.push_back(state);
     }
-    // Check that all of the WT^s are added
-    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vWT));
+    // Check that all of the withdrawals are added
+    BOOST_CHECK(scdbTest.UpdateSCDBIndex(vState));
     for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
         BOOST_CHECK(scdbTest.GetState(s.nSidechain).size() == 1);
     }
@@ -1436,34 +1436,34 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     // script to make scdbTest match scdbTestCopy
     SidechainDB scdbTestCopy = scdbTest;
 
-    // Get the current scores of all WT^(s) and then create new votes for them
-    std::vector<SidechainWTPrimeState> vNewScores;
+    // Get the current scores of all withdrawals and then create new votes
+    std::vector<SidechainWithdrawalState> vNewScores;
     std::vector<SidechainCustomVote> vUserVotes;
     int i = 0;
     for (const Sidechain& s : scdbTestCopy.GetActiveSidechains()) {
-        // Get the current WT^ score for this sidechain
-        std::vector<SidechainWTPrimeState> vOldScores = scdbTestCopy.GetState(s.nSidechain);
+        // Get the current scores for this sidechain
+        std::vector<SidechainWithdrawalState> vOldScores = scdbTestCopy.GetState(s.nSidechain);
 
         // There should be one score
         BOOST_CHECK(vOldScores.size() == 1);
 
-        SidechainWTPrimeState wt = vOldScores.front();
+        SidechainWithdrawalState state = vOldScores.front();
 
-        // Create custom vote for WT^
+        // Create custom vote
         SidechainCustomVote vote;
         vote.nSidechain = s.nSidechain;
-        vote.hashWTPrime = wt.hashWTPrime;
+        vote.hash = state.hash;
 
         // If i is an even number set downvote otherwise upvote
         if (i % 2 == 0) {
-            wt.nWorkScore--;
+            state.nWorkScore--;
             vote.vote = SCDB_DOWNVOTE;
         } else {
-            wt.nWorkScore++;
+            state.nWorkScore++;
             vote.vote = SCDB_UPVOTE;
         }
 
-        vNewScores.push_back(wt);
+        vNewScores.push_back(state);
         vUserVotes.push_back(vote);
         i++;
     }
@@ -1479,7 +1479,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
-    std::vector<std::vector<SidechainWTPrimeState>> vOldScores;
+    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
     for (const Sidechain& s : scdbTestCopy.GetActiveSidechains()) {
         vOldScores.push_back(scdbTestCopy.GetState(s.nSidechain));
     }
@@ -1514,7 +1514,7 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     for (size_t i = 0; i < nMaxSidechain; i++) {
         SidechainCustomVote vote;
         vote.nSidechain = i;
-        vote.hashWTPrime = GetRandHash();
+        vote.hash = GetRandHash();
         vote.vote = SCDB_UPVOTE;
 
         vVoteIn.push_back(vote);
@@ -1524,7 +1524,7 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     std::vector<SidechainCustomVote> vVoteOut = scdb.GetCustomVoteCache();
     BOOST_CHECK(vVoteOut.size() == nMaxSidechain);
 
-    // Test that new WT^ votes replace old votes for the same sidechain
+    // Test that new votes replace old votes for the same sidechain
 
     // Add a new vote for each sidechain and check that they have replaced all
     // of the old votes
@@ -1532,7 +1532,7 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     for (size_t i = 0; i < nMaxSidechain; i++) {
         SidechainCustomVote vote;
         vote.nSidechain = i;
-        vote.hashWTPrime = GetRandHash();
+        vote.hash = GetRandHash();
         vote.vote = SCDB_ABSTAIN;
 
         vVoteIn.push_back(vote);
@@ -1548,7 +1548,7 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
         BOOST_CHECK(v.vote == SCDB_ABSTAIN);
     }
 
-    // Test that changing vote type updates the current WT^ vote
+    // Test that changing vote type updates the current vote
 
     // Pass in the same votes as currently in the cache, but with their vote
     // type changed to SCDB_DOWNVOTE and make sure they were all changed
@@ -1571,17 +1571,17 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     // Test adding each vote type and check that it is set correctly
     SidechainCustomVote upvote;
     upvote.nSidechain = 0;
-    upvote.hashWTPrime = GetRandHash();
+    upvote.hash = GetRandHash();
     upvote.vote = SCDB_UPVOTE;
 
     SidechainCustomVote abstain;
     abstain.nSidechain = 1;
-    abstain.hashWTPrime = GetRandHash();
+    abstain.hash = GetRandHash();
     abstain.vote = SCDB_ABSTAIN;
 
     SidechainCustomVote downvote;
     downvote.nSidechain = 2;
-    downvote.hashWTPrime = GetRandHash();
+    downvote.hash = GetRandHash();
     downvote.vote = SCDB_DOWNVOTE;
 
     BOOST_CHECK(scdb.CacheCustomVotes(std::vector<SidechainCustomVote> { upvote, abstain, downvote }));
@@ -1600,7 +1600,7 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     // Check that invalid vote types are rejected the current cache size is 3
     SidechainCustomVote invalidVote;
     invalidVote.nSidechain = 2;
-    invalidVote.hashWTPrime = GetRandHash();
+    invalidVote.hash = GetRandHash();
     invalidVote.vote = 'z';
 
     BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ invalidVote }));
@@ -1613,12 +1613,12 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     vVoteOut = scdb.GetCustomVoteCache();
     BOOST_CHECK(vVoteOut.empty());
 
-    SidechainCustomVote nullHashWTPrime;
-    nullHashWTPrime.nSidechain = 2;
-    nullHashWTPrime.hashWTPrime.SetNull();
-    nullHashWTPrime.vote = SCDB_DOWNVOTE;
+    SidechainCustomVote nullHash;
+    nullHash.nSidechain = 2;
+    nullHash.hash.SetNull();
+    nullHash.vote = SCDB_DOWNVOTE;
 
-    BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ nullHashWTPrime }));
+    BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ nullHash }));
     vVoteOut = scdb.GetCustomVoteCache();
     BOOST_CHECK(vVoteOut.empty());
 }

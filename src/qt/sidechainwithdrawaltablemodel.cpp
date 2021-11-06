@@ -79,7 +79,7 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
         }
         // Max age
         if (col == 2) {
-            // TODO just use SIDECHAIN_VERIFICATION_PERIOD and remove nMaxAge
+            // TODO just use SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD and remove nMaxAge
             // from the model objects
             return object.nMaxAge;
         }
@@ -88,16 +88,16 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
             QString qAcks;
             qAcks += QString::number(object.nAcks);
             qAcks += " / ";
-            qAcks += QString::number(SIDECHAIN_MIN_WORKSCORE);
+            qAcks += QString::number(SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE);
             return qAcks;
         }
         // Approved
         if (col == 4) {
             return object.fApproved;
         }
-        // WT^ hash
+        // hash
         if (col == 5) {
-            return object.hashWTPrime;
+            return object.hash;
         }
     }
     case AcksRole:
@@ -106,7 +106,7 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
     }
     case HashRole:
     {
-        return object.hashWTPrime;
+        return object.hash;
     }
     case Qt::TextAlignmentRole:
     {
@@ -130,7 +130,7 @@ QVariant SidechainWithdrawalTableModel::data(const QModelIndex &index, int role)
         if (col == 4) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
-        // WT^ hash
+        // hash
         if (col == 5) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
@@ -155,7 +155,7 @@ QVariant SidechainWithdrawalTableModel::headerData(int section, Qt::Orientation 
             case 4:
                 return QString("Approved");
             case 5:
-                return QString("WT^ hash");
+                return QString("Withdrawal hash");
             }
         }
     }
@@ -177,15 +177,15 @@ void SidechainWithdrawalTableModel::updateModel()
     int nSidechains = vSidechain.size();
     beginInsertRows(QModelIndex(), model.size(), model.size() + nSidechains);
     for (const Sidechain& s : vSidechain) {
-        std::vector<SidechainWTPrimeState> vState = scdb.GetState(s.nSidechain);
-        for (const SidechainWTPrimeState& wt : vState) {
+        std::vector<SidechainWithdrawalState> vState = scdb.GetState(s.nSidechain);
+        for (const SidechainWithdrawalState& state : vState) {
             SidechainWithdrawalTableObject object;
             object.sidechain = QString::fromStdString(s.GetSidechainName());
-            object.hashWTPrime = QString::fromStdString(wt.hashWTPrime.ToString());
-            object.nAcks = wt.nWorkScore;
-            object.nAge = abs(wt.nBlocksLeft - SIDECHAIN_VERIFICATION_PERIOD);
-            object.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
-            object.fApproved = scdb.CheckWorkScore(wt.nSidechain, wt.hashWTPrime);
+            object.hash = QString::fromStdString(state.hash.ToString());
+            object.nAcks = state.nWorkScore;
+            object.nAge = abs(state.nBlocksLeft - SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD);
+            object.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
+            object.fApproved = scdb.CheckWorkScore(state.nSidechain, state.hash);
 
             model.append(QVariant::fromValue(object));
         }
@@ -207,76 +207,76 @@ void SidechainWithdrawalTableModel::AddDemoData()
 
     beginInsertRows(QModelIndex(), 0, 5);
 
-    // WT^ 1
+    // Withdrawal 1
     SidechainWithdrawalTableObject object1;
     object1.sidechain = QString::fromStdString("Grin");
-    object1.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
+    object1.hash = QString::fromStdString(GetRandHash().ToString());
     object1.nAcks = 42;
     object1.nAge = 50;
-    object1.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object1.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object1.fApproved = false;
 
-    // WT^ 2
+    // Withdrawal 2
     SidechainWithdrawalTableObject object2;
     object2.sidechain = QString::fromStdString("Hivemind");
-    object2.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
+    object2.hash = QString::fromStdString(GetRandHash().ToString());
     object2.nAcks = 13141;
     object2.nAge = 21358;
-    object2.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object2.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object2.fApproved = true;
 
-    // WT^ 3
+    // Withdrawal 3
     SidechainWithdrawalTableObject object3;
     object3.sidechain = QString::fromStdString("Hivemind");
-    object3.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
+    object3.hash = QString::fromStdString(GetRandHash().ToString());
     object3.nAcks = 1637;
     object3.nAge = 2000;
-    object3.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object3.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object3.fApproved = false;
 
-    // WT^ 4
+    // Withdrawal 4
     SidechainWithdrawalTableObject object4;
     object4.sidechain = QString::fromStdString("Cash");
-    object4.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
+    object4.hash = QString::fromStdString(GetRandHash().ToString());
     object4.nAcks = 705;
     object4.nAge = 26215;
-    object4.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object4.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object4.fApproved = false;
 
-    // WT^ 5
+    // Withdrawal 5
     SidechainWithdrawalTableObject object5;
     object5.sidechain = QString::fromStdString("Hivemind");
-    object5.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
+    object5.hash = QString::fromStdString(GetRandHash().ToString());
     object5.nAcks = 10;
     object5.nAge = 10;
-    object5.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object5.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object5.fApproved = false;
 
-    // WT^ 6
+    // Withdrawal 6
     SidechainWithdrawalTableObject object6;
     object6.sidechain = QString::fromStdString("sofa");
-    object6.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
+    object6.hash = QString::fromStdString(GetRandHash().ToString());
     object6.nAcks = 1256;
     object6.nAge = 1378;
-    object6.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object6.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object6.fApproved = false;
 
-    // WT^ 7
+    // Withdrawal 7
     SidechainWithdrawalTableObject object7;
     object7.sidechain = QString::fromStdString("Cash");
-    object7.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
-    object7.nAcks = SIDECHAIN_MIN_WORKSCORE + 10;
-    object7.nAge = SIDECHAIN_MIN_WORKSCORE + 11;
-    object7.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object7.hash = QString::fromStdString(GetRandHash().ToString());
+    object7.nAcks = SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE + 10;
+    object7.nAge = SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE + 11;
+    object7.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object7.fApproved = true;
 
-    // WT^ 8
+    // Withdrawal 8
     SidechainWithdrawalTableObject object8;
     object8.sidechain = QString::fromStdString("Hivemind");
-    object8.hashWTPrime = QString::fromStdString(GetRandHash().ToString());
+    object8.hash = QString::fromStdString(GetRandHash().ToString());
     object8.nAcks = 1;
     object8.nAge = 26142;
-    object8.nMaxAge = SIDECHAIN_VERIFICATION_PERIOD;
+    object8.nMaxAge = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD;
     object8.fApproved = false;
 
     // Add demo objects to model

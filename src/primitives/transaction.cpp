@@ -81,7 +81,7 @@ uint256 CTransaction::GetWitnessHash() const
     }
 }
 
-bool CTransaction::GetBWTHash(uint256& hashRet) const
+bool CTransaction::GetBlindHash(uint256& hashRet) const
 {
     CMutableTransaction mtx(*this);
     if (!mtx.vin.size() || !mtx.vout.size())
@@ -95,7 +95,7 @@ bool CTransaction::GetBWTHash(uint256& hashRet) const
     // Remove the sidechain change return
     mtx.vout.pop_back();
 
-    // We now have the B-WT^ hash
+    // We now have the blind withdrawal hash
     hashRet = mtx.GetHash();
 
     return true;

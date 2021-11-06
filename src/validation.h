@@ -41,7 +41,7 @@ class CBlockPolicyEstimator;
 class CTxMemPool;
 class CValidationState;
 class SidechainDB;
-class SidechainWTPrimeState;
+class SidechainWithdrawalState;
 class CSidechainTreeDB;
 class OPReturnDB;
 struct ChainTxData;
@@ -318,8 +318,8 @@ void PruneBlockFilesManual(int nManualPruneHeight);
 void GetSidechainValues(const CCoinsView& coins, const CTransaction& tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
                         CAmount& amtReturning, CAmount& amtWithdrawn);
 
-/** Compare the blinded hash (B-WT^) with the transaction provided */
-bool CheckBWTHash(const uint256& hashWTPrime, const CTransaction& tx);
+/** Compare the blinded hash with the transaction provided */
+bool CheckBlindHash(const uint256& hash, const CTransaction& tx);
 
 /** (try to) add transaction to memory pool
  * plTxnReplaced will be appended to with all transactions replaced from mempool **/
@@ -449,14 +449,14 @@ void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& co
 /** Produce the SCDB hashMerkleRoot coinbase commitment for a block */
 void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB, const Consensus::Params& consensusParams);
 
-/** Produce WT^ hash coinbase commitment for a block */
-void GenerateWTPrimeHashCommitment(CBlock& block, const uint256& hashWTPrime, const uint8_t nSidechain, const Consensus::Params& consensusParams);
+/** Produce withdrawal hash coinbase commitment for a block */
+void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain, const Consensus::Params& consensusParams);
 
 void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams);
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams);
 
-void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWTPrimeState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams);
+void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams);
 
 CScript GetNewsTokyoDailyHeader();
 CScript GetNewsUSDailyHeader();
@@ -534,10 +534,10 @@ bool DumpMempool();
 /** Load the mempool from disk. */
 bool LoadMempool();
 
-/** Load cache of user set WT^ votes for sidechains */
+/** Load cache of user set votes for withdrawals */
 bool LoadCustomVoteCache();
 
-/** Dump cache of user set WT^ votes for sidechains */
+/** Dump cache of user set votes for withdrawals */
 void DumpCustomVoteCache();
 
 // TODO Add startup param to enable this, make disabled by default. The other
@@ -549,12 +549,12 @@ bool LoadDepositCache();
 /** Dump the deposit cache to disk. */
 void DumpDepositCache();
 
-/** Load the optional WT^ transaction cache from disk. */
-bool LoadWTPrimeCache(bool fReindex = false);
+/** Load the withdrawal transaction cache from disk. */
+bool LoadWithdrawalCache(bool fReindex = false);
 
-/** Dump the WT^ cache to disk.
- * Spent WT^(s), failed WT^(s), WT^ raw transaction cache */
-void DumpWTPrimeCache();
+/** Dump the withdrawal cache to disk.
+ * Spent, failed & raw transaction cache */
+void DumpWithdrawalCache();
 
 /* Load sidechain proposal cache */
 bool LoadSidechainProposalCache();
@@ -574,7 +574,7 @@ bool LoadBMMCache();
 /* Write list of failed BMM txid */
 void DumpBMMCache();
 
-/** Tracks validation status of sidechain WT^(s) */
+/** Tracks validation status of sidechain withdrawals */
 extern SidechainDB scdb;
 
 /** Create txout proof */
@@ -586,7 +586,7 @@ bool VerifyTxOutProof(const std::string& strProof);
 /** Flush SCDB cache data to disk */
 void DumpSCDBCache();
 
-/** Resync SCDB WT^ status & verify hashBlockLastSeen. Used during init and
+/** Resync SCDB status & verify hashBlockLastSeen. Used during init and
  * when a block is disconnected. */
 bool ResyncSCDB(const CBlockIndex* pindex);
 

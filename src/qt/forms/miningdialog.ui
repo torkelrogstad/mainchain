@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>751</width>
-    <height>447</height>
+    <width>856</width>
+    <height>545</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -189,9 +189,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonWTPrimeVote">
+      <widget class="QPushButton" name="pushButtonWithdrawalVote">
        <property name="text">
-        <string>ACK WT^(s)</string>
+        <string>ACK Withdrawals</string>
        </property>
       </widget>
      </item>

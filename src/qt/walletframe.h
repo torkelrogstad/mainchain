@@ -102,7 +102,7 @@ public Q_SLOTS:
     void outOfSyncWarningClicked();
 
     void showSidechainActivationDialog();
-    void showSidechainWTPrimeDialog();
+    void showSidechainWithdrawalDialog();
 };
 
 #endif // BITCOIN_QT_WALLETFRAME_H

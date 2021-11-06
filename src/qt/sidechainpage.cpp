@@ -14,7 +14,7 @@
 #include <qt/sidechainactivationdialog.h>
 #include <qt/sidechaindetailsdialog.h>
 #include <qt/sidechaindepositconfirmationdialog.h>
-#include <qt/sidechainwtprimedialog.h>
+#include <qt/sidechainwithdrawaldialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/txdetails.h>
 #include <qt/walletmodel.h>
@@ -60,15 +60,15 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     // Initialize deposit confirmation dialog
     depositConfirmationDialog = new SidechainDepositConfirmationDialog(this);
 
-    // Initialize WT^ & sidechain miner configuration dialogs. Any widget that
-    // wants to show them can call ShowActivationDialog() / showWTPrimeDialog()
+    // Initialize Withdrawal & sidechain miner configuration dialogs. Any widget that
+    // wants to show them can call ShowActivationDialog() / showWithdrawalDialog()
     // instead of creating a new instance.
 
     activationDialog = new SidechainActivationDialog(platformStyle);
     activationDialog->setParent(this, Qt::Window);
 
-    wtPrimeDialog = new SidechainWTPrimeDialog(platformStyle);
-    wtPrimeDialog->setParent(this, Qt::Window);
+    withdrawalDialog = new SidechainWithdrawalDialog(platformStyle);
+    withdrawalDialog->setParent(this, Qt::Window);
 
     // Setup recent deposits table
     ui->tableWidgetRecentDeposits->setColumnCount(COLUMN_STATUS + 1);
@@ -90,7 +90,7 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
 
     // Buttons
     ui->pushButtonAddRemove->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
-    ui->pushButtonWTPrimeVote->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
+    ui->pushButtonWithdrawalVote->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
     ui->pushButtonDeposit->setIcon(platformStyle->SingleColorIcon(":/icons/send"));
     ui->pushButtonPaste->setIcon(platformStyle->SingleColorIcon(":/icons/editpaste"));
     ui->pushButtonClear->setIcon(platformStyle->SingleColorIcon(":/icons/remove"));
@@ -287,10 +287,10 @@ void SidechainPage::on_pushButtonDeposit_clicked()
         return;
     }
 
-    if (strDest == SIDECHAIN_WTPRIME_RETURN_DEST) {
+    if (strDest == SIDECHAIN_WITHDRAWAL_RETURN_DEST) {
         // Invalid deposit address
         messageBox.setWindowTitle("Invalid sidechain deposit address!");
-        messageBox.setText("Destination cannot be SIDECHAIN_WTPRIME_RETURN_DEST, please choose another address and try again.");
+        messageBox.setText("Destination cannot be SIDECHAIN_WITHDRAWAL_RETURN_DEST, please choose another address and try again.");
         messageBox.exec();
         return;
     }
@@ -431,20 +431,20 @@ void SidechainPage::on_tableViewWT_doubleClicked(const QModelIndex& index)
     QString qHash = index.sibling(row, 5).data().toString();
 
     QMessageBox messageBox;
-    messageBox.setWindowTitle("Failed to locate WT^ raw transaction!");
+    messageBox.setWindowTitle("Failed to locate Withdrawal raw transaction!");
 
     uint256 hash = uint256S(qHash.toStdString());
     if (hash.IsNull()) {
-        messageBox.setText("Invalid WT^ hash!");
+        messageBox.setText("Invalid Withdrawal hash!");
         messageBox.exec();
         return;
     }
 
     CMutableTransaction mtx;
-    if (!scdb.GetCachedWTPrime(hash, mtx)) {
+    if (!scdb.GetCachedWithdrawalTx(hash, mtx)) {
         QString error;
-        error += "WT^ not in cache!\n\n";
-        error += "Try using the 'rebroadcastwtprimehex' RPC command on the sidechain.\n";
+        error += "Withdrawal not in cache!\n\n";
+        error += "Try using the 'rebroadcastwithdrawaltx' RPC command on the sidechain.\n";
         messageBox.setText(error);
         messageBox.exec();
         return;
@@ -517,9 +517,9 @@ void SidechainPage::on_pushButtonAddRemove_clicked()
     ShowActivationDialog();
 }
 
-void SidechainPage::on_pushButtonWTPrimeVote_clicked()
+void SidechainPage::on_pushButtonWithdrawalVote_clicked()
 {
-    ShowWTPrimeDialog();
+    ShowWithdrawalDialog();
 }
 
 void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
@@ -527,12 +527,12 @@ void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
     QMessageBox::information(this, tr("DriveNet - information"),
         tr("If you have a sidechain full node, and have granted it RPC-access, "
            "then your mainchain node will periodically receive a cache of raw "
-           "WT^ transactions. From this cache, the WT^ transaction-details can "
+           "Withdrawal transactions. From this cache, the Withdrawal transaction-details can "
            "be obtained and displayed.\n\n"
            "If you do not have a sidechain full node connected, then you have no "
-           "direct firsthand knowledge about WT^s. You do NOT know how much money "
-           "the WT^ is withdrawing, nor where that money is trying to go, nor if "
-           "the WT^ is sidechain-valid. Until the WT^ accumulates sufficient ACK-score, "
+           "direct firsthand knowledge about Withdrawals. You do NOT know how much money "
+           "the Withdrawal is withdrawing, nor where that money is trying to go, nor if "
+           "the Withdrawal is sidechain-valid. Until the Withdrawal accumulates sufficient ACK-score, "
            "you will not even know if it is mainchain-valid.\n"),
         QMessageBox::Ok);
 }
@@ -560,7 +560,7 @@ void SidechainPage::on_pushButtonRecentDepositHelp_clicked()
 
 void SidechainPage::gotoWTPage()
 {
-    // Go to the WT^ table
+    // Go to the Withdrawal table
     ui->tabWidget->setCurrentIndex(1);
 }
 
@@ -582,9 +582,9 @@ void SidechainPage::ShowActivationDialog()
     activationDialog->show();
 }
 
-void SidechainPage::ShowWTPrimeDialog()
+void SidechainPage::ShowWithdrawalDialog()
 {
-    wtPrimeDialog->show();
+    withdrawalDialog->show();
 }
 
 void SidechainPage::UpdateRecentDeposits()

@@ -895,18 +895,18 @@ UniValue countsidechaindeposits(const JSONRPCRequest& request)
     return count;
 }
 
-UniValue receivewtprime(const JSONRPCRequest& request)
+UniValue receivewithdrawalbundle(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 2)
         throw std::runtime_error(
-            "receivewtprime\n"
-            "Called by sidechain to announce new WT^ for verification\n"
+            "receivewithdrawalbundle\n"
+            "Called by sidechain to announce new withdrawal for verification\n"
             "\nArguments:\n"
             "1. \"nsidechain\"      (int, required) The sidechain number\n"
             "2. \"rawtx\"           (string, required) The raw transaction hex\n"
             "\nExamples:\n"
-            + HelpExampleCli("receivewtprime", "")
-            + HelpExampleRpc("receivewtprime", "")
+            + HelpExampleCli("receivewithdrawalbundle", "")
+            + HelpExampleRpc("receivewithdrawalbundle", "")
      );
 
 #ifndef ENABLE_WALLET
@@ -943,17 +943,17 @@ UniValue receivewtprime(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
-    CTransaction wtPrime(mtx);
+    CTransaction withdrawal(mtx);
 
-    if (wtPrime.IsNull()) {
-        strError = "Invalid WT^ hex";
+    if (withdrawal.IsNull()) {
+        strError = "Invalid withdrawal hex";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
-    // Reject the WT^ if it spends more than the sidechain's CTIP as it won't
+    // Reject the withdrawal if it spends more than the sidechain's CTIP as it won't
     // be accepted anyway
-    CAmount amount = wtPrime.GetValueOut();
+    CAmount amount = withdrawal.GetValueOut();
     std::vector<COutput> vSidechainCoin;
     CScript scriptPubKey;
     if (!scdb.GetSidechainScript(nSidechain, scriptPubKey)) {
@@ -964,18 +964,18 @@ UniValue receivewtprime(const JSONRPCRequest& request)
 
     SidechainCTIP ctip;
     if (!scdb.GetCTIP(nSidechain, ctip)) {
-        strError = "Rejecting WT^: No CTIP found!";
+        strError = "Rejecting withdrawal: No CTIP found!";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
     if (amount > ctip.amount) {
-        strError = "Rejecting WT^: Withdrawn amount greater than CTIP amount!";
+        strError = "Rejecting withdrawal: Withdrawn amount greater than CTIP amount!";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
-    // Check for the required WT^ change return destination OP_RETURN output
+    // Check for the required withdrawal change return destination OP_RETURN output
     for (size_t i = 0; i < mtx.vout.size(); i++) {
         const CScript& scriptPubKey = mtx.vout[i].scriptPubKey;
         if (!scriptPubKey.size())
@@ -984,7 +984,7 @@ UniValue receivewtprime(const JSONRPCRequest& request)
             continue;
 
         if (scriptPubKey.size() < 3) {
-            strError = "Rejecting WT^: First OP_RETURN output invalid size (too small)!\n";
+            strError = "Rejecting Withdrawal: First OP_RETURN output invalid size (too small)!\n";
             LogPrintf("%s: %s\n", __func__, strError);
             throw JSONRPCError(RPC_MISC_ERROR, strError);
         }
@@ -993,30 +993,30 @@ UniValue receivewtprime(const JSONRPCRequest& request)
         opcodetype opcode;
         std::vector<unsigned char> vch;
         if (!scriptPubKey.GetOp(pDest, opcode, vch) || vch.empty()) {
-            strError = "Rejecting WT^: First OP_RETURN output invalid. (Failed GetOp)!\n";
+            strError = "Rejecting Withdrawal: First OP_RETURN output invalid. (Failed GetOp)!\n";
             LogPrintf("%s: %s\n", __func__, strError);
             throw JSONRPCError(RPC_MISC_ERROR, strError);
         }
         std::string strDest((const char*)vch.data(), vch.size());
-        if (strDest != SIDECHAIN_WTPRIME_RETURN_DEST) {
-            strError = "Rejecting WT^: First OP_RETURN output invalid. (incorrect dest)!\n";
+        if (strDest != SIDECHAIN_WITHDRAWAL_RETURN_DEST) {
+            strError = "Rejecting Withdrawal: First OP_RETURN output invalid. (incorrect dest)!\n";
             LogPrintf("%s: %s\n", __func__, strError);
             throw JSONRPCError(RPC_MISC_ERROR, strError);
         }
         break;
     }
 
-    // Add WT^ to our local cache so that we can create a WT^ hash commitment
+    // Add Withdrawal to our local cache so that we can create a Withdrawal hash commitment
     // in the next block we mine to begin the verification process
-    if (!scdb.CacheWTPrime(wtPrime, nSidechain)) {
-        strError = "WT^ rejected from cache (duplicate?)";
+    if (!scdb.CacheWithdrawalTx(withdrawal, nSidechain)) {
+        strError = "Withdrawal rejected from cache (duplicate?)";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
-    // Return WT^ hash to verify it has been received
+    // Return Withdrawal hash to verify it has been received
     UniValue ret(UniValue::VOBJ);
-    ret.push_back(Pair("wtxid", wtPrime.GetHash().GetHex()));
+    ret.push_back(Pair("wtxid", withdrawal.GetHash().GetHex()));
     return ret;
 }
 
@@ -1451,19 +1451,19 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     return obj;
 }
 
-UniValue setwtprimevote(const JSONRPCRequest& request)
+UniValue setwithdrawalvote(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 3)
         throw std::runtime_error(
-            "setwtprimevote\n"
-            "Set custom vote for sidechain WT^.\n"
+            "setwithdrawalvote\n"
+            "Set custom vote for sidechain Withdrawal.\n"
             "\nArguments:\n"
             "1. vote (\"upvote\"/\"downvote\"/\"abstain\")  (string, required) vote\n"
-            "2. nsidechain                            (numeric, required) Sidechain number of WT^\n"
-            "3. hashwtprime                           (string, required) Hash of the WT^\n"
+            "2. nsidechain                            (numeric, required) Sidechain number of Withdrawal\n"
+            "3. hash                                  (string, required) Hash of the withdrawal\n"
             "\nExamples:\n"
-            + HelpExampleCli("setwtprimevote", "")
-            + HelpExampleRpc("setwtprimevote", "")
+            + HelpExampleCli("setwithdrawalvote", "")
+            + HelpExampleRpc("setwithdrawalvote", "")
             );
 
     std::string strVote = request.params[0].get_str();
@@ -1478,15 +1478,15 @@ UniValue setwtprimevote(const JSONRPCRequest& request)
 
     std::string strHash = request.params[2].get_str();
     if (strHash.size() != 64)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash length");
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash length");
 
-    uint256 hashWTPrime = uint256S(strHash);
-    if (hashWTPrime.IsNull())
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash");
+    uint256 hash = uint256S(strHash);
+    if (hash.IsNull())
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash");
 
     SidechainCustomVote vote;
     vote.nSidechain = nSidechain;
-    vote.hashWTPrime = hashWTPrime;
+    vote.hash = hash;
 
     if (strVote == "upvote") {
         vote.vote = SCDB_UPVOTE;
@@ -1502,36 +1502,36 @@ UniValue setwtprimevote(const JSONRPCRequest& request)
 
     // TODO improve error message
     if (!scdb.CacheCustomVotes(std::vector<SidechainCustomVote> {vote}))
-        throw JSONRPCError(RPC_MISC_ERROR, "Failed to cache WT^ vote!");
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to cache Withdrawal vote!");
 
     return NullUniValue;
 }
 
-UniValue clearwtprimevotes(const JSONRPCRequest& request)
+UniValue clearwithdrawalvotes(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
         throw std::runtime_error(
-            "clearwtprimevotes\n"
-            "Delete all custom WT^ vote(s).\n"
+            "clearwithdrawalvotes\n"
+            "Delete all custom Withdrawal vote(s).\n"
             "\nExamples:\n"
-            + HelpExampleCli("clearwtprimevotes", "")
-            + HelpExampleRpc("clearwtprimevotes", "")
+            + HelpExampleCli("clearwithdrawalvotes", "")
+            + HelpExampleRpc("clearwithdrawalvotes", "")
             );
 
-    scdb.ResetWTPrimeVotes();
+    scdb.ResetWithdrawalVotes();
 
     return NullUniValue;
 }
 
-UniValue listwtprimevotes(const JSONRPCRequest& request)
+UniValue listwithdrawalvotes(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 0)
         throw std::runtime_error(
-            "listwtprimevotes\n"
-            "List custom votes for sidechain WT^(s).\n"
+            "listwithdrawalvotes\n"
+            "List custom votes for sidechain Withdrawal(s).\n"
             "\nExamples:\n"
-            + HelpExampleCli("listwtprimevotes", "")
-            + HelpExampleRpc("listwtprimevotes", "")
+            + HelpExampleCli("listwithdrawalvotes", "")
+            + HelpExampleRpc("listwithdrawalvotes", "")
             );
 
     std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
@@ -1555,7 +1555,7 @@ UniValue listwtprimevotes(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("nSidechain", v.nSidechain));
         obj.push_back(Pair("vote", strVote));
-        obj.push_back(Pair("hashWTPrime", v.hashWTPrime.ToString()));
+        obj.push_back(Pair("hash", v.hash.ToString()));
         ret.push_back(obj);
     }
 
@@ -1633,18 +1633,18 @@ UniValue getworkscore(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 2)
         throw std::runtime_error(
-            "getworkscore \"nsidechain\" \"hashwtprime\")\n"
-            "Request the workscore of a WT^\n"
+            "getworkscore \"nsidechain\" \"hash\")\n"
+            "Request the workscore of a Withdrawal\n"
             "\nArguments:\n"
-            "1. nsidechain     (numeric, required) Sidechain number to look up WT^ of\n"
-            "2. hashwtprime    (string, required) Hash of the WT^\n"
+            "1. nsidechain     (numeric, required) Sidechain number to look up Withdrawal of\n"
+            "2. hash           (string, required) Hash of the Withdrawal\n"
             "\nResult:\n"
             "{\n"
-            "  \"workscore\" : x,   (numeric) workscore of WT^\n"
+            "  \"workscore\" : x,   (numeric) workscore of Withdrawal\n"
             "}\n"
             "\n"
             "\nExample:\n"
-            + HelpExampleCli("getworkscore", "0 hashWTPrime")
+            + HelpExampleCli("getworkscore", "0 hash")
             );
 
     // nSidechain
@@ -1655,47 +1655,47 @@ UniValue getworkscore(const JSONRPCRequest& request)
 
     std::string strHash = request.params[1].get_str();
     if (strHash.size() != 64)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash length");
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash length");
 
-    uint256 hashWTPrime = uint256S(strHash);
-    if (hashWTPrime.IsNull())
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash");
+    uint256 hash = uint256S(strHash);
+    if (hash.IsNull())
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash");
 
-    std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
+    std::vector<SidechainWithdrawalState> vState = scdb.GetState(nSidechain);
     if (vState.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No WT^(s) in SCDB for sidechain");
+        throw JSONRPCError(RPC_TYPE_ERROR, "No Withdrawal(s) in SCDB for sidechain");
 
     int nWorkScore = -1;
-    for (const SidechainWTPrimeState& s : vState) {
-        if (s.hashWTPrime == hashWTPrime) {
+    for (const SidechainWithdrawalState& s : vState) {
+        if (s.hash == hash) {
             nWorkScore = s.nWorkScore;
             break;
         }
     }
 
     if (nWorkScore == -1)
-        throw JSONRPCError(RPC_TYPE_ERROR, "No WT^ workscore in SCDB");
+        throw JSONRPCError(RPC_TYPE_ERROR, "No Withdrawal workscore in SCDB");
 
     return nWorkScore;
 }
 
-UniValue listwtprimestatus(const JSONRPCRequest& request)
+UniValue listwithdrawalstatus(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
-            "listwtprimestatus \"nsidechain\")\n"
-            "Request the workscore of a WT^\n"
+            "listwithdrawalstatus \"nsidechain\")\n"
+            "Request the workscore of a Withdrawal\n"
             "\nArguments:\n"
-            "1. nsidechain     (numeric, required) Sidechain number to look up WT^(s) of\n"
+            "1. nsidechain     (numeric, required) Sidechain number to look up Withdrawal(s) of\n"
             "\nResult:\n"
             "{\n"
-            "  \"hashwtprime\" : (string) hash of WT^\n"
+            "  \"hash\" : (string) hash of Withdrawal\n"
             "  \"nblocksleft\" : x, (numeric) verification blocks remaining\n"
-            "  \"workscore\" : x, (numeric) workscore of WT^\n"
+            "  \"workscore\" : x, (numeric) workscore of Withdrawal\n"
             "}\n"
             "\n"
             "\nExample:\n"
-            + HelpExampleCli("getworkscore", "0 hashWTPrime")
+            + HelpExampleCli("getworkscore", "0 hash")
             );
 
     // nSidechain
@@ -1704,15 +1704,15 @@ UniValue listwtprimestatus(const JSONRPCRequest& request)
     if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
-    std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
+    std::vector<SidechainWithdrawalState> vState = scdb.GetState(nSidechain);
     if (vState.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No WT^(s) in SCDB for sidechain");
+        throw JSONRPCError(RPC_TYPE_ERROR, "No Withdrawal(s) in SCDB for sidechain");
 
     UniValue ret(UniValue::VARR);
-    for (const SidechainWTPrimeState& s : vState) {
+    for (const SidechainWithdrawalState& s : vState) {
         UniValue obj(UniValue::VOBJ);
 
-        obj.push_back(Pair("hashwtprime", s.hashWTPrime.ToString()));
+        obj.push_back(Pair("hash", s.hash.ToString()));
         obj.push_back(Pair("nblocksleft", s.nBlocksLeft));
         obj.push_back(Pair("nworkscore", s.nWorkScore));
 
@@ -1722,21 +1722,21 @@ UniValue listwtprimestatus(const JSONRPCRequest& request)
     return ret;
 }
 
-UniValue listcachedwtprimetransactions(const JSONRPCRequest& request)
+UniValue listcachedwithdrawaltransactions(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 1)
         throw std::runtime_error(
-            "listcachedwtprimetransactions\n"
-            "List my cached WT^(s) for nSidechain\n"
+            "listcachedwithdrawaltransactions\n"
+            "List my cached Withdrawal(s) for nSidechain\n"
             "\nArguments:\n"
-            "1. nsidechain     (numeric, required) Sidechain number to list WT^(s) of\n"
+            "1. nsidechain     (numeric, required) Sidechain number to list Withdrawal(s) of\n"
             "\nResult: (array)\n"
             "{\n"
-            "  \"hashwtprime\" : x (string) hash of WT^\n"
+            "  \"hash\" : x (string) hash of Withdrawal\n"
             "}\n"
             "\n"
             "\nExample:\n"
-            + HelpExampleCli("listcachedwtprimetransactions", "0")
+            + HelpExampleCli("listcachedwithdrawaltransactions", "0")
             );
 
     // nSidechain
@@ -1745,14 +1745,14 @@ UniValue listcachedwtprimetransactions(const JSONRPCRequest& request)
     if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
-    std::vector<SidechainWTPrimeState> vState = scdb.GetState(nSidechain);
+    std::vector<SidechainWithdrawalState> vState = scdb.GetState(nSidechain);
     if (vState.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No WT^(s) in SCDB for sidechain");
+        throw JSONRPCError(RPC_TYPE_ERROR, "No Withdrawal(s) in SCDB for sidechain");
 
     UniValue ret(UniValue::VARR);
-    for (const SidechainWTPrimeState& s : vState) {
+    for (const SidechainWithdrawalState& s : vState) {
         UniValue obj(UniValue::VOBJ);
-        obj.push_back(Pair("hashwtprime", s.hashWTPrime.ToString()));
+        obj.push_back(Pair("hash", s.hash.ToString()));
 
         ret.push_back(obj);
     }
@@ -1760,91 +1760,91 @@ UniValue listcachedwtprimetransactions(const JSONRPCRequest& request)
     return ret;
 }
 
-UniValue havespentwtprime(const JSONRPCRequest& request)
+UniValue havespentwithdrawal(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 2)
         throw std::runtime_error(
-            "havespentwtprime\n"
-            "Return whether this WT^ was spent\n"
+            "havespentwithdrawal\n"
+            "Return whether this Withdrawal was spent\n"
             "\nResult: true | false \n"
             "\nExample:\n"
-            + HelpExampleCli("havespentwtprime", "hashwtprime, nsidechain")
+            + HelpExampleCli("havespentwithdrawal", "hash, nsidechain")
             );
 
     std::string strHash = request.params[0].get_str();
     if (strHash.size() != 64)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash length");
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash length");
 
-    uint256 hashWTPrime = uint256S(strHash);
-    if (hashWTPrime.IsNull())
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash");
+    uint256 hash = uint256S(strHash);
+    if (hash.IsNull())
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash");
 
     int nSidechain = request.params[1].get_int();
 
     if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
-    bool fSpent = scdb.HaveSpentWTPrime(hashWTPrime, nSidechain);
+    bool fSpent = scdb.HaveSpentWithdrawal(hash, nSidechain);
 
     return fSpent;
 }
 
-UniValue havefailedwtprime(const JSONRPCRequest& request)
+UniValue havefailedwithdrawal(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 2)
         throw std::runtime_error(
-            "havefailedwtprime\n"
-            "Return whether this WT^ failed\n"
+            "havefailedwithdrawal\n"
+            "Return whether this Withdrawal failed\n"
             "\nResult: true | false \n"
             "\nExample:\n"
-            + HelpExampleCli("havefailedwtprime", "hashwtprime, nsidechain")
+            + HelpExampleCli("havefailedwithdrawal", "hash, nsidechain")
             );
 
     std::string strHash = request.params[0].get_str();
     if (strHash.size() != 64)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash length");
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash length");
 
-    uint256 hashWTPrime = uint256S(strHash);
-    if (hashWTPrime.IsNull())
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid WT^ hash");
+    uint256 hash = uint256S(strHash);
+    if (hash.IsNull())
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash");
 
     int nSidechain = request.params[1].get_int();
 
     if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
-    bool fFailed = scdb.HaveFailedWTPrime(hashWTPrime, nSidechain);
+    bool fFailed = scdb.HaveFailedWithdrawal(hash, nSidechain);
 
     return fFailed;
 }
 
-UniValue listspentwtprimes(const JSONRPCRequest& request)
+UniValue listspentwithdrawals(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
         throw std::runtime_error(
-            "listspentwtprimes\n"
-            "List WT^(s) which have been approved by workscore and spent\n"
+            "listspentwithdrawals\n"
+            "List Withdrawal(s) which have been approved by workscore and spent\n"
             "\nResult: (array)\n"
             "{\n"
-            "  \"nsidechain\" : (numeric) Sidechain number of WT^\n"
-            "  \"hashwtprime\" : (string) hash of WT^\n"
-            "  \"hashblock\"   : (string) hash of block WT^ was spent in\n"
+            "  \"nsidechain\" : (numeric) Sidechain number of Withdrawal\n"
+            "  \"hash\" : (string) hash of Withdrawal\n"
+            "  \"hashblock\"   : (string) hash of block Withdrawal was spent in\n"
             "}\n"
             "\n"
             "\nExample:\n"
-            + HelpExampleCli("listspentwtprimes", "")
+            + HelpExampleCli("listspentwithdrawals", "")
             );
 
-    std::vector<SidechainSpentWTPrime> vSpent = scdb.GetSpentWTPrimeCache();
+    std::vector<SidechainSpentWithdrawal> vSpent = scdb.GetSpentWithdrawalCache();
     if (vSpent.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No spent WT^(s) in cache!");
+        throw JSONRPCError(RPC_TYPE_ERROR, "No spent Withdrawal(s) in cache!");
 
     UniValue ret(UniValue::VARR);
-    for (const SidechainSpentWTPrime& s : vSpent) {
+    for (const SidechainSpentWithdrawal& s : vSpent) {
         UniValue obj(UniValue::VOBJ);
 
         obj.push_back(Pair("nsidechain", s.nSidechain));
-        obj.push_back(Pair("hashwtprime", s.hashWTPrime.ToString()));
+        obj.push_back(Pair("hash", s.hash.ToString()));
         obj.push_back(Pair("hashblock", s.hashBlock.ToString()));
 
         ret.push_back(obj);
@@ -1853,32 +1853,32 @@ UniValue listspentwtprimes(const JSONRPCRequest& request)
     return ret;
 }
 
-UniValue listfailedwtprimes(const JSONRPCRequest& request)
+UniValue listfailedwithdrawals(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
         throw std::runtime_error(
-            "listfailedwtprimes\n"
-            "List WT^(s) which have failed\n"
+            "listfailedwithdrawals\n"
+            "List Withdrawal(s) which have failed\n"
             "\nResult: (array)\n"
             "{\n"
-            "  \"nsidechain\" : (numeric) Sidechain number of WT^\n"
-            "  \"hashwtprime\" : (string) hash of WT^\n"
+            "  \"nsidechain\" : (numeric) Sidechain number of Withdrawal\n"
+            "  \"hash\" : (string) hash of withdrawal\n"
             "}\n"
             "\n"
             "\nExample:\n"
-            + HelpExampleCli("listfailedwtprimes", "")
+            + HelpExampleCli("listfailedwithdrawals", "")
             );
 
-    std::vector<SidechainFailedWTPrime> vFailed = scdb.GetFailedWTPrimeCache();
+    std::vector<SidechainFailedWithdrawal> vFailed = scdb.GetFailedWithdrawalCache();
     if (vFailed.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No failed WT^(s) in cache!");
+        throw JSONRPCError(RPC_TYPE_ERROR, "No failed Withdrawal(s) in cache!");
 
     UniValue ret(UniValue::VARR);
-    for (const SidechainFailedWTPrime& f : vFailed) {
+    for (const SidechainFailedWithdrawal& f : vFailed) {
         UniValue obj(UniValue::VOBJ);
 
         obj.push_back(Pair("nsidechain", f.nSidechain));
-        obj.push_back(Pair("hashwtprime", f.hashWTPrime.ToString()));
+        obj.push_back(Pair("hash", f.hash.ToString()));
 
         ret.push_back(obj);
     }
@@ -1922,12 +1922,12 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
             "Get SCDB data from leveldb for the specified block hash\n"
             "\nResult:\n"
             "\"nsidechains\" : (numeric) Number of active sidechains\n"
-            "\nArray of WT^ status\n"
+            "\nArray of Withdrawal status\n"
             "{\n"
-            "  \"nsidechain\"  : (numeric) Sidechain number of WT^\n"
-            "  \"nblocksleft\" : (numeric) Blocks remaining to validate WT^\n"
-            "  \"nworkscore\"  : (numeric) Number of ACK(s) WT^ has received\n"
-            "  \"hashwtprime\" : (string) hash of WT^\n"
+            "  \"nsidechain\"  : (numeric) Sidechain number of Withdrawal\n"
+            "  \"nblocksleft\" : (numeric) Blocks remaining to validate Withdrawal\n"
+            "  \"nworkscore\"  : (numeric) Number of ACK(s) Withdrawal has received\n"
+            "  \"hash\" : (string) hash of withdrawal\n"
             "}\n"
             "\n"
             "\nExample:\n"
@@ -1959,15 +1959,15 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
 
     UniValue ret(UniValue::VARR);
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("nsidechains", (uint64_t)data.vWTPrimeStatus.size()));
+    obj.push_back(Pair("nsidechains", (uint64_t)data.vWithdrawalStatus.size()));
     ret.push_back(obj);
-    for (auto& x : data.vWTPrimeStatus) {
+    for (auto& x : data.vWithdrawalStatus) {
         for (auto& y : x) {
             UniValue obj(UniValue::VOBJ);
             obj.push_back(Pair("nsidechain", y.nSidechain));
             obj.push_back(Pair("nblocksleft", y.nBlocksLeft));
             obj.push_back(Pair("nworkscore", y.nWorkScore));
-            obj.push_back(Pair("hashwtprime", y.hashWTPrime.ToString()));
+            obj.push_back(Pair("hash", y.hash.ToString()));
             ret.push_back(obj);
         }
     }
@@ -2110,7 +2110,7 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listsidechainctip",             &listsidechainctip,            {"nsidechain"}},
     { "DriveChain",  "listsidechaindeposits",         &listsidechaindeposits,        {"addressbytes"}},
     { "DriveChain",  "countsidechaindeposits",        &countsidechaindeposits,       {"nsidechain"}},
-    { "DriveChain",  "receivewtprime",                &receivewtprime,               {"nsidechain","rawtx"}},
+    { "DriveChain",  "receivewithdrawalbundle",       &receivewithdrawalbundle,      {"nsidechain","rawtx"}},
     { "DriveChain",  "verifybmm",                     &verifybmm,                    {"blockhash", "bmmhash"}},
     { "DriveChain",  "verifydeposit",                 &verifydeposit,                {"blockhash", "txid", "ntx"}},
     { "DriveChain",  "listpreviousblockhashes",       &listpreviousblockhashes,      {}},
@@ -2119,17 +2119,17 @@ static const CRPCCommand commands[] =
     { "DriveChain",  "listsidechainproposals",        &listsidechainproposals,       {}},
     { "DriveChain",  "getsidechainactivationstatus",  &getsidechainactivationstatus, {}},
     { "DriveChain",  "createsidechainproposal",       &createsidechainproposal,      {"nsidechain", "title", "description", "keyhash", "nversion", "hashid1", "hashid2"}},
-    { "DriveChain",  "clearwtprimevotes",             &clearwtprimevotes,            {}},
-    { "DriveChain",  "setwtprimevote",                &setwtprimevote,               {"vote", "nsidechain", "hashwtprime"}},
-    { "DriveChain",  "listwtprimevotes",              &listwtprimevotes,             {}},
+    { "DriveChain",  "clearwithdrawalvotes",          &clearwithdrawalvotes,            {}},
+    { "DriveChain",  "setwithdrawalvote",             &setwithdrawalvote,               {"vote", "nsidechain", "hashwithdrawal"}},
+    { "DriveChain",  "listwithdrawalvotes",           &listwithdrawalvotes,             {}},
     { "DriveChain",  "getaveragefee",                 &getaveragefee,                {"numblocks", "startheight"}},
-    { "DriveChain",  "getworkscore",                  &getworkscore,                 {"nsidechain", "hashwtprime"}},
-    { "DriveChain",  "havespentwtprime",              &havespentwtprime,             {"hashwtprime", "nsidechain"}},
-    { "DriveChain",  "havefailedwtprime",             &havefailedwtprime,            {"hashwtprime", "nsidechain"}},
-    { "DriveChain",  "listcachedwtprimetransactions", &listcachedwtprimetransactions,{"nsidechain"}},
-    { "DriveChain",  "listwtprimestatus",             &listwtprimestatus,            {"nsidechain"}},
-    { "DriveChain",  "listspentwtprimes",             &listspentwtprimes,            {}},
-    { "DriveChain",  "listfailedwtprimes",            &listfailedwtprimes,           {}},
+    { "DriveChain",  "getworkscore",                  &getworkscore,                 {"nsidechain", "hashwithdrawal"}},
+    { "DriveChain",  "havespentwithdrawal",              &havespentwithdrawal,             {"hashwithdrawal", "nsidechain"}},
+    { "DriveChain",  "havefailedwithdrawal",             &havefailedwithdrawal,            {"hashwithdrawal", "nsidechain"}},
+    { "DriveChain",  "listcachedwithdrawaltransactions", &listcachedwithdrawaltransactions,{"nsidechain"}},
+    { "DriveChain",  "listwithdrawalstatus",             &listwithdrawalstatus,            {"nsidechain"}},
+    { "DriveChain",  "listspentwithdrawals",             &listspentwithdrawals,            {}},
+    { "DriveChain",  "listfailedwithdrawals",            &listfailedwithdrawals,           {}},
     { "DriveChain",  "getscdbhash",                   &getscdbhash,                  {}},
     { "DriveChain",  "gettotalscdbhash",              &gettotalscdbhash,             {}},
     { "DriveChain",  "getscdbdataforblock",           &getscdbdataforblock,          {"blockhash"}},

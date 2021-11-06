@@ -392,8 +392,8 @@ public:
     // Compute a hash that includes both transaction and witness data
     uint256 GetWitnessHash() const;
 
-    // Compute B-WT^ hash (blinded) of tx (remove inputs and sidechain change)
-    bool GetBWTHash(uint256& hashRet) const;
+    // Compute blind hash of withdrawal tx (remove inputs and sidechain change)
+    bool GetBlindHash(uint256& hashRet) const;
 
     CAmount GetBlindValueOut() const;
 

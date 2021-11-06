@@ -1627,9 +1627,9 @@ bool AppInitMain()
                             !LoadSidechainActivationHashCache() ||
                             !LoadCustomVoteCache() ||
                             !LoadBMMCache() ||
-                            !LoadWTPrimeCache(fReindex))
+                            !LoadWithdrawalCache(fReindex))
                     {
-                        std::string strError = "Error loading WT^ vote & BMM settings!\n\n";
+                        std::string strError = "Error loading withdrawal vote & BMM settings!\n\n";
                         strError += "You may need to re-set any vote settings you have made.";
                         uiInterface.ThreadSafeMessageBox(_(strError.c_str()), "", CClientUIInterface::MSG_ERROR);
                         LogPrintf("Error reading custom vote cache.\n");

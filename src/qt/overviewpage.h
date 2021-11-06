@@ -24,7 +24,6 @@ class SidechainWithdrawalTableModel;
 class TransactionFilterProxy;
 class TxViewDelegate;
 class WalletModel;
-class WTPrimeViewDelegate;
 
 namespace Ui {
     class OverviewPage;
