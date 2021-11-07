@@ -204,7 +204,7 @@ struct NewsType
     // Number of days news in this category is collected and ranked before
     // staring a new period. If the number is 7 then the last 7 days of this
     // news type should be ranked and displayed on the news table at a time.
-    unsigned int nDays;
+    int nDays;
 
     ADD_SERIALIZE_METHODS
 
