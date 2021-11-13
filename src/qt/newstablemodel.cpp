@@ -63,7 +63,7 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
         // Decode
         if (col == 2) {
             // Display up to NEWS_HEADLINE_CHARS or until newline
-            QString str = "";
+            std::string str = "";
             bool fNewline = false;
             for (size_t x = 0; x < object.decode.size(); x++) {
                 if (x == NEWS_HEADLINE_CHARS)
@@ -80,7 +80,7 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
             if (fNewline || object.decode.size() > NEWS_HEADLINE_CHARS)
                 str += "...";
 
-            return str;
+            return QString::fromStdString(str);
         }
     }
     case Qt::TextAlignmentRole:

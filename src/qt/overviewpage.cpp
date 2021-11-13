@@ -69,8 +69,6 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     latestBlockModel = new LatestBlockTableModel(this);
     ui->tableViewBlocks->setModel(latestBlockModel);
 
-
-
     newsModel1 = new NewsTableModel(this);
     newsModel1->setNewsTypesModel(newsTypesTableModel);
 
