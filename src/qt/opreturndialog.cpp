@@ -7,8 +7,8 @@
 
 #include <qt/clientmodel.h>
 #include <qt/createopreturndialog.h>
+#include <qt/guiutil.h>
 #include <qt/opreturntablemodel.h>
-
 #include <qt/platformstyle.h>
 
 #include <QMenu>
@@ -63,13 +63,19 @@ OPReturnDialog::OPReturnDialog(const PlatformStyle *_platformStyle, QWidget *par
     ui->tableView->setContextMenuPolicy(Qt::CustomContextMenu);
 
     QAction *showDetailsAction = new QAction(tr("Show full data decode"), this);
+    QAction *copyDecodeAction = new QAction(tr("Copy decode"), this);
+    QAction *copyHexAction = new QAction(tr("Copy hex"), this);
     contextMenu = new QMenu(this);
     contextMenu->setObjectName("contextMenuOPReturn");
     contextMenu->addAction(showDetailsAction);
+    contextMenu->addAction(copyDecodeAction);
+    contextMenu->addAction(copyHexAction);
 
     // Connect context menus
     connect(ui->tableView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
     connect(showDetailsAction, SIGNAL(triggered()), this, SLOT(showDetails()));
+    connect(copyDecodeAction, SIGNAL(triggered()), this, SLOT(copyDecode()));
+    connect(copyHexAction, SIGNAL(triggered()), this, SLOT(copyHex()));
 
     ui->pushButtonCreate->setIcon(platformStyle->SingleColorIcon(":/icons/add"));
 
@@ -97,7 +103,7 @@ void OPReturnDialog::on_tableView_doubleClicked(const QModelIndex& index)
     if (!index.isValid())
         return;
 
-    QString strDecode = index.data(OPReturnTableModel::OPReturnRole).toString();
+    QString strDecode = index.data(OPReturnTableModel::DecodeRole).toString();
 
     QMessageBox messageBox;
     messageBox.setWindowTitle("OP_RETURN data");
@@ -120,6 +126,42 @@ void OPReturnDialog::showDetails()
     QModelIndexList selection = ui->tableView->selectionModel()->selectedRows();
     if (!selection.isEmpty())
         on_tableView_doubleClicked(selection.front());
+}
+
+void OPReturnDialog::copyDecode()
+{
+    if (!ui->tableView->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows();
+    if (selection.isEmpty())
+        return;
+
+    QModelIndex index = selection.front();
+    if (!index.isValid())
+        return;
+
+    QString strDecode = index.data(OPReturnTableModel::DecodeRole).toString();
+
+    GUIUtil::setClipboard(strDecode);
+}
+
+void OPReturnDialog::copyHex()
+{
+    if (!ui->tableView->selectionModel())
+        return;
+
+    QModelIndexList selection = ui->tableView->selectionModel()->selectedRows();
+    if (selection.isEmpty())
+        return;
+
+    QModelIndex index = selection.front();
+    if (!index.isValid())
+        return;
+
+    QString strHex = index.data(OPReturnTableModel::HexRole).toString();
+
+    GUIUtil::setClipboard(strHex);
 }
 
 void OPReturnDialog::on_pushButtonCreate_clicked()

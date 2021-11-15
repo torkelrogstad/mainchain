@@ -94,9 +94,13 @@ QVariant OPReturnTableModel::data(const QModelIndex &index, int role) const
             return QString::fromStdString(object.decode);
         }
     }
-    case OPReturnRole:
+    case DecodeRole:
     {
         return QString::fromStdString(object.decode);
+    }
+    case HexRole:
+    {
+        return QString::fromStdString(object.hex);
     }
     }
     return QVariant();
@@ -185,6 +189,7 @@ void OPReturnTableModel::UpdateModel()
             object.decode = strDecode;
             object.fees = FormatMoney(d.fees);
             object.feeAmount = d.fees;
+            object.hex = HexStr(d.script.begin(), d.script.end(), false);
 
             vObj.push_back(object);
         }

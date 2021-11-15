@@ -106,6 +106,10 @@ private Q_SLOTS:
 
     void showDetailsNews1();
     void showDetailsNews2();
+    void copyNews1();
+    void copyNews2();
+    void copyNewsHex1();
+    void copyNewsHex2();
     void showDetailsMempool();
     void showDetailsBlock();
 };

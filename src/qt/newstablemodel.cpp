@@ -117,6 +117,10 @@ QVariant NewsTableModel::data(const QModelIndex &index, int role) const
     {
         return QString::fromStdString(object.decode);
     }
+    case NewsHexRole:
+    {
+        return QString::fromStdString(object.hex);
+    }
     }
     return QVariant();
 }
@@ -225,6 +229,7 @@ void NewsTableModel::UpdateModel()
             object.decode = strDecode;
             object.fees = FormatMoney(d.fees);
             object.feeAmount = d.fees;
+            object.hex = HexStr(d.script.begin(), d.script.end(), false);
 
             vNews.push_back(object);
         }
