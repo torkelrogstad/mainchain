@@ -8,6 +8,7 @@
 #include <qt/blockindexdetailsdialog.h>
 #include <qt/clientmodel.h>
 #include <qt/createnewsdialog.h>
+#include <qt/decodeviewdialog.h>
 #include <qt/drivenetunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
@@ -32,7 +33,7 @@
 #include <txdb.h>
 #include <validation.h>
 
-OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) :
+OverviewPage::OverviewPage(const PlatformStyle *platformStyleIn, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::OverviewPage),
     clientModel(0),
@@ -45,6 +46,8 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
     currentWatchImmatureBalance(-1)
 {
     ui->setupUi(this);
+
+    platformStyle = platformStyleIn;
 
     // use a SingleColorIcon for the "out of sync warning" icon
     QIcon icon = platformStyle->SingleColorIcon(":/icons/warning");
@@ -430,12 +433,16 @@ void OverviewPage::on_tableViewNews1_doubleClicked(const QModelIndex& index)
     if (!index.isValid())
         return;
 
-    QString strNews = index.data(NewsTableModel::NewsRole).toString();
+    if (!platformStyle)
+        return;
 
-    QMessageBox messageBox;
-    messageBox.setWindowTitle("News");
-    messageBox.setText(strNews);
-    messageBox.exec();
+    QString strNews = index.data(NewsTableModel::NewsRole).toString();
+    QString strHex = index.data(NewsTableModel::NewsHexRole).toString();
+
+    DecodeViewDialog dialog;
+    dialog.SetPlatformStyle(platformStyle);
+    dialog.SetData(strNews, strHex, "Coin News: ");
+    dialog.exec();
 }
 
 void OverviewPage::on_comboBoxNewsType1_currentIndexChanged(int index)
@@ -455,12 +462,16 @@ void OverviewPage::on_tableViewNews2_doubleClicked(const QModelIndex& index)
     if (!index.isValid())
         return;
 
-    QString strNews = index.data(NewsTableModel::NewsRole).toString();
+    if (!platformStyle)
+        return;
 
-    QMessageBox messageBox;
-    messageBox.setWindowTitle("News");
-    messageBox.setText(strNews);
-    messageBox.exec();
+    QString strNews = index.data(NewsTableModel::NewsRole).toString();
+    QString strHex = index.data(NewsTableModel::NewsHexRole).toString();
+
+    DecodeViewDialog dialog;
+    dialog.SetPlatformStyle(platformStyle);
+    dialog.SetData(strNews, strHex, "Coin News: ");
+    dialog.exec();
 }
 
 void OverviewPage::on_comboBoxNewsType2_currentIndexChanged(int index)

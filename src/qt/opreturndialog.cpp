@@ -7,6 +7,7 @@
 
 #include <qt/clientmodel.h>
 #include <qt/createopreturndialog.h>
+#include <qt/decodeviewdialog.h>
 #include <qt/guiutil.h>
 #include <qt/opreturntablemodel.h>
 #include <qt/platformstyle.h>
@@ -103,12 +104,16 @@ void OPReturnDialog::on_tableView_doubleClicked(const QModelIndex& index)
     if (!index.isValid())
         return;
 
-    QString strDecode = index.data(OPReturnTableModel::DecodeRole).toString();
+    if (!platformStyle)
+        return;
 
-    QMessageBox messageBox;
-    messageBox.setWindowTitle("OP_RETURN data");
-    messageBox.setText(strDecode);
-    messageBox.exec();
+    QString strDecode = index.data(OPReturnTableModel::DecodeRole).toString();
+    QString strHex = index.data(OPReturnTableModel::HexRole).toString();
+
+    DecodeViewDialog dialog;
+    dialog.SetPlatformStyle(platformStyle);
+    dialog.SetData(strDecode, strHex, "OP_RETURN Graffiti: ");
+    dialog.exec();
 }
 
 void OPReturnDialog::contextualMenu(const QPoint &point)
