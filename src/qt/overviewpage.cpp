@@ -413,7 +413,7 @@ void OverviewPage::on_tableViewMempool_doubleClicked(const QModelIndex& index)
     CTransactionRef txRef;
     if (!memPoolModel->GetTx(hash, txRef)) {
         messageBox.setWindowTitle("Error - not found in mempool!");
-        messageBox.setText("Transaction is not in your memory pool!\n");
+        messageBox.setText("Sorry, this transaction is no longer in your memory pool!\n");
         messageBox.exec();
         return;
     }
