@@ -184,24 +184,24 @@ bool CCriticalData::IsBMMRequest(uint8_t& nSidechain, std::string& strPrevBlock)
         return false;
 
     int intSidechain = -1;
-    size_t nSideBytes = 0;
+    size_t nSideNumBytes = 0;
     if (bytes[3] == 0x00)
     {
         // Special case for sidechain 0
         intSidechain = 0;
-        nSideBytes = 0;
+        nSideNumBytes = 0;
     }
     else
     if (bytes[3] == 0x01)
     {
         intSidechain = CScriptNum(std::vector<unsigned char>{bytes[4]}, false).getint();
-        nSideBytes = 1;
+        nSideNumBytes = 1;
     }
     else
     if (bytes[3] == 0x02)
     {
         intSidechain = CScriptNum(std::vector<unsigned char>{bytes[4], bytes[5]}, false).getint();
-        nSideBytes = 2;
+        nSideNumBytes = 2;
     }
     else
     {
@@ -216,10 +216,13 @@ bool CCriticalData::IsBMMRequest(uint8_t& nSidechain, std::string& strPrevBlock)
 
     // Read prev block bytes
 
-    size_t nBytes = 4 + nSideBytes;
+    // Header bytes + sidechain number push + number bytes
+    const size_t nPrevPos = 3 + 1 + nSideNumBytes;
     std::vector<unsigned char> prevBytes;
-    if (bytes[nBytes] == 0x08) {
-        prevBytes = std::vector<unsigned char>(bytes.begin() + nBytes + 1, bytes.end());
+    // Check for 4 char push op
+    if (bytes[nPrevPos] == 0x08) {
+        // Copy 4 char prev block reference
+        prevBytes = std::vector<unsigned char>(bytes.begin() + nPrevPos + 1, bytes.end());
     } else {
         return false;
     }
