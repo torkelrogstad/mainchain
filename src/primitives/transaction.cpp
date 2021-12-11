@@ -177,7 +177,7 @@ bool CCriticalData::IsBMMRequest(uint8_t& nSidechain, std::string& strPrevBlock)
         return false;
     if (hashCritical.IsNull())
         return false;
-    if (bytes.size() < 13)
+    if (bytes.size() < 9)
         return false;
 
     if (bytes[0] != 0x00 || bytes[1] != 0xbf || bytes[2] != 0x00)
@@ -219,36 +219,21 @@ bool CCriticalData::IsBMMRequest(uint8_t& nSidechain, std::string& strPrevBlock)
     // Header bytes + sidechain number push + number bytes
     const size_t nPrevPos = 3 + 1 + nSideNumBytes;
     std::vector<unsigned char> prevBytes;
-    // Check for 4 char push op
-    if (bytes[nPrevPos] == 0x08) {
+    if (bytes[nPrevPos] == 0x04) {
         // Copy 4 char prev block reference
         prevBytes = std::vector<unsigned char>(bytes.begin() + nPrevPos + 1, bytes.end());
     } else {
         return false;
     }
 
-    std::stringstream ss;
-    for (size_t i = 0; i < prevBytes.size(); i++) {
-        ss << std::hex << prevBytes[i];
-    }
+    std::string strHex = "";
+    for (size_t i = 0; i < prevBytes.size(); i++)
+        strHex += prevBytes[i];
 
-    std::string strHex = ss.str();
-    std::string strBytesFinal = "";
-    int nHexBytes = strHex.size();
-    for (int i = 0; i < nHexBytes; i += 2) {
-        // Convert the c_str into a long integer and then cast to char. We want
-        // to get the previous block hash string back from the hex bytes for
-        // easy verification.
-        std::string byte = strHex.substr(i, 2);
-        char c = (char) (int) strtol(byte.c_str(), NULL /* endptr - unused */, 16);
-        strBytesFinal.push_back(c);
-    }
-
-    if (strBytesFinal.size() == 4) {
-        strPrevBlock = strBytesFinal;
-    } else {
+    if (strHex.size() != 4)
         return false;
-    }
+
+    strPrevBlock = strHex;
 
     return true;
 }

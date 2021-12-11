@@ -3898,10 +3898,10 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
     bytes[2] = 0x00;
 
     bytes << CScriptNum(nSidechain);
-    bytes << ToByteVector(HexStr(strPrevBlock));
+    bytes << ParseHex(HexStr(strPrevBlock));
 
     CCriticalData criticalData;
-    criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    criticalData.bytes = ToByteVector(bytes);
     criticalData.hashCritical = hashCritical;
 
 #ifdef ENABLE_WALLET

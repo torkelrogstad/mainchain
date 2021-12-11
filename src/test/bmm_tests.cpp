@@ -101,9 +101,9 @@ BOOST_AUTO_TEST_CASE(bmm_commit_format)
     bytes[1] = 0xbf;
     bytes[2] = 0x00;
     bytes << CScriptNum(0); // nSidechain
-    bytes << ToByteVector(HexStr(std::string("fd3s")));
+    bytes << ParseHex(HexStr(std::string("fd3s")));
 
-    bmm.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    bmm.bytes = ToByteVector(bytes);
 
     BOOST_CHECK(!bmm.IsBMMRequest());
 
@@ -120,9 +120,9 @@ BOOST_AUTO_TEST_CASE(bmm_commit_format)
         bytes[1] = 0xbf;
         bytes[2] = 0x00;
         bytes << CScriptNum(i); // nSidechain
-        bytes << ToByteVector(HexStr(std::string("fd3s")));
+        bytes << ParseHex(HexStr(std::string("fd3s")));
 
-        bmm.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+        bmm.bytes = ToByteVector(bytes);
 
         uint8_t nSidechain;
         std::string strPrevBlock = "";
@@ -140,9 +140,9 @@ BOOST_AUTO_TEST_CASE(bmm_commit_format)
     bytes[1] = 0xbf;
     bytes[2] = 0x00;
     bytes << CScriptNum(1337); // nSidechain
-    bytes << ToByteVector(HexStr(std::string("fd3s")));
+    bytes << ParseHex(HexStr(std::string("fd3s")));
 
-    bmm.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    bmm.bytes = ToByteVector(bytes);
 
     BOOST_CHECK(!bmm.IsBMMRequest());
 
@@ -154,9 +154,9 @@ BOOST_AUTO_TEST_CASE(bmm_commit_format)
     bytes[1] = 0xbf;
     bytes[2] = 0x00;
     bytes << CScriptNum(0); // nSidechain
-    bytes << ToByteVector(HexStr(std::string("btc")));
+    bytes << ParseHex(HexStr(std::string("btc")));
 
-    bmm.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    bmm.bytes = ToByteVector(bytes);
 
     BOOST_CHECK(!bmm.IsBMMRequest());
 
@@ -168,9 +168,9 @@ BOOST_AUTO_TEST_CASE(bmm_commit_format)
     bytes[1] = 0xbf;
     bytes[2] = 0x00;
     bytes << CScriptNum(255); // nSidechain
-    bytes << ToByteVector(HexStr(std::string("The Times 03/Jan/2009 Chancellor on brink of second bailout for banks")));
+    bytes << ParseHex(HexStr(std::string("The Times 03/Jan/2009 Chancellor on brink of second bailout for banks")));
 
-    bmm.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    bmm.bytes = ToByteVector(bytes);
 
     BOOST_CHECK(!bmm.IsBMMRequest());
 }
@@ -202,10 +202,10 @@ BOOST_AUTO_TEST_CASE(bmm_prevbytes_mempool)
     strPrevHash = strPrevHash.substr(strPrevHash.size() - 4, strPrevHash.size() - 1);
 
     bytes << CScriptNum(0); // nSidechain
-    bytes << ToByteVector(HexStr(std::string(strPrevHash)));
+    bytes << ParseHex(HexStr(std::string(strPrevHash)));
 
     CCriticalData criticalData;
-    criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    criticalData.bytes = ToByteVector(bytes);
     criticalData.hashCritical = GetRandHash();
 
     // Create transaction with critical data
@@ -317,9 +317,9 @@ BOOST_AUTO_TEST_CASE(bmm_prevbytes_mempool)
     bytes[2] = 0x00;
 
     bytes << CScriptNum(0); // nSidechain
-    bytes << ToByteVector(HexStr(std::string("trueno")));
+    bytes << ParseHex(HexStr(std::string("trueno")));
 
-    criticalData.bytes = std::vector<unsigned char>(bytes.begin(), bytes.end());
+    criticalData.bytes = ToByteVector(bytes);
 
     // Update input
     mtx.vin.clear();
