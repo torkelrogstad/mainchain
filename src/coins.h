@@ -38,33 +38,25 @@ public:
     //! whether containing transaction was a coinbase
     unsigned int fCoinBase : 1;
 
-    //! whether containing transaction has critical data
-    bool fCriticalData;
-
     //! whether coin was loaded from utxo dat file
     bool fLoaded;
 
     //! construct a Coin from a CTxOut and height/coinbase information.
-    Coin(CTxOut&& outIn, int nHeightIn, bool fCoinBaseIn, bool fCriticalDataIn, bool fLoadedIn) : out(std::move(outIn)), nHeight(nHeightIn), fCoinBase(fCoinBaseIn), fCriticalData(fCriticalDataIn), fLoaded(fLoadedIn) {}
-    Coin(const CTxOut& outIn, int nHeightIn, bool fCoinBaseIn, bool fCriticalDataIn, bool fLoadedIn) : out(outIn), nHeight(nHeightIn), fCoinBase(fCoinBaseIn), fCriticalData(fCriticalDataIn), fLoaded(fLoadedIn) {}
+    Coin(CTxOut&& outIn, int nHeightIn, bool fCoinBaseIn, bool fLoadedIn) : out(std::move(outIn)), nHeight(nHeightIn), fCoinBase(fCoinBaseIn), fLoaded(fLoadedIn) {}
+    Coin(const CTxOut& outIn, int nHeightIn, bool fCoinBaseIn, bool fLoadedIn) : out(outIn), nHeight(nHeightIn), fCoinBase(fCoinBaseIn), fLoaded(fLoadedIn) {}
 
     void Clear() {
         out.SetNull();
         fCoinBase = false;
-        fCriticalData = false;
         fLoaded = false;
         nHeight = 0;
     }
 
     //! empty constructor
-    Coin() : nHeight(0), fCoinBase(false), fCriticalData(false), fLoaded(false) { }
+    Coin() : nHeight(0), fCoinBase(false), fLoaded(false) { }
 
     bool IsCoinBase() const {
         return fCoinBase;
-    }
-
-    bool IsCriticalData() const {
-        return fCriticalData;
     }
 
     bool IsLoaded() const {
@@ -76,7 +68,6 @@ public:
         assert(!IsSpent());
         uint32_t code = nHeight * 2 + fCoinBase;
         ::Serialize(s, VARINT(code));
-        ::Serialize(s, fCriticalData);
         ::Serialize(s, fLoaded);
         ::Serialize(s, CTxOutCompressor(REF(out)));
     }
@@ -87,7 +78,6 @@ public:
         ::Unserialize(s, VARINT(code));
         nHeight = code >> 1;
         fCoinBase = code & 1;
-        ::Unserialize(s, fCriticalData);
         ::Unserialize(s, fLoaded);
         ::Unserialize(s, REF(CTxOutCompressor(out)));
     }

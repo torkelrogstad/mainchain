@@ -896,20 +896,9 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             }
         }
 
-        bool fSpendsCriticalData = false;
-        if (drivechainsEnabled) {
-            for (const CTxIn& txin : tx.vin) {
-                const Coin &coin = view.AccessCoin(txin.prevout);
-                if (coin.IsCriticalData()) {
-                    fSpendsCriticalData = true;
-                    break;
-                }
-            }
-        }
-
         CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
-                              fSpendsCoinbase, fSpendsCriticalData,
-                              fSidechainOutput, nSidechain, nSigOpsCost, lp);
+                              fSpendsCoinbase, fSidechainOutput, nSidechain,
+                              nSigOpsCost, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -1595,23 +1584,10 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                 return true;
             }
 
-            //bool fDrivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), Params().GetConsensus());
-
             for (unsigned int i = 0; i < tx.vin.size(); i++) {
                 const COutPoint &prevout = tx.vin[i].prevout;
                 const Coin& coin = inputs.AccessCoin(prevout);
                 assert(!coin.IsSpent());
-
-                // Check Critical Data tx maturity - Critical Data outputs must
-                // have a block depth greater than CRITICAL_DATA_MATURITY.
-                //if (fDrivechainsEnabled) {
-                //    if (coin.IsCriticalData()) {
-                //        if ((chainActive.Height() - coin.nHeight) < CRITICAL_DATA_MATURITY) {
-                //        LogPrintf("KYLO: %u\n", chainActive.Height() - coin.nHeight);
-                //            return state.Invalid(false, REJECT_INVALID, "bad-block-txn-immature-critical-data");
-                //        }
-                //    }
-                //}
 
                 // We very carefully only pass in things to CScriptCheck which
                 // are clearly committed to by tx' witness hash. This provides

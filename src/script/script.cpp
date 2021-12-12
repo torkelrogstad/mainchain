@@ -333,7 +333,7 @@ bool CScript::IsSidechainActivationCommit(uint256& hashSidechain) const
 {
     // Check script size
     size_t size = this->size();
-    if (size < 37) // TODO put in exact minimum size
+    if (size < 37)
         return false;
 
     // Check script header

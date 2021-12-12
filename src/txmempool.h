@@ -72,7 +72,6 @@ private:
     int64_t nTime;             //!< Local time when entering the mempool
     unsigned int entryHeight;  //!< Chain height when entering the mempool
     bool spendsCoinbase;       //!< keep track of transactions that spend a coinbase
-    bool spendsCriticalData;   //!< keep track of transactions that spend a critical data request
 
     // Sidechain deposit info
     bool fSidechainDeposit;
@@ -100,7 +99,6 @@ public:
     CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,
                     int64_t _nTime, unsigned int _entryHeight,
                     bool spendsCoinbase,
-                    bool spendsCriticalData,
                     bool fSidechainDeposit,
                     uint8_t nSidechain,
                     int64_t nSigOpsCost, LockPoints lp);
@@ -132,7 +130,6 @@ public:
     CAmount GetModFeesWithDescendants() const { return nModFeesWithDescendants; }
 
     bool GetSpendsCoinbase() const { return spendsCoinbase; }
-    bool GetSpendsCriticalData() const { return spendsCriticalData; }
     bool HasCriticalData() const { return !this->tx->criticalData.IsNull(); }
 
     bool GetSidechainDeposit() const { return fSidechainDeposit; }

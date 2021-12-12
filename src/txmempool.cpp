@@ -24,9 +24,9 @@
 
 CTxMemPoolEntry::CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,
                                  int64_t _nTime, unsigned int _entryHeight,
-                                 bool _spendsCoinbase, bool _spendsCriticalData, bool _fSidechainDeposit, uint8_t _nSidechain, int64_t _sigOpsCost, LockPoints lp):
+                                 bool _spendsCoinbase, bool _fSidechainDeposit, uint8_t _nSidechain, int64_t _sigOpsCost, LockPoints lp):
     tx(_tx), nFee(_nFee), nTime(_nTime), entryHeight(_entryHeight),
-    spendsCoinbase(_spendsCoinbase), spendsCriticalData(_spendsCriticalData), fSidechainDeposit(_fSidechainDeposit), nSidechain(_nSidechain), sigOpCost(_sigOpsCost), lockPoints(lp)
+    spendsCoinbase(_spendsCoinbase), fSidechainDeposit(_fSidechainDeposit), nSidechain(_nSidechain), sigOpCost(_sigOpsCost), lockPoints(lp)
 {
     nTxWeight = GetTransactionWeight(*tx);
     nUsageSize = RecursiveDynamicUsage(tx);
@@ -551,18 +551,6 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem
                     break;
                 }
             }
-        } else if (drivechainsEnabled && it->GetSpendsCriticalData()) {
-            for (const CTxIn& txin : tx.vin) {
-                indexed_transaction_set::const_iterator it2 = mapTx.find(txin.prevout.hash);
-                if (it2 != mapTx.end())
-                    continue;
-                const Coin &coin = pcoins->AccessCoin(txin.prevout);
-                if (nCheckFrequency != 0) assert(!coin.IsSpent());
-                if (coin.IsSpent() /* || (coin.IsCriticalData() && ((signed long)nMemPoolHeight) - coin.nHeight < CRITICAL_DATA_MATURITY)*/) {
-                    txToRemove.insert(it);
-                    break;
-                }
-            }
         }
         if (!validLP) {
             mapTx.modify(it, update_lock_points(lp));
@@ -985,11 +973,7 @@ bool CCoinsViewMemPool::GetCoin(const COutPoint &outpoint, Coin &coin) const {
     CTransactionRef ptx = mempool.get(outpoint.hash);
     if (ptx) {
         if (outpoint.n < ptx->vout.size()) {
-            if (ptx->criticalData.IsNull()) {
-                coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, false, false);
-            } else {
-                coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, true /* fCriticalData */, false);
-            }
+            coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, false);
             return true;
         } else {
             return false;
