@@ -3718,12 +3718,15 @@ void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<
     out.nValue = 0;
 
     // Add script header
-    out.scriptPubKey.resize(5);
+    out.scriptPubKey.resize(6);
     out.scriptPubKey[0] = OP_RETURN;
     out.scriptPubKey[1] = 0xD7;
     out.scriptPubKey[2] = 0x7D;
     out.scriptPubKey[3] = 0x17;
     out.scriptPubKey[4] = 0x76;
+
+    // Add version number
+    out.scriptPubKey[5] = SCDB_UPDATE_SCRIPT_VERSION;
 
     // TODO refactor : change container of vUserVotes so we don't loop
 

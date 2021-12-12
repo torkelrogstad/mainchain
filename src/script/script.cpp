@@ -355,7 +355,7 @@ bool CScript::IsSCDBUpdate() const
 {
     // Check script size
     size_t size = this->size();
-    if (size < 5) // TODO put in exact minimum size
+    if (size < 6)
         return false;
 
     // Check script header

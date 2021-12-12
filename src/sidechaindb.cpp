@@ -2162,7 +2162,7 @@ bool DecodeWithdrawalFees(const CScript& script, CAmount& amount)
 
 bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<SidechainWithdrawalState>& vNewScores)
 {
-    if (!script.IsSCDBUpdate()) {
+    if (script.size() < 6 || !script.IsSCDBUpdate()) {
         LogPrintf("SCDB %s: Error: script not SCDB update bytes!\n", __func__);
         return false;
     }
@@ -2172,7 +2172,13 @@ bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<
         return false;
     }
 
-    CScript bytes = CScript(script.begin() + 5, script.end());
+    uint8_t nVersion = script[5];
+    if (nVersion > SCDB_UPDATE_SCRIPT_MAX_VERSION) {
+        LogPrintf("SCDB %s: Error: Invalid version!\n", __func__);
+        return false;
+    }
+
+    CScript bytes = CScript(script.begin() + 6, script.end());
 
     size_t x = 0; // vOldScores outer vector (sidechains)
     for (CScript::const_iterator it = bytes.begin(); it < bytes.end(); it++) {

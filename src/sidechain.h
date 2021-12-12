@@ -48,6 +48,10 @@ static const int SIDECHAIN_VERSION_MAX = 0;
 //! The key for sidechain block data in ldb
 static const char DB_SIDECHAIN_BLOCK_OP = 'S';
 
+//! The SidechainDB update script version
+static const uint8_t SCDB_UPDATE_SCRIPT_VERSION = 0;
+static const uint8_t SCDB_UPDATE_SCRIPT_MAX_VERSION = 0;
+
 struct Sidechain {
     bool fActive;
     uint8_t nSidechain;
