@@ -67,10 +67,6 @@ public:
         return hashPrevBlock;
     }
 
-    // The inspiration for this approach was Litecoin. Thank you Litecoin
-    // developers thrasher- & shaolinfry (based on git blame)
-    uint256 GetPoWHash() const;
-
     int64_t GetBlockTime() const
     {
         return (int64_t)nTime;
