@@ -138,9 +138,6 @@ Intro::Intro(QWidget *parent) :
     );
     startThread();
 
-    // TODO loaded coins are disabled
-    // Remove this to re-show the loaded coins notice on the intro page
-    ui->labelLoadedCoins->setHidden(true);
 }
 
 Intro::~Intro()

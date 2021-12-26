@@ -1727,7 +1727,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
     bool fClean = true;
 
     if (view.HaveCoin(out)) fClean = false; // overwriting transaction output
-    if (undo.nHeight == 0 && !undo.fLoaded) {
+    if (undo.nHeight == 0) {
         // Missing undo metadata (height and coinbase). Older versions included this
         // information only in undo records for the last spend of a transactions'
         // outputs. This implies that it must be present for some other output of the same tx.
@@ -1738,16 +1738,6 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
         } else {
             return DISCONNECT_FAILED; // adding output for transaction without known metadata
         }
-    }
-    if (undo.fLoaded) {
-        // Set fSpent to false
-        LoadedCoin loaded;
-        if (!pcoinsTip->GetLoadedCoin(out.hash, loaded))
-            return false;
-
-        loaded.fSpent = false;
-
-        pcoinsTip->WriteToLoadedCoinIndex(loaded);
     }
 
     // The potential_overwrite parameter to AddCoin is only allowed to be false if we know for

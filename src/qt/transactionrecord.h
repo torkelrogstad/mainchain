@@ -45,7 +45,6 @@ public:
     enum ReplayStatus {
         ReplayUnknown,
         ReplayFalse,
-        ReplayLoaded,
         ReplayTrue,
         ReplaySplit
     };
