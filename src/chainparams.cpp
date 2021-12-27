@@ -86,12 +86,12 @@ public:
 
         // Deployment of SegWit (BIP141, BIP143, and BIP147)
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1479168000;
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1510704000;
 
-        // Deployment of Drivechains (BIPX hashrate escrow, BIPY BMM)
+        // Deployment of Drivechains (BIP300 hashrate escrow, BIP301 BMM)
         consensus.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS].bit = 4;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS].nStartTime = 1640565296;
         consensus.vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // The best chain should have at least this much work.
