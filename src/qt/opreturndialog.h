@@ -38,8 +38,12 @@ private:
     CreateOPReturnDialog *createOPReturnDialog = nullptr;
     OPReturnTableModel *opReturnModel = nullptr;
     const PlatformStyle *platformStyle = nullptr;
+    ClientModel *clientModel = nullptr;
     QMenu *contextMenu;
     QSortFilterProxyModel *proxyModel;
+
+public Q_SLOTS:
+    void updateOnShow();
 
 private Q_SLOTS:
     void on_tableView_doubleClicked(const QModelIndex& index);
@@ -49,6 +53,10 @@ private Q_SLOTS:
     void copyHex();
     void on_pushButtonCreate_clicked();
     void on_spinBoxDays_valueChanged(int nDays);
+    void numBlocksChanged(int nHeight, const QDateTime& time);
+
+Q_SIGNALS:
+    void UpdateTable();
 };
 
 #endif // OPRETURNDIALOG_H

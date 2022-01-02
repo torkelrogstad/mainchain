@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2021 The Bitcoin Core developers
+﻿// Copyright (c) 2021-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,11 +9,8 @@
 #include <utilmoneystr.h>
 #include <validation.h>
 
-#include <qt/clientmodel.h>
-
 #include <QDateTime>
 #include <QMetaType>
-#include <QTimer>
 #include <QVariant>
 
 Q_DECLARE_METATYPE(OPReturnTableObject)
@@ -123,26 +120,9 @@ QVariant OPReturnTableModel::headerData(int section, Qt::Orientation orientation
     return QVariant();
 }
 
-void OPReturnTableModel::setClientModel(ClientModel *model)
-{
-    this->clientModel = model;
-    if(model)
-    {
-        numBlocksChanged();
-
-        connect(model, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
-                this, SLOT(numBlocksChanged()));
-    }
-}
-
 void OPReturnTableModel::setDays(int nDaysIn)
 {
     nDays = nDaysIn;
-    UpdateModel();
-}
-
-void OPReturnTableModel::numBlocksChanged()
-{
     UpdateModel();
 }
 

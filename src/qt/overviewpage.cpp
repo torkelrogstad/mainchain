@@ -244,6 +244,7 @@ void OverviewPage::on_pushButtonManageNews_clicked()
 
 void OverviewPage::on_pushButtonGraffiti_clicked()
 {
+    opReturnDialog->updateOnShow();
     opReturnDialog->show();
 }
 

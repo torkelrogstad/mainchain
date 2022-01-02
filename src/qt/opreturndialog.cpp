@@ -84,6 +84,8 @@ OPReturnDialog::OPReturnDialog(const PlatformStyle *_platformStyle, QWidget *par
 
     ui->tableView->setSortingEnabled(true);
     ui->tableView->sortByColumn(0, Qt::DescendingOrder);
+
+    connect(this, SIGNAL(UpdateTable()), opReturnModel, SLOT(UpdateModel()));
 }
 
 OPReturnDialog::~OPReturnDialog()
@@ -93,9 +95,10 @@ OPReturnDialog::~OPReturnDialog()
 
 void OPReturnDialog::setClientModel(ClientModel *model)
 {
-    if(model && opReturnModel)
+    if (model)
     {
-        opReturnModel->setClientModel(model);
+        connect(model, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
+                this, SLOT(numBlocksChanged(int, QDateTime)));
     }
 }
 
@@ -177,4 +180,15 @@ void OPReturnDialog::on_pushButtonCreate_clicked()
 void OPReturnDialog::on_spinBoxDays_valueChanged(int nDays)
 {
     opReturnModel->setDays(nDays);
+
+void OPReturnDialog::updateOnShow()
+{
+    Q_EMIT(UpdateTable());
+}
+
+void OPReturnDialog::numBlocksChanged(int nHeight, const QDateTime& time)
+{
+    // Update the table model if the dialog is open
+    if (this->isVisible())
+        Q_EMIT(UpdateTable());
 }
