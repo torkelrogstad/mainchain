@@ -52,7 +52,7 @@ private Q_SLOTS:
     void copyDecode();
     void copyHex();
     void on_pushButtonCreate_clicked();
-    void on_spinBoxDays_valueChanged(int nDays);
+    void on_spinBoxDays_editingFinished();
     void numBlocksChanged(int nHeight, const QDateTime& time);
 
 Q_SIGNALS:

@@ -141,6 +141,7 @@ void OPReturnTableModel::UpdateModel()
 
     // Loop backwards from chainTip until we reach target time or genesis block.
     std::vector<OPReturnTableObject> vObj;
+    int nBatchSize = 300;
     for (int i = nHeight; i > 1; i--) {
         CBlockIndex *index = chainActive[i];
         if (!index)
@@ -173,9 +174,22 @@ void OPReturnTableModel::UpdateModel()
 
             vObj.push_back(object);
         }
+
+        // Write batch
+        if (i % nBatchSize == 0 && vObj.size()) {
+            int offset = model.size() ? 2 : 1;
+            beginInsertRows(QModelIndex(), model.size(), model.size() + vObj.size() - offset);
+            for (const OPReturnTableObject& o : vObj)
+                model.append(QVariant::fromValue(o));
+            endInsertRows();
+
+            vObj.clear();
+        }
     }
 
-    beginInsertRows(QModelIndex(), 0, vObj.size() - 1);
+    // Write final batch
+    int offset = model.size() ? 2 : 1;
+    beginInsertRows(QModelIndex(), model.size(), model.size() + vObj.size() - offset);
     for (const OPReturnTableObject& o : vObj)
         model.append(QVariant::fromValue(o));
     endInsertRows();

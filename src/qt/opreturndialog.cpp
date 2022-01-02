@@ -177,9 +177,10 @@ void OPReturnDialog::on_pushButtonCreate_clicked()
     createOPReturnDialog->show();
 }
 
-void OPReturnDialog::on_spinBoxDays_valueChanged(int nDays)
+void OPReturnDialog::on_spinBoxDays_editingFinished()
 {
-    opReturnModel->setDays(nDays);
+    opReturnModel->setDays(ui->spinBoxDays->value());
+}
 
 void OPReturnDialog::updateOnShow()
 {
