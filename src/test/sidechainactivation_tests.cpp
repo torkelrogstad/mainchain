@@ -179,7 +179,6 @@ BOOST_AUTO_TEST_CASE(activate_single)
     Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
-    proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
     proposal.strKeyID = "80dca759b4ff2c9e9b65ec790703ad09fba844cd";
@@ -585,7 +584,6 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
-    proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
@@ -601,7 +599,6 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     // Creat sidechain proposal
     Sidechain proposal2;
     proposal2.nSidechain = 0;
-    proposal2.nVersion = 0;
     proposal2.nVersion = 0;
     proposal2.title = "replacement";
     proposal2.description = "description";
@@ -668,7 +665,6 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     Sidechain proposal;
     proposal.nSidechain = 0;
     proposal.nVersion = 0;
-    proposal.nVersion = 0;
     proposal.title = "test";
     proposal.description = "description";
     proposal.hashID1 = uint256S("b55d224f1fda033d930c92b1b40871f209387355557dd5e0d2b5dd9bb813c33f");
@@ -684,7 +680,6 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     // Creat sidechain proposal
     Sidechain proposal2;
     proposal2.nSidechain = 0;
-    proposal2.nVersion = 0;
     proposal2.nVersion = 0;
     proposal2.title = "replacement";
     proposal2.description = "description";

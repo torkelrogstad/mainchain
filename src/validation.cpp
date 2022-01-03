@@ -3502,10 +3502,6 @@ void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& con
     if (block.vtx.size() < 2)
         return;
 
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     std::vector<CCriticalData> vCriticalData = GetCriticalDataRequests(block, consensusParams);
     std::vector<CTxOut> vout;
     for (const CCriticalData& d : vCriticalData) {
@@ -3543,10 +3539,6 @@ void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& co
      * Example Lightning version of Drivechain BMM commitment request.
      * BIP: 300 & 301
      */
-
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
 
     // TODO
     std::vector<CCriticalData> vCriticalData; // = GetLNBMMRequests();
@@ -3593,10 +3585,6 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
      * BIP: 300 & 301
      */
 
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     // Create output that commitment will be added to
     CTxOut out;
     out.nValue = 0;
@@ -3626,10 +3614,6 @@ void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const 
      * BIP: 300 & 301
      */
 
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     CTxOut out;
     out.nValue = 0;
 
@@ -3655,10 +3639,6 @@ void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const 
 
 void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams)
 {
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     CTxOut out;
     out.nValue = 0;
 
@@ -3673,10 +3653,6 @@ void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidecha
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams)
 {
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     CTxOut out;
     out.nValue = 0;
 
@@ -3689,20 +3665,14 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, c
     out.scriptPubKey[4] = 0xBF;
 
     memcpy(&out.scriptPubKey[5], &hash, 32);
-
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);
     mtx.vout.push_back(out);
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-
 void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
 {
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     // Create output that bytes will be added to
     CTxOut out;
     out.nValue = 0;
@@ -3784,10 +3754,6 @@ CScript GetNewsUSDailyHeader()
 std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block, const Consensus::Params& consensusParams)
 {
     std::vector<CCriticalData> vCriticalData;
-
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return vCriticalData;
 
     if (block.vtx.size() < 2)
         return vCriticalData;

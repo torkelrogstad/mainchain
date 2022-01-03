@@ -216,9 +216,8 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
     out.scriptPubKey = proposal.GetProposalScript();
     out.nValue = 50 * CENT;
 
-    if (!out.scriptPubKey.IsSidechainProposalCommit()) {
+    if (!out.scriptPubKey.IsSidechainProposalCommit())
         return false;
-    }
 
     uint256 hashBlock1 = GetRandHash();
     scdbTest.Update(nHeight, hashBlock1, scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out});
@@ -226,27 +225,31 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
     std::vector<SidechainActivationStatus> vActivation;
     vActivation = scdbTest.GetSidechainActivationStatus();
 
-    if (vActivation.size() != 1) {
+    if (vActivation.size() != 1)
         return false;
-    }
+
     if (vActivation.front().proposal.GetHash() != proposal.GetHash())
-    {
         return false;
-    }
 
     // Use the function from validation to generate the commit, and then
     // copy it from the block.
-    CBlock block;
+
     CMutableTransaction mtx;
+    mtx.vout.resize(1);
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
+
+    CBlock block;
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+
     GenerateSidechainActivationCommitment(block, proposal.GetHash(), Params().GetConsensus());
+    if (block.vtx.front()->vout.size() != 2)
+        return false;
 
     // Add votes until the sidechain is activated
     nHeight++;
     for (int i = 0; i < SIDECHAIN_ACTIVATION_PERIOD - 1; i++) {
-        if (!scdbTest.Update(nHeight, GetRandHash(), scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout)) {
+        if (!scdbTest.Update(nHeight, GetRandHash(), scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{block.vtx.front()->vout[1]})) {
             return false;
         }
         nHeight++;
