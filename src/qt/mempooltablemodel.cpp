@@ -16,8 +16,6 @@
 
 Q_DECLARE_METATYPE(MemPoolTableObject)
 
-static const int nEntriesToDisplay = 21;
-
 MemPoolTableModel::MemPoolTableModel(QObject *parent) :
     QAbstractTableModel(parent)
 {
@@ -132,43 +130,36 @@ void MemPoolTableModel::updateModel()
                 continue;
 
             if (it->tx->GetHash() == old.txid) {
-                vInfo = std::vector<TxMempoolInfo>(vInfo.begin(), it/*(it == vInfo.begin() ? it : it - 1)*/);
+                vInfo = std::vector<TxMempoolInfo>(vInfo.begin(), it);
                 break;
             }
         }
     }
 
-    // Copy and then clear old data
-    QList<QVariant> oldModel = model;
+    if (vInfo.empty())
+        return;
 
-    beginResetModel();
-    model.clear();
-    endResetModel();
-
-    // Add new data then old data to table
-    beginInsertRows(QModelIndex(), 0, oldModel.size() + vInfo.size() - 1);
-    for (const TxMempoolInfo& i : vInfo) {
-        if (!i.tx)
+    // Add new data to table
+    beginInsertRows(QModelIndex(), 0, vInfo.size() - 1);
+    for (auto it = vInfo.begin(); it != vInfo.end(); it++) {
+        if (!it->tx)
             continue;
 
         MemPoolTableObject object;
-        object.txid = i.tx->GetHash();
-        object.time = GUIUtil::timeStr(i.nTime);
-        object.value = i.tx->GetValueOut();
-        object.feeRate = i.feeRate;
+        object.txid = it->tx->GetHash();
+        object.time = GUIUtil::timeStr(it->nTime);
+        object.value = it->tx->GetValueOut();
+        object.feeRate = it->feeRate;
 
-        model.append(QVariant::fromValue(object));
-    }
-    for (const QVariant& v : oldModel) {
-        model.append(v);
+        model.prepend(QVariant::fromValue(object));
     }
     endInsertRows();
 
     // Remove extra entries
-    if (model.size() > nEntriesToDisplay)
+    if (model.size() > 50)
     {
-        beginRemoveRows(QModelIndex(), model.size() - 1, nEntriesToDisplay);
-        while (model.size() > nEntriesToDisplay)
+        beginRemoveRows(QModelIndex(), model.size() - std::abs(50 - model.size()), model.size() - 1);
+        while (model.size() > 50)
             model.pop_back();
         endRemoveRows();
     }
@@ -179,7 +170,6 @@ void MemPoolTableModel::memPoolSizeChanged(long nTxIn, size_t nBytesIn)
     if (nTxIn != nTx || nBytesIn != nBytes) {
         nTx = nTxIn;
         nBytes = nBytesIn;
-
         updateModel();
     }
 }
