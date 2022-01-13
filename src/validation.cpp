@@ -3776,6 +3776,18 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
         return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
 
+    // Enforce Network Fork
+    // Special nBits requirement at the specified blockheight.
+    // Mainnet BTC nodes will reject this block and all future blocks.
+    if (nHeight == DRIVECHAIN_DA_HEIGHT) {
+        const arith_uint256 bnPowDA = UintToArith256(consensusParams.powLimit);
+        if (block.nBits != bnPowDA.GetCompact()) {
+            LogPrintf("%s: Invalid diffbits for DriveChain DA at height: %u.\n", __func__, nHeight);
+            return state.DoS(100, false, REJECT_INVALID, "bad-diffbits-drivechain-da", false, "Bits invalid for DriveChain DA height block!");
+        }
+        LogPrintf("%s: Drivechain fork birthday DA activated! Height: %u\n", __func__, nHeight);
+    }
+
     // Check against checkpoints
     if (fCheckpointsEnabled) {
         // Don't accept any forks from the main chain prior to last checkpoint.
