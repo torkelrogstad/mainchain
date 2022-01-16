@@ -63,7 +63,10 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         if (col == 2) {
             QString rate = BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.feeRate.GetFeePerK(), false, BitcoinUnits::separatorAlways);
             rate += "/kB";
-            return rate;
+
+            QString total = "$" + QString::fromStdString(ConvertToFiat(object.fee));
+            return rate + " (" + total + ")";
+        }
         // txid
         if (col == 3) {
             return QString::fromStdString(object.txid.ToString()).left(21) + "...";
