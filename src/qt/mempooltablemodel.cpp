@@ -12,6 +12,7 @@
 #include <utilmoneystr.h>
 #include <validation.h>
 
+#include <QDateTime>
 #include <QString>
 
 Q_DECLARE_METATYPE(MemPoolTableObject)
@@ -146,9 +147,10 @@ void MemPoolTableModel::updateModel()
 
         MemPoolTableObject object;
         object.txid = it->tx->GetHash();
-        object.time = GUIUtil::timeStr(it->nTime);
+        object.time = QDateTime::fromTime_t((int64_t)it->nTime).toString("hh:mm MMM dd");
         object.value = it->tx->GetValueOut();
         object.feeRate = it->feeRate;
+        object.fee = it->fee;
 
         model.prepend(QVariant::fromValue(object));
     }

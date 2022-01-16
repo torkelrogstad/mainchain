@@ -12,8 +12,6 @@
 #include <policy/feerate.h>
 #include <uint256.h>
 
-class CFeeRate;
-class uint256;
 class CTransaction;
 typedef std::shared_ptr<const CTransaction> CTransactionRef;
 
@@ -27,6 +25,7 @@ struct MemPoolTableObject
     QString time;
     CAmount value;
     CFeeRate feeRate;
+    CAmount fee;
 };
 
 class MemPoolTableModel : public QAbstractTableModel
