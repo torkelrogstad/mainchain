@@ -50,42 +50,41 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DisplayRole:
     {
-        // txid
-        if (col == 0) {
-            return QString::fromStdString(object.txid.ToString()).left(21) + "...";
-        }
         // Time
-        if (col == 1) {
+        if (col == 0) {
             return object.time;
         }
         // Value
-        if (col == 2) {
+        if (col == 1) {
             return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.value, false, BitcoinUnits::separatorAlways);
         }
-        // Feerate
-        if (col == 3) {
+        // Fees
+        if (col == 2) {
             QString rate = BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.feeRate.GetFeePerK(), false, BitcoinUnits::separatorAlways);
             rate += "/kB";
             return rate;
+        // txid
+        if (col == 3) {
+            return QString::fromStdString(object.txid.ToString()).left(21) + "...";
         }
     }
     case Qt::TextAlignmentRole:
     {
-        // txid
-        if (col == 0) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
-        }
         // Time
-        if (col == 1) {
+        if (col == 0) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // Value
-        if (col == 2) {
+        if (col == 1) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Feerate
+        // Fee
+        if (col == 2) {
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
+        }
+        // txid
         if (col == 3) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
     case HashRole:
@@ -102,13 +101,13 @@ QVariant MemPoolTableModel::headerData(int section, Qt::Orientation orientation,
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("TxID");
-            case 1:
                 return QString("Time");
-            case 2:
+            case 1:
                 return QString("Value");
-            case 3:
+            case 2:
                 return QString("Fee");
+            case 3:
+                return QString("TxID");
             }
         }
     }
