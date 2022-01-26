@@ -42,6 +42,7 @@ public:
 
     void setModel(OptionsModel *model);
     void setMapper();
+    void showDisplayOptions();
 
 private Q_SLOTS:
     /* set OK button state (enabled / disabled) */

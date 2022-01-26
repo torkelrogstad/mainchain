@@ -113,6 +113,7 @@ private Q_SLOTS:
     void copyNewsHex2();
     void showDetailsMempool();
     void showDetailsBlock();
+    void showDisplayOptions();
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

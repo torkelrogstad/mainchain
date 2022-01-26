@@ -18,6 +18,7 @@
 #include <qt/newstablemodel.h>
 #include <qt/newstypestablemodel.h>
 #include <qt/optionsmodel.h>
+#include <qt/optionsdialog.h>
 #include <qt/opreturndialog.h>
 #include <qt/platformstyle.h>
 #include <qt/transactionfilterproxy.h>
@@ -31,6 +32,7 @@
 #include <QSortFilterProxyModel>
 
 #include <txdb.h>
+#include <utilmoneystr.h>
 #include <validation.h>
 
 OverviewPage::OverviewPage(const PlatformStyle *platformStyleIn, QWidget *parent) :
@@ -184,9 +186,12 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyleIn, QWidget *parent
 
     // Recent txns (mempool) table context menu
     QAction *showDetailsMempoolAction = new QAction(tr("Show transaction details from mempool"), this);
+    QAction *showDisplayOptionsAction = new QAction(tr("Set BTC / USD display price"), this);
+
     contextMenuMempool = new QMenu(this);
     contextMenuMempool->setObjectName("contextMenuMempool");
     contextMenuMempool->addAction(showDetailsMempoolAction);
+    contextMenuMempool->addAction(showDisplayOptionsAction);
 
     // Recent block table context menu
     QAction *showDetailsBlockAction = new QAction(tr("Show in block explorer"), this);
@@ -207,6 +212,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyleIn, QWidget *parent
     connect(copyNewsHexAction1, SIGNAL(triggered()), this, SLOT(copyNewsHex1()));
     connect(copyNewsHexAction2, SIGNAL(triggered()), this, SLOT(copyNewsHex2()));
     connect(showDetailsMempoolAction, SIGNAL(triggered()), this, SLOT(showDetailsMempool()));
+    connect(showDisplayOptionsAction, SIGNAL(triggered()), this, SLOT(showDisplayOptions()));
     connect(showDetailsBlockAction, SIGNAL(triggered()), this, SLOT(showDetailsBlock()));
 
     // Setup news type combo box options
@@ -270,6 +276,10 @@ void OverviewPage::setBalance(const CAmount& balance, const CAmount& unconfirmed
     ui->labelWatchPending->setText(BitcoinUnits::formatWithUnit(unit, watchUnconfBalance, false, BitcoinUnits::separatorAlways));
     ui->labelWatchImmature->setText(BitcoinUnits::formatWithUnit(unit, watchImmatureBalance, false, BitcoinUnits::separatorAlways));
     ui->labelWatchTotal->setText(BitcoinUnits::formatWithUnit(unit, watchOnlyBalance + watchUnconfBalance + watchImmatureBalance, false, BitcoinUnits::separatorAlways));
+
+    CAmount total = balance + unconfirmedBalance + immatureBalance + watchOnlyBalance + watchUnconfBalance + watchImmatureBalance;
+    int nUSDBTC = walletModel->getOptionsModel()->getUSDBTC();
+    ui->labelUSDBTC->setText("@ $" + QString::number(nUSDBTC) + "/BTC: $" + QString::fromStdString(ConvertToFiat(total, nUSDBTC)));
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users
@@ -611,6 +621,17 @@ void OverviewPage::showDetailsBlock()
     QModelIndexList selection = ui->tableViewBlocks->selectionModel()->selectedRows();
     if (!selection.isEmpty())
         on_tableViewBlocks_doubleClicked(selection.front());
+}
+
+void OverviewPage::showDisplayOptions()
+{
+    if(!clientModel || !clientModel->getOptionsModel())
+        return;
+
+    OptionsDialog dlg(this, (walletModel != nullptr));
+    dlg.setModel(clientModel->getOptionsModel());
+    dlg.showDisplayOptions();
+    dlg.exec();
 }
 
 void OverviewPage::updateNewsTypes()
