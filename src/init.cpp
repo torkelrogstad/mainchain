@@ -175,12 +175,6 @@ void Interrupt()
 
 void Shutdown()
 {
-#ifdef ENABLE_WALLET
-    if (!vpwallets.empty()) {
-        CWalletRef pwallet = vpwallets.front();
-    }
-#endif
-
     LogPrintf("%s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);

@@ -3432,8 +3432,7 @@ bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa
 
 bool IsDrivechainEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
-    LOCK(cs_main);
-    return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_DRIVECHAINS, versionbitscache) == THRESHOLD_ACTIVE);
+    return (pindexPrev && pindexPrev->nHeight + 1 >= params.DriveChainHeight);
 }
 
 // Compute at which vout of the block's coinbase transaction the witness
@@ -3779,9 +3778,9 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     // Enforce Network Fork
     // Special nBits requirement at the specified blockheight.
     // Mainnet BTC nodes will reject this block and all future blocks.
-    if (nHeight == DRIVECHAIN_DA_HEIGHT) {
-        const arith_uint256 bnPowDA = UintToArith256(consensusParams.powLimit);
-        if (block.nBits != bnPowDA.GetCompact()) {
+    if (nHeight == consensusParams.DriveChainHeight) {
+        const arith_uint256 bnPoWDA = UintToArith256(consensusParams.powLimit);
+        if (block.nBits != bnPoWDA.GetCompact()) {
             LogPrintf("%s: Invalid diffbits for DriveChain DA at height: %u.\n", __func__, nHeight);
             return state.DoS(100, false, REJECT_INVALID, "bad-diffbits-drivechain-da", false, "Bits invalid for DriveChain DA height block!");
         }
