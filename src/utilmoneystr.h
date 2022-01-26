@@ -18,7 +18,7 @@
  * JSON but use AmountFromValue and ValueFromAmount for that.
  */
 std::string FormatMoney(const CAmount& n);
-std::string ConvertToFiat(const CAmount& n);
+std::string ConvertToFiat(const CAmount& n, int64_t nUSDBTC);
 bool ParseMoney(const std::string& str, CAmount& nRet);
 bool ParseMoney(const char* pszIn, CAmount& nRet);
 

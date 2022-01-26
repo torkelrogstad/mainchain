@@ -30,32 +30,22 @@ std::string FormatMoney(const CAmount& n)
     return str;
 }
 
-static const int64_t FIAT = 50000;
-
-std::string ConvertToFiat(const CAmount& n)
-{
-    // Note: not using straight sprintf here because we do NOT want
-    // localized number formatting.
+std::string ConvertToFiat(const CAmount& n, int64_t nUSDBTC)
+{   
+    double out = 0.00;
     int64_t n_abs = (n > 0 ? n : -n);
-    int64_t quotient = (n_abs/COIN) * FIAT;
-    int64_t remainder = (n_abs%COIN) * FIAT;
-    std::string str = strprintf("%d.%d", quotient, remainder);
+    out = n_abs * (nUSDBTC * 0.00000001);
 
-    // Right-trim excess zeros before the decimal point:
-    int nTrim = 0;
-    for (int i = str.size()-1; (str[i] == '0' && isdigit(str[i-2])); --i)
-        ++nTrim;
-    if (nTrim)
-        str.erase(str.size()-nTrim, nTrim);
+    std::string str = strprintf("%f", out);
 
     // Remove extra precision
-    nTrim = 0;
     for (size_t i = 0; i < str.size(); i++)
         if (str[i] == '.' && str.size() > i + 3)
             str.erase(i + 3, str.size());
 
     if (n < 0)
         str.insert((unsigned int)0, 1, '-');
+
     return str;
 }
 
