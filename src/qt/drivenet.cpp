@@ -496,6 +496,8 @@ void BitcoinApplication::initializeResult(bool success)
         connect(clientModel, SIGNAL(mempoolSizeChanged(long, size_t)),
                         memPoolModel, SLOT(memPoolSizeChanged(long, size_t)));
 
+        memPoolModel->setClientModel(clientModel);
+
 #ifdef ENABLE_WALLET
         // TODO: Expose secondary wallets
         if (!vpwallets.empty())

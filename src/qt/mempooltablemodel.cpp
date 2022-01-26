@@ -4,7 +4,9 @@
 
 #include <qt/mempooltablemodel.h>
 
+#include <qt/clientmodel.h>
 #include <qt/drivenetunits.h>
+#include <qt/optionsmodel.h>
 #include <qt/guiutil.h>
 
 #include <primitives/transaction.h>
@@ -31,7 +33,7 @@ int MemPoolTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int MemPoolTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 4;
+    return 5;
 }
 
 QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
@@ -59,16 +61,16 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.value, false, BitcoinUnits::separatorAlways);
         }
-        // Fees
+        // sats / byte
         if (col == 2) {
-            QString rate = BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.feeRate.GetFeePerK(), false, BitcoinUnits::separatorAlways);
-            rate += "/kB";
-
-            QString total = "$" + QString::fromStdString(ConvertToFiat(object.fee));
-            return rate + " (" + total + ")";
+            return QString::number(object.feeRate.GetFeePerB());
         }
+        // Total fee in USD
         // txid
         if (col == 3) {
+            return "$" + QString::fromStdString(ConvertToFiat(object.fee, nUSDBTC));
+        }
+        if (col == 4) {
             return QString::fromStdString(object.txid.ToString()).left(21) + "...";
         }
     }
@@ -82,12 +84,16 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Fee
+        // Sats / byte
         if (col == 2) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Fee in USD
+        if (col == 3) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
         }
         // txid
-        if (col == 3) {
+        if (col == 4) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
@@ -109,13 +115,26 @@ QVariant MemPoolTableModel::headerData(int section, Qt::Orientation orientation,
             case 1:
                 return QString("Value");
             case 2:
-                return QString("Fee");
+                return QString("Sat/vB");
             case 3:
+                return QString("Fee USD");
+            case 4:
                 return QString("TxID");
             }
         }
     }
     return QVariant();
+}
+
+void MemPoolTableModel::setClientModel(ClientModel *model)
+{
+    this->clientModel = model;
+    OptionsModel* optionsModel = model->getOptionsModel();
+
+    connect(optionsModel, SIGNAL(usdBTCChanged(int)),
+            this, SLOT(setUSDBTC(int)));
+
+    setUSDBTC(optionsModel->getUSDBTC());
 }
 
 void MemPoolTableModel::updateModel()
@@ -176,6 +195,12 @@ void MemPoolTableModel::memPoolSizeChanged(long nTxIn, size_t nBytesIn)
         nBytes = nBytesIn;
         updateModel();
     }
+}
+
+void MemPoolTableModel::setUSDBTC(int nUSDBTCIn)
+{
+    nUSDBTC = nUSDBTCIn;
+    updateModel();
 }
 
 bool MemPoolTableModel::GetTx(const uint256& txid, CTransactionRef& tx) const
