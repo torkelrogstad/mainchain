@@ -59,7 +59,7 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         }
         // Value
         if (col == 1) {
-            return BitcoinUnits::formatWithUnit(BitcoinUnit::BTC, object.value, false, BitcoinUnits::separatorAlways);
+            return QString::fromStdString(FormatMoney(object.value));
         }
         // sats / byte
         if (col == 2) {
@@ -113,7 +113,7 @@ QVariant MemPoolTableModel::headerData(int section, Qt::Orientation orientation,
             case 0:
                 return QString("Time");
             case 1:
-                return QString("Value");
+                return QString("BTC");
             case 2:
                 return QString("Sat/vB");
             case 3:
