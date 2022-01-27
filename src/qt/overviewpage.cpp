@@ -27,6 +27,7 @@
 #include <qt/walletmodel.h>
 
 #include <QMenu>
+#include <QLocale>
 #include <QPoint>
 #include <QScrollBar>
 #include <QSortFilterProxyModel>
@@ -279,7 +280,7 @@ void OverviewPage::setBalance(const CAmount& balance, const CAmount& unconfirmed
 
     CAmount total = balance + unconfirmedBalance + immatureBalance + watchOnlyBalance + watchUnconfBalance + watchImmatureBalance;
     int nUSDBTC = walletModel->getOptionsModel()->getUSDBTC();
-    ui->labelUSDBTC->setText("@ $" + QString::number(nUSDBTC) + "/BTC: $" + QString::fromStdString(ConvertToFiat(total, nUSDBTC)));
+    ui->labelUSDBTC->setText("@ $" + QLocale(QLocale::English).toString(nUSDBTC) + "/BTC: $" + QLocale(QLocale::English).toString(ConvertToFiat(total, nUSDBTC), 'f', 2));
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users

@@ -15,6 +15,7 @@
 #include <validation.h>
 
 #include <QDateTime>
+#include <QLocale>
 #include <QString>
 
 Q_DECLARE_METATYPE(MemPoolTableObject)
@@ -68,7 +69,7 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         // Total fee in USD
         // txid
         if (col == 3) {
-            return "$" + QString::fromStdString(ConvertToFiat(object.fee, nUSDBTC));
+            return "$" + QLocale(QLocale::English).toString(ConvertToFiat(object.fee, nUSDBTC), 'f', 2);
         }
         if (col == 4) {
             return QString::fromStdString(object.txid.ToString()).left(21) + "...";

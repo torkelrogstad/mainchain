@@ -30,23 +30,10 @@ std::string FormatMoney(const CAmount& n)
     return str;
 }
 
-std::string ConvertToFiat(const CAmount& n, int64_t nUSDBTC)
-{   
-    double out = 0.00;
+double ConvertToFiat(const CAmount& n, int64_t nUSDBTC)
+{
     int64_t n_abs = (n > 0 ? n : -n);
-    out = n_abs * (nUSDBTC * 0.00000001);
-
-    std::string str = strprintf("%f", out);
-
-    // Remove extra precision
-    for (size_t i = 0; i < str.size(); i++)
-        if (str[i] == '.' && str.size() > i + 3)
-            str.erase(i + 3, str.size());
-
-    if (n < 0)
-        str.insert((unsigned int)0, 1, '-');
-
-    return str;
+    return n_abs * (nUSDBTC * 0.00000001);
 }
 
 bool ParseMoney(const std::string& str, CAmount& nRet)
