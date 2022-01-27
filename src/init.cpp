@@ -1403,8 +1403,6 @@ bool AppInitMain()
     // ********************************************************* Step 7: load caches
     fReindex = gArgs.GetBoolArg("-reindex", false);
 
-    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
-
     std::string strFailSCDAT;
     strFailSCDAT = "Failed to load sidechain database files!\n";
     strFailSCDAT += "They may corrupt or need to be updated.\n";
@@ -1535,6 +1533,8 @@ bool AppInitMain()
                     }
                     assert(chainActive.Tip() != nullptr);
                 }
+
+    		    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
 
                 // Synchronize SCDB
                 if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
