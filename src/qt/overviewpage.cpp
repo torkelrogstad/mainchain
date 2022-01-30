@@ -344,6 +344,9 @@ void OverviewPage::setWalletModel(WalletModel *model)
 
         updateWatchOnlyLabels(model->haveWatchOnly());
         connect(model, SIGNAL(notifyWatchonlyChanged(bool)), this, SLOT(updateWatchOnlyLabels(bool)));
+
+        connect(model->getOptionsModel(), SIGNAL(usdBTCChanged(int)),
+                this, SLOT(updateUSDTotal()));
     }
 
     // update the display unit, to not use the default ("BTC")
@@ -657,4 +660,18 @@ void OverviewPage::updateNewsTypes()
     // Setup combo box #2
     for (const NewsType t : vType)
         ui->comboBoxNewsType2->addItem(QString::fromStdString(t.title));
+}
+
+void OverviewPage::updateUSDTotal()
+{
+    // Update the balance to refresh the BTC USD conversion
+    if(walletModel)
+    {
+        setBalance(walletModel->getBalance(),
+                   walletModel->getUnconfirmedBalance(),
+                   walletModel->getImmatureBalance(),
+                   walletModel->getWatchBalance(),
+                   walletModel->getWatchUnconfirmedBalance(),
+                   walletModel->getWatchImmatureBalance());
+    }
 }

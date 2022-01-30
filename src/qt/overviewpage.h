@@ -105,6 +105,7 @@ private Q_SLOTS:
     void contextualMenuMempool(const QPoint &);
     void contextualMenuBlocks(const QPoint &);
     void updateNewsTypes();
+    void updateUSDTotal();
 
     void showDetailsNews1();
     void showDetailsNews2();
