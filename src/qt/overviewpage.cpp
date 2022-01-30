@@ -232,6 +232,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyleIn, QWidget *parent
     ui->pushButtonCreateNews->setIcon(platformStyle->SingleColorIcon(":/icons/broadcastnews"));
     ui->pushButtonManageNews->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
     ui->pushButtonGraffiti->setIcon(platformStyle->SingleColorIcon(":/icons/spray"));
+    ui->pushButtonSetUSDBTC->setIcon(platformStyle->SingleColorIcon(":/icons/options"));
 }
 
 void OverviewPage::handleOutOfSyncWarningClicks()
@@ -253,6 +254,11 @@ void OverviewPage::on_pushButtonGraffiti_clicked()
 {
     opReturnDialog->updateOnShow();
     opReturnDialog->show();
+}
+
+void OverviewPage::on_pushButtonSetUSDBTC_clicked()
+{
+    showDisplayOptions();
 }
 
 OverviewPage::~OverviewPage()

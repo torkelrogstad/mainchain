@@ -93,6 +93,7 @@ private Q_SLOTS:
     void on_pushButtonCreateNews_clicked();
     void on_pushButtonManageNews_clicked();
     void on_pushButtonGraffiti_clicked();
+    void on_pushButtonSetUSDBTC_clicked();
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
     void on_tableViewMempool_doubleClicked(const QModelIndex& index);
     void on_tableViewNews1_doubleClicked(const QModelIndex& index);
