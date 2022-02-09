@@ -1435,6 +1435,7 @@ bool AppInitMain()
     LogPrintf("* Using %.1fMiB for in-memory UTXO set (plus up to %.1fMiB of unused mempool space)\n", nCoinCacheUsage * (1.0 / 1024 / 1024), nMempoolSizeMax * (1.0 / 1024 / 1024));
 
     bool fLoaded = false;
+    bool drivechainsEnabled = false;
     while (!fLoaded && !fRequestShutdown) {
         bool fReset = fReindex;
         std::string strLoadError;
@@ -1534,7 +1535,7 @@ bool AppInitMain()
                     assert(chainActive.Tip() != nullptr);
                 }
 
-    		    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
+    		    drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
 
                 // Synchronize SCDB
                 if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
@@ -1703,8 +1704,9 @@ bool AppInitMain()
         nLocalServices = ServiceFlags(nLocalServices | NODE_WITNESS);
     }
 
-    // TODO
-    // nLocalServices = ServiceFlags(nLocalServices | NODE_DRIVECHAIN);
+    // Show NODE_DRIVECHAIN after fork height
+    if (drivechainsEnabled)
+        nLocalServices = ServiceFlags(nLocalServices | NODE_DRIVECHAIN);
 
     // ********************************************************* Step 11: import blocks
 

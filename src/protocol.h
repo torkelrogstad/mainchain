@@ -305,7 +305,7 @@ enum ServiceFlags : uint64_t {
  */
 static ServiceFlags GetDesirableServiceFlags(ServiceFlags services) {
     // TODO
-    return ServiceFlags(NODE_NETWORK | NODE_WITNESS /*| NODE_DRIVECHAIN*/);
+    return ServiceFlags(NODE_NETWORK | NODE_WITNESS /* | NODE_DRIVECHAIN */ );
 }
 
 /**
