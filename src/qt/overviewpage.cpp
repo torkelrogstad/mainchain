@@ -125,11 +125,13 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyleIn, QWidget *parent
     ui->tableViewNews2->horizontalHeader()->setStretchLastSection(true);
 
     // Hide vertical header
+    ui->tableViewMempool->verticalHeader()->setVisible(false);
     ui->tableViewBlocks->verticalHeader()->setVisible(false);
     ui->tableViewNews1->verticalHeader()->setVisible(false);
     ui->tableViewNews2->verticalHeader()->setVisible(false);
 
     // Left align the horizontal header text
+    ui->tableViewMempool->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
     ui->tableViewBlocks->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
     ui->tableViewNews1->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
     ui->tableViewNews2->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
@@ -286,7 +288,8 @@ void OverviewPage::setBalance(const CAmount& balance, const CAmount& unconfirmed
 
     CAmount total = balance + unconfirmedBalance + immatureBalance + watchOnlyBalance + watchUnconfBalance + watchImmatureBalance;
     int nUSDBTC = walletModel->getOptionsModel()->getUSDBTC();
-    ui->labelUSDBTC->setText("@ $" + QLocale(QLocale::English).toString(nUSDBTC) + "/BTC: $" + QLocale(QLocale::English).toString(ConvertToFiat(total, nUSDBTC), 'f', 2));
+    ui->labelUSDBTC->setText("$" + QLocale(QLocale::English).toString(nUSDBTC) + "/BTC");
+    ui->labelUSDBTCTotal->setText("$" + QLocale(QLocale::English).toString(ConvertToFiat(total, nUSDBTC), 'f', 0));
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users
