@@ -34,7 +34,7 @@ int MemPoolTableModel::rowCount(const QModelIndex & /*parent*/) const
 
 int MemPoolTableModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return 5;
+    return 6;
 }
 
 QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
@@ -62,16 +62,20 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return QString::fromStdString(FormatMoney(object.value));
         }
-        // sats / byte
+        // Value USD
         if (col == 2) {
+            return "$" + QLocale(QLocale::English).toString(ConvertToFiat(object.value, nUSDBTC), 'f', 0);
+        }
+        // sats / byte
+        if (col == 3) {
             return QString::number(object.feeRate.GetFeePerB());
         }
         // Total fee in USD
         // txid
-        if (col == 3) {
+        if (col == 4) {
             return "$" + QLocale(QLocale::English).toString(ConvertToFiat(object.fee, nUSDBTC), 'f', 2);
         }
-        if (col == 4) {
+        if (col == 5) {
             return QString::fromStdString(object.txid.ToString()).left(21) + "...";
         }
     }
@@ -85,16 +89,20 @@ QVariant MemPoolTableModel::data(const QModelIndex &index, int role) const
         if (col == 1) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Sats / byte
+        // Value USD
         if (col == 2) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // Fee in USD
+        // Sats / byte
         if (col == 3) {
             return int(Qt::AlignRight | Qt::AlignVCenter);
         }
-        // txid
+        // Fee in USD
         if (col == 4) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // txid
+        if (col == 5) {
             return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
@@ -116,10 +124,12 @@ QVariant MemPoolTableModel::headerData(int section, Qt::Orientation orientation,
             case 1:
                 return QString("BTC");
             case 2:
-                return QString("Sat/vB");
+                return QString("$");
             case 3:
-                return QString("Fee USD");
+                return QString("Sat/vB");
             case 4:
+                return QString("Fee $");
+            case 5:
                 return QString("TxID");
             }
         }
