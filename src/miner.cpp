@@ -840,7 +840,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
     while (mi != mempool.mapTx.get<ancestor_score>().end() || !mapModifiedTx.empty())
     {
         // Don't add deposits to the same block as a Withdrawal for this sidechain
-        if (mi->GetSidechainDeposit() &&
+        if (mi->IsSidechainDeposit() &&
                 setSidechainsWithWithdrawal.count(mi->GetSidechainNumber())) {
             ++mi;
             continue;

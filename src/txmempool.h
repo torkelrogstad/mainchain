@@ -132,7 +132,7 @@ public:
     bool GetSpendsCoinbase() const { return spendsCoinbase; }
     bool HasCriticalData() const { return !this->tx->criticalData.IsNull(); }
 
-    bool GetSidechainDeposit() const { return fSidechainDeposit; }
+    bool IsSidechainDeposit() const { return fSidechainDeposit; }
     uint8_t GetSidechainNumber() const { return nSidechain; }
 
     uint64_t GetCountWithAncestors() const { return nCountWithAncestors; }
