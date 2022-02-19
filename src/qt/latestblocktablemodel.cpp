@@ -49,17 +49,17 @@ QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DisplayRole:
     {
-        // Height
+        // Time
         if (col == 0) {
+            return QDateTime::fromTime_t((int64_t)object.nTime).toString("hh:mm MMM dd");
+        }
+        // Height
+        if (col == 1) {
             return object.nHeight;
         }
         // Hash
-        if (col == 1) {
-            return QString::fromStdString(object.hash.ToString()).left(32) + "...";
-        }
-        // Time
         if (col == 2) {
-            return QDateTime::fromTime_t((int64_t)object.nTime).toString("hh:mm MMM dd");
+            return QString::fromStdString(object.hash.ToString()).left(32) + "...";
         }
     }
     case HashRole:
@@ -68,17 +68,17 @@ QVariant LatestBlockTableModel::data(const QModelIndex &index, int role) const
     }
     case Qt::TextAlignmentRole:
     {
-        // Height
+        // Time
         if (col == 0) {
+            return int(Qt::AlignRight | Qt::AlignVCenter);
+        }
+        // Height
+        if (col == 1) {
             return int(Qt::AlignHCenter | Qt::AlignVCenter);
         }
         // Hash
-        if (col == 1) {
-            return int(Qt::AlignLeft | Qt::AlignVCenter);
-        }
-        // Time
         if (col == 2) {
-            return int(Qt::AlignRight | Qt::AlignVCenter);
+            return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     }
     }
@@ -91,11 +91,11 @@ QVariant LatestBlockTableModel::headerData(int section, Qt::Orientation orientat
         if (orientation == Qt::Horizontal) {
             switch (section) {
             case 0:
-                return QString("Height");
-            case 1:
-                return QString("Hash");
-            case 2:
                 return QString("Time");
+            case 1:
+                return QString("Height");
+            case 2:
+                return QString("Hash");
             }
         }
     }

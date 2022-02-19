@@ -1311,7 +1311,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
-    if (!CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
+    if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
     return true;
@@ -1727,7 +1727,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
     bool fClean = true;
 
     if (view.HaveCoin(out)) fClean = false; // overwriting transaction output
-    if (undo.nHeight == 0 && !undo.fLoaded) {
+    if (undo.nHeight == 0) {
         // Missing undo metadata (height and coinbase). Older versions included this
         // information only in undo records for the last spend of a transactions'
         // outputs. This implies that it must be present for some other output of the same tx.
@@ -1738,16 +1738,6 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
         } else {
             return DISCONNECT_FAILED; // adding output for transaction without known metadata
         }
-    }
-    if (undo.fLoaded) {
-        // Set fSpent to false
-        LoadedCoin loaded;
-        if (!pcoinsTip->GetLoadedCoin(out.hash, loaded))
-            return false;
-
-        loaded.fSpent = false;
-
-        pcoinsTip->WriteToLoadedCoinIndex(loaded);
     }
 
     // The potential_overwrite parameter to AddCoin is only allowed to be false if we know for
@@ -3365,7 +3355,7 @@ static bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, 
 static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
 {
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetPoWHash(), block.nBits, consensusParams))
+    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     return true;
@@ -3442,8 +3432,7 @@ bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa
 
 bool IsDrivechainEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
-    LOCK(cs_main);
-    return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_DRIVECHAINS, versionbitscache) == THRESHOLD_ACTIVE);
+    return (pindexPrev && pindexPrev->nHeight + 1 >= params.DriveChainHeight);
 }
 
 // Compute at which vout of the block's coinbase transaction the witness
@@ -3512,10 +3501,6 @@ void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& con
     if (block.vtx.size() < 2)
         return;
 
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     std::vector<CCriticalData> vCriticalData = GetCriticalDataRequests(block, consensusParams);
     std::vector<CTxOut> vout;
     for (const CCriticalData& d : vCriticalData) {
@@ -3553,10 +3538,6 @@ void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& co
      * Example Lightning version of Drivechain BMM commitment request.
      * BIP: 300 & 301
      */
-
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
 
     // TODO
     std::vector<CCriticalData> vCriticalData; // = GetLNBMMRequests();
@@ -3603,10 +3584,6 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
      * BIP: 300 & 301
      */
 
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     // Create output that commitment will be added to
     CTxOut out;
     out.nValue = 0;
@@ -3636,10 +3613,6 @@ void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const 
      * BIP: 300 & 301
      */
 
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     CTxOut out;
     out.nValue = 0;
 
@@ -3665,10 +3638,6 @@ void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const 
 
 void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams)
 {
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     CTxOut out;
     out.nValue = 0;
 
@@ -3683,10 +3652,6 @@ void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidecha
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams)
 {
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     CTxOut out;
     out.nValue = 0;
 
@@ -3699,20 +3664,14 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, c
     out.scriptPubKey[4] = 0xBF;
 
     memcpy(&out.scriptPubKey[5], &hash, 32);
-
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);
     mtx.vout.push_back(out);
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-
 void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
 {
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return;
-
     // Create output that bytes will be added to
     CTxOut out;
     out.nValue = 0;
@@ -3795,10 +3754,6 @@ std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block, const Co
 {
     std::vector<CCriticalData> vCriticalData;
 
-    // Check for activation of Drivechains
-    if (!IsDrivechainEnabled(chainActive.Tip(), consensusParams))
-        return vCriticalData;
-
     if (block.vtx.size() < 2)
         return vCriticalData;
 
@@ -3819,6 +3774,18 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     const Consensus::Params& consensusParams = params.GetConsensus();
     if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
         return state.DoS(100, false, REJECT_INVALID, "bad-diffbits", false, "incorrect proof of work");
+
+    // Enforce Network Fork
+    // Special nBits requirement at the specified blockheight.
+    // Mainnet BTC nodes will reject this block and all future blocks.
+    if (nHeight == consensusParams.DriveChainHeight) {
+        const arith_uint256 bnPoWDA = UintToArith256(consensusParams.powLimit);
+        if (block.nBits != bnPoWDA.GetCompact()) {
+            LogPrintf("%s: Invalid diffbits for DriveChain DA at height: %u.\n", __func__, nHeight);
+            return state.DoS(100, false, REJECT_INVALID, "bad-diffbits-drivechain-da", false, "Bits invalid for DriveChain DA height block!");
+        }
+        LogPrintf("%s: Drivechain fork birthday DA activated! Height: %u\n", __func__, nHeight);
+    }
 
     // Check against checkpoints
     if (fCheckpointsEnabled) {

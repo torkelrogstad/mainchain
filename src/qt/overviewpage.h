@@ -93,6 +93,7 @@ private Q_SLOTS:
     void on_pushButtonCreateNews_clicked();
     void on_pushButtonManageNews_clicked();
     void on_pushButtonGraffiti_clicked();
+    void on_pushButtonSetUSDBTC_clicked();
     void on_tableViewBlocks_doubleClicked(const QModelIndex& index);
     void on_tableViewMempool_doubleClicked(const QModelIndex& index);
     void on_tableViewNews1_doubleClicked(const QModelIndex& index);
@@ -104,6 +105,7 @@ private Q_SLOTS:
     void contextualMenuMempool(const QPoint &);
     void contextualMenuBlocks(const QPoint &);
     void updateNewsTypes();
+    void updateUSDTotal();
 
     void showDetailsNews1();
     void showDetailsNews2();
@@ -113,6 +115,7 @@ private Q_SLOTS:
     void copyNewsHex2();
     void showDetailsMempool();
     void showDetailsBlock();
+    void showDisplayOptions();
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

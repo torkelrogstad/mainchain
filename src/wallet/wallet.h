@@ -80,7 +80,6 @@ class CTxMemPool;
 class CBlockPolicyEstimator;
 class CWalletTx;
 class CriticalData;
-class LoadedCoin;
 struct FeeCalculation;
 enum class FeeEstimateMode;
 
@@ -118,7 +117,6 @@ enum ReplayStatus : int
 {
     REPLAY_UNKNOWN,
     REPLAY_FALSE,
-    REPLAY_LOADED,
     REPLAY_TRUE,
     REPLAY_SPLIT
 };
@@ -780,11 +778,6 @@ private:
      */
     const CBlockIndex* m_last_block_processed;
 
-    // TODO improve persistence and caching method of loaded coins tracked by
-    // wallet.
-    // Cache of loaded coins owned by this wallet
-    std::vector<LoadedCoin> vLoadedCoinCache;
-
 public:
     /*
      * Main wallet lock.
@@ -1026,9 +1019,6 @@ public:
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB *pwalletdb);
     template <typename ContainerType>
     bool DummySignTx(CMutableTransaction &txNew, const ContainerType &coins) const;
-
-    void AddLoadedCoins(const std::vector<LoadedCoin>& vLoadedCoin);
-    std::vector<LoadedCoin> GetMyLoadedCoins() const;
 
     static CFeeRate minTxFee;
     static CFeeRate fallbackFee;

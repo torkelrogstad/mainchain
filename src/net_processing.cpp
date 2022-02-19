@@ -407,8 +407,8 @@ void UpdateBlockAvailability(NodeId nodeid, const uint256 &hash) {
 void MaybeSetPeerAsAnnouncingHeaderAndIDs(NodeId nodeid, CConnman* connman) {
     AssertLockHeld(cs_main);
     CNodeState* nodestate = State(nodeid);
-    if (!nodestate || !nodestate->fSupportsDesiredCmpctVersion || !nodestate->fHaveDrivechain) {
-        // Never ask from peers who can't provide witnesses or drivechain support
+    if (!nodestate || !nodestate->fSupportsDesiredCmpctVersion) {
+        // Never ask from peers who can't provide witnesses
         return;
     }
     if (nodestate->fProvidesHeaderAndIDs) {
@@ -893,7 +893,7 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std:
                     hashBlock.ToString(), pnode->GetId());
 
             bool fPeerHasDrivechain = state.fHaveDrivechain;
-            if (fPeerHasDrivechain) {
+            if (fDrivechainEnabled && fPeerHasDrivechain) {
                 connman->PushMessage(pnode, msgMaker.Make(NetMsgType::CMPCTBLOCK, *pcmpctblock));
             }
             else {

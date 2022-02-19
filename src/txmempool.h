@@ -132,7 +132,7 @@ public:
     bool GetSpendsCoinbase() const { return spendsCoinbase; }
     bool HasCriticalData() const { return !this->tx->criticalData.IsNull(); }
 
-    bool GetSidechainDeposit() const { return fSidechainDeposit; }
+    bool IsSidechainDeposit() const { return fSidechainDeposit; }
     uint8_t GetSidechainNumber() const { return nSidechain; }
 
     uint64_t GetCountWithAncestors() const { return nCountWithAncestors; }
@@ -580,7 +580,6 @@ public:
     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, bool validFeeEstimate = true);
     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, setEntries &setAncestors, bool validFeeEstimate = true);
 
-    void removeIfExists(const txiter& it);
     void removeRecursive(const CTransaction &tx, MemPoolRemovalReason reason = MemPoolRemovalReason::UNKNOWN);
     void removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight, int flags);
     void removeConflicts(const CTransaction &tx);

@@ -73,7 +73,7 @@ static const char* strHelp =
 "                                                                      |                                                        |\n"
 "                                                                       -------------------------------------------------------- \n"
 "\n\n"
-"For reference, we also provide the wtxid hashes and segwit merkleroot (which is now the \"real\" one):\n\n";
+"For reference, we also provide the wtxid hashes and segwit merkleroot (which is now the \"real\" one)";
 
 
 MerkleTreeDialog::MerkleTreeDialog(QWidget *parent) :

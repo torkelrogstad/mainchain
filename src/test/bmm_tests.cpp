@@ -54,6 +54,7 @@ BOOST_AUTO_TEST_CASE(bmm_commit)
     CMutableTransaction coinbase;
     coinbase.nVersion = 1;
     coinbase.vin.resize(1);
+    coinbase.vout.resize(1);
     coinbase.vin[0].prevout.SetNull();
     coinbase.vin[0].scriptSig = CScript() << 102;
 
@@ -65,9 +66,11 @@ BOOST_AUTO_TEST_CASE(bmm_commit)
     // Generate commit
     GenerateCriticalHashCommitments(block, Params().GetConsensus());
 
+    BOOST_REQUIRE(block.vtx[0]->vout.size() == 2);
+
     // Check that the commit has been generated
     uint256 hashCritical;
-    BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsCriticalHashCommit(hashCritical));
+    BOOST_CHECK(block.vtx[0]->vout[1].scriptPubKey.IsCriticalHashCommit(hashCritical));
     BOOST_CHECK(hashCritical == criticalData.hashCritical);
 }
 

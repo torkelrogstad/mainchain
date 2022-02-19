@@ -94,9 +94,6 @@ static CZMQNotificationInterface* pzmqNotificationInterface = nullptr;
 
 static const char* FEE_ESTIMATES_FILENAME="fee_estimates.dat";
 
-static const char* LAST_LOADED_OUTPOINT="000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
-static const uint32_t LAST_LOADED_N=25;
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // Shutdown
@@ -178,14 +175,6 @@ void Interrupt()
 
 void Shutdown()
 {
-#ifdef ENABLE_WALLET
-    if (!vpwallets.empty()) {
-        CWalletRef pwallet = vpwallets.front();
-        std::vector<LoadedCoin> vLoadedCoin = pwallet->GetMyLoadedCoins();
-        pcoinsTip->WriteMyLoadedCoins(vLoadedCoin);
-    }
-#endif
-
     LogPrintf("%s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);
@@ -1414,8 +1403,6 @@ bool AppInitMain()
     // ********************************************************* Step 7: load caches
     fReindex = gArgs.GetBoolArg("-reindex", false);
 
-    bool drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
-
     std::string strFailSCDAT;
     strFailSCDAT = "Failed to load sidechain database files!\n";
     strFailSCDAT += "They may corrupt or need to be updated.\n";
@@ -1448,6 +1435,7 @@ bool AppInitMain()
     LogPrintf("* Using %.1fMiB for in-memory UTXO set (plus up to %.1fMiB of unused mempool space)\n", nCoinCacheUsage * (1.0 / 1024 / 1024), nMempoolSizeMax * (1.0 / 1024 / 1024));
 
     bool fLoaded = false;
+    bool drivechainsEnabled = false;
     while (!fLoaded && !fRequestShutdown) {
         bool fReset = fReindex;
         std::string strLoadError;
@@ -1546,6 +1534,8 @@ bool AppInitMain()
                     }
                     assert(chainActive.Tip() != nullptr);
                 }
+
+    		    drivechainsEnabled = IsDrivechainEnabled(chainActive.Tip(), chainparams.GetConsensus());
 
                 // Synchronize SCDB
                 if (drivechainsEnabled && !fReindex && chainActive.Tip() && (chainActive.Tip()->GetBlockHash() != scdb.GetHashBlockLastSeen()))
@@ -1714,9 +1704,9 @@ bool AppInitMain()
         nLocalServices = ServiceFlags(nLocalServices | NODE_WITNESS);
     }
 
-    if (chainparams.GetConsensus().vDeployments[Consensus::DEPLOYMENT_DRIVECHAINS].nTimeout != 0) {
+    // Show NODE_DRIVECHAIN after fork height
+    if (drivechainsEnabled)
         nLocalServices = ServiceFlags(nLocalServices | NODE_DRIVECHAIN);
-    }
 
     // ********************************************************* Step 11: import blocks
 
@@ -1764,69 +1754,9 @@ bool AppInitMain()
 
 #ifdef ENABLE_WALLET
     StartWallets(scheduler);
-
-    // ********************************************************* Step 12: load coins
-
-    bool fReadLoadedCoins = gArgs.GetBoolArg("-loadedcoins", true);
-
-    // TODO loaded coins are disabled for this release. Setting fReadLoadedCoins
-    // to false no matter what settings are applied means that loaded coins will
-    // not be read and cannot be used by other nodes without violating consensus
-    // rules.
-    //
-    // If loaded coins are to be removed entirely the code should be deleted.
-    // Or if loaded coins are to be re-enabled the next line can be deleted.
-    fReadLoadedCoins = false;
-
-    // TODO improve this check... Right now we're just checking if the last
-    // loaded coin that will be written can currently be looked up by pcoinsTip.
-    // That does basically ensure that we have loaded all of the coins, but I'm
-    // sure there's a better way of doing this. The loaded_coins.dat file itself
-    // should be checksum verified by the user after download. However, most
-    // people will not read or follow those instructions so maybe we can just do
-    // our own checksum comparison here.
-    //
-    // Note that we only load coins for main network.
-    //
-    // Check if we have already imported loaded coins, try to load them if not
-    if (chainparams.NetworkIDString() == "main" && fReadLoadedCoins &&
-            !pcoinsTip->HaveCoin(COutPoint(uint256S(LAST_LOADED_OUTPOINT), LAST_LOADED_N)))
-    {
-        uiInterface.InitMessage(_("Importing UTXO set. First time only (~10 minutes)."));
-
-        // Try to read loaded coins
-        if (!pcoinsTip->ReadLoadedCoins()) {
-            // Failed to read loaded coins, abort
-            // TODO add link to website with setup guide
-            std::string strError = "Error reading loading coins!\n\n";
-            strError += "DriveNet needs to import a UTXO set (loaded coins) before starting for the first time.";
-            strError += "\n\n";
-            strError += "You must move loaded_coins.dat to your DriveNet datadir.";
-            strError += "\n\n";
-            strError += "Shutting down.";
-            uiInterface.ThreadSafeMessageBox(_(strError.c_str()), "", CClientUIInterface::MSG_ERROR);
-            LogPrintf("Error reading loaded coins, aborting init");
-            return false;
-        }
-    }
-
-    //
-    // TODO
-    // Loaded coins disabled in this release, so don't show ui message
-    // about loaded coins or scan for wallet's loaded coins.
-    /*
-    if (!vpwallets.empty()) {
-        uiInterface.InitMessage(_("Reading wallet's loaded coins."));
-        CWalletRef pwallet = vpwallets.front();
-        std::vector<LoadedCoin> vLoadedCoin;
-        LOCK2(cs_main, pwallet->cs_wallet);
-        vLoadedCoin = pcoinsTip->ReadMyLoadedCoins();
-        pwallet->AddLoadedCoins(vLoadedCoin);
-    }
-    */
 #endif
 
-    // ********************************************************* Step 13: start node
+    // ********************************************************* Step 12: start node
     uiInterface.InitMessage(_("Starting node..."));
 
     int chain_active_height;
@@ -1903,7 +1833,7 @@ bool AppInitMain()
         return false;
     }
 
-    // ********************************************************* Step 14: finished
+    // ********************************************************* Step 13: finished
     uiInterface.InitMessage(_("DriveNet ready to TESTDRIVE"));
 
     SetRPCWarmupFinished();

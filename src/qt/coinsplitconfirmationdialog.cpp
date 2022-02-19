@@ -113,7 +113,7 @@ void CoinSplitConfirmationDialog::on_buttonBox_accepted()
     std::vector<CRecipient> vecSend;
     CRecipient recipient = {GetScriptForDestination(dest), amount, true};
     vecSend.push_back(recipient);
-    if (!vpwallets[0]->CreateTransaction(vecSend, wtx, reservekey, nFeeRequired, nChangePosRet, strError, cc, true, 4)) {
+    if (!vpwallets[0]->CreateTransaction(vecSend, wtx, reservekey, nFeeRequired, nChangePosRet, strError, cc, true, TX_REPLAY_VERSION)) {
         QString message = "Failed to create coin split transaction!\n";
         message += "Error: ";
         message += QString::fromStdString(strError);

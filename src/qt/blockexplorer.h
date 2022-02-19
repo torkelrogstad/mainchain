@@ -31,6 +31,7 @@ public:
     void setClientModel(ClientModel *model);
 
 public Q_SLOTS:
+    void updateOnShow();
     void scrollRight();
 
 private Q_SLOTS:
@@ -49,6 +50,9 @@ private:
     BlockIndexDetailsDialog* blockIndexDialog = nullptr;
 
     void Search();
+
+Q_SIGNALS:
+    void UpdateTable();
 };
 
 #endif // BLOCKEXPLORER_H

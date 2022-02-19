@@ -117,14 +117,14 @@ QString BitcoinUnits::format(int unit, const CAmount& nIn, bool fPlus, Separator
     else if (fPlus && n > 0)
         quotient_str.insert(0, '+');
 
-    QString final = quotient_str + QString(".") + remainder_str;
+    QString str = quotient_str + QString(".") + remainder_str;
 
     // Insert comma if needed
     if (unit == BTC && remainder_str.size() == 8) {
-        final.insert(final.size() - 4, ",");
+        str.insert(str.size() - 4, ",");
     }
 
-    return final;
+    return str;
 }
 
 

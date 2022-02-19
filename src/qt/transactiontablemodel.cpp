@@ -295,7 +295,6 @@ void TransactionTableModel::updateReplayStatus(const QString &hash, int replaySt
 {
     if (replayStatus != TransactionStatus::ReplayUnknown &&
             replayStatus != TransactionStatus::ReplayFalse &&
-            replayStatus != TransactionStatus::ReplayLoaded &&
             replayStatus != TransactionStatus::ReplayTrue &&
             replayStatus != TransactionStatus::ReplaySplit)
     {
@@ -372,9 +371,6 @@ QString TransactionTableModel::formatTxStatus(const TransactionRecord *wtx) cons
         break;
     case TransactionStatus::ReplayFalse:
         status += "Not replayed.\n";
-        break;
-    case TransactionStatus::ReplayLoaded:
-        status += "Loaded coin, replayed.\n";
         break;
     case TransactionStatus::ReplayTrue:
         status += "Replayed\n";
@@ -553,8 +549,6 @@ QVariant TransactionTableModel::txReplayStatusDecoration(const TransactionRecord
         return QIcon(":/icons/replay_unknown");
     case TransactionStatus::ReplayFalse:
         return QIcon(":/icons/replay_not_replayed");
-    case TransactionStatus::ReplayLoaded:
-        return QIcon(":/icons/replay_loaded");
     case TransactionStatus::ReplayTrue:
         return QIcon(":/icons/replay_replayed");
     case TransactionStatus::ReplaySplit:
