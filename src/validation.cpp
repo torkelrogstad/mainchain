@@ -3906,7 +3906,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
     if (drivechainsEnabled) {
         // Track existence of BMM h* commit requests per sidechain
         std::vector<bool> vSidechainBMM;
-        vSidechainBMM.resize(scdb.GetActiveSidechainCount());
+        vSidechainBMM.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
         for (const auto& tx: block.vtx) {
             // Look for transactions with non-null CCriticalData
             if (!tx->criticalData.IsNull()) {
@@ -3941,6 +3941,12 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
                 uint8_t nSidechain;
                 std::string strPrevBlock = "";
                 if (!fFromDisk && tx->criticalData.IsBMMRequest(nSidechain, strPrevBlock)) {
+                    if (!scdb.IsSidechainActive(nSidechain)) {
+                        return state.DoS(100, false, REJECT_INVALID,
+                                "bad-critical-bmm-nsidechain-inactive", true,
+                                strprintf("%s : Invalid (inactive) sidechain number: %u in BMM commitment", __func__, nSidechain));
+                    }
+
                     if (nSidechain >= vSidechainBMM.size()) {
                         return state.DoS(100, false, REJECT_INVALID,
                                 "bad-critical-bmm-nsidechain-invalid", true,

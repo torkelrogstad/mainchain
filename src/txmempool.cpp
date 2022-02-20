@@ -1082,7 +1082,7 @@ void CTxMemPool::SelectBMMRequests(std::vector<uint256>& vHashRemoved)
     // We only want 1 BMM request per sidechain so track whether we've
     // already found one for a given sidechain
     std::vector<bool> vSidechain;
-    vSidechain.resize(scdb.GetActiveSidechainCount());
+    vSidechain.resize(SIDECHAIN_ACTIVATION_MAX_ACTIVE);
 
     std::vector<CTransaction> vTxRemove;
     for (indexed_transaction_set::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {
@@ -1099,7 +1099,7 @@ void CTxMemPool::SelectBMMRequests(std::vector<uint256>& vHashRemoved)
                     continue;
                 }
 
-                if (nSidechain > vSidechain.size()) {
+                if (nSidechain >= vSidechain.size()) {
                     vTxRemove.push_back(it->GetTx());
                     continue;
                 }
