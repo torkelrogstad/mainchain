@@ -3,12 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include <config/drivenet-config.h>
+#include <config/drivechain-config.h>
 #endif
 
 #include <qt/optionsmodel.h>
 
-#include <qt/drivenetunits.h>
+#include <qt/drivechainunits.h>
 #include <qt/guiutil.h>
 
 #include <init.h>

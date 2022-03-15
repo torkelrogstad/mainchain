@@ -7,7 +7,7 @@
 #include <uint256.h>
 #include <undo.h>
 #include <utilstrencodings.h>
-#include <test/test_drivenet.h>
+#include <test/test_drivechain.h>
 #include <validation.h>
 #include <consensus/validation.h>
 

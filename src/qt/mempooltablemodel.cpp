@@ -5,7 +5,7 @@
 #include <qt/mempooltablemodel.h>
 
 #include <qt/clientmodel.h>
-#include <qt/drivenetunits.h>
+#include <qt/drivechainunits.h>
 #include <qt/optionsmodel.h>
 #include <qt/guiutil.h>
 

@@ -9,7 +9,7 @@
 #include <core_io.h>
 #include <netbase.h>
 
-#include <test/test_drivenet.h>
+#include <test/test_drivechain.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/test/unit_test.hpp>

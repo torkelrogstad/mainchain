@@ -48,9 +48,9 @@ static const int MAX_URI_LENGTH = 255;
 /* Number of frames in spinner animation */
 #define SPINNER_FRAMES 36
 
-#define QAPP_ORG_NAME "DriveNet"
+#define QAPP_ORG_NAME "DriveChain"
 #define QAPP_ORG_DOMAIN "drivechain.info"
-#define QAPP_APP_NAME_DEFAULT "DriveNet"
-#define QAPP_APP_NAME_TESTNET "DriveNet-testnet"
+#define QAPP_APP_NAME_DEFAULT "DriveChain"
+#define QAPP_APP_NAME_TESTNET "DriveChain-testnet"
 
 #endif // BITCOIN_QT_GUICONSTANTS_H

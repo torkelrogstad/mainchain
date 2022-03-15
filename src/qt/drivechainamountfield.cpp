@@ -2,9 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/drivenetamountfield.h>
+#include <qt/drivechainamountfield.h>
 
-#include <qt/drivenetunits.h>
+#include <qt/drivechainunits.h>
 #include <qt/guiconstants.h>
 #include <qt/qvaluecombobox.h>
 
@@ -173,7 +173,7 @@ Q_SIGNALS:
     void valueChanged();
 };
 
-#include <qt/drivenetamountfield.moc>
+#include <qt/drivechainamountfield.moc>
 
 BitcoinAmountField::BitcoinAmountField(QWidget *parent) :
     QWidget(parent),

@@ -22,8 +22,8 @@
 #include <script/standard.h>
 #include <qt/guiutil.h>
 
-#include <qt/drivenetaddressvalidator.h>
-#include <qt/drivenetunits.h>
+#include <qt/drivechainaddressvalidator.h>
+#include <qt/drivechainunits.h>
 #include <qt/qvalidatedlineedit.h>
 #include <qt/walletmodel.h>
 

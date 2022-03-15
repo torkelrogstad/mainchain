@@ -9,7 +9,7 @@
 #include <qt/clientmodel.h>
 #include <qt/createnewsdialog.h>
 #include <qt/decodeviewdialog.h>
-#include <qt/drivenetunits.h>
+#include <qt/drivechainunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/latestblocktablemodel.h>

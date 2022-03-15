@@ -10,7 +10,7 @@
 #include <txdb.h>
 #include <validation.h>
 
-#include <qt/drivenetunits.h>
+#include <qt/drivechainunits.h>
 #include <qt/newstablemodel.h>
 #include <qt/newstypestablemodel.h>
 #include <qt/platformstyle.h>

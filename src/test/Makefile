@@ -1,6 +1,6 @@
 all:
-	$(MAKE) -C .. drivenet_test
+	$(MAKE) -C .. drivechain_test
 clean:
-	$(MAKE) -C .. drivenet_test_clean
+	$(MAKE) -C .. drivechain_test_clean
 check:
-	$(MAKE) -C .. drivenet_test_check
+	$(MAKE) -C .. drivechain_test_check

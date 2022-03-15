@@ -53,7 +53,7 @@
 #include <boost/thread.hpp>
 
 #if defined(NDEBUG)
-# error "DriveNet cannot be compiled without assertions."
+# error "DriveChain cannot be compiled without assertions."
 #endif
 
 #define MICRO 0.000001

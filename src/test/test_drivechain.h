@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef DRIVENET_TEST_TEST_DRIVENET_H
-#define DRIVENET_TEST_TEST_DRIVENET_H
+#ifndef DRIVECHAIN_TEST_TEST_DRIVECHAIN_H
+#define DRIVECHAIN_TEST_TEST_DRIVECHAIN_H
 
 #include <chainparamsbase.h>
 #include <fs.h>

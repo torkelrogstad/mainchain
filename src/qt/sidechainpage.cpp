@@ -6,7 +6,7 @@
 #include <qt/forms/ui_sidechainpage.h>
 
 #include <qt/clientmodel.h>
-#include <qt/drivenetunits.h>
+#include <qt/drivechainunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
@@ -524,7 +524,7 @@ void SidechainPage::on_pushButtonWithdrawalVote_clicked()
 
 void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
 {
-    QMessageBox::information(this, tr("DriveNet - information"),
+    QMessageBox::information(this, tr("DriveChain - information"),
         tr("If you have a sidechain full node, and have granted it RPC-access, "
            "then your mainchain node will periodically receive a cache of raw "
            "Withdrawal transactions. From this cache, the Withdrawal transaction-details can "
@@ -539,7 +539,7 @@ void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
 
 void SidechainPage::on_pushButtonRecentDepositHelp_clicked()
 {
-    QMessageBox::information(this, tr("DriveNet - information"),
+    QMessageBox::information(this, tr("DriveChain - information"),
         tr("Hello, from the creators of Drivechain! We wrote Drivechain "
            "(the software you are using right now), and we wrote you this "
            "message. \n\n"

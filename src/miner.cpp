@@ -1043,7 +1043,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
 {
     LogPrintf("BitcoinMiner started\n");
     //SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    RenameThread("drivenet-miner");
+    RenameThread("drivechain-miner");
 
     unsigned int nExtraNonce = 0;
 

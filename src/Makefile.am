@@ -18,28 +18,28 @@ else
 LIBUNIVALUE = $(UNIVALUE_LIBS)
 endif
 
-DRIVENET_INCLUDES=-I$(builddir) $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
+DRIVECHAIN_INCLUDES=-I$(builddir) $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
 
-DRIVENET_INCLUDES += -I$(srcdir)/secp256k1/include
-DRIVENET_INCLUDES += $(UNIVALUE_CFLAGS)
+DRIVECHAIN_INCLUDES += -I$(srcdir)/secp256k1/include
+DRIVECHAIN_INCLUDES += $(UNIVALUE_CFLAGS)
 
-LIBDRIVENET_SERVER=libdrivenet_server.a
-LIBDRIVENET_COMMON=libdrivenet_common.a
-LIBDRIVENET_CONSENSUS=libdrivenet_consensus.a
-LIBDRIVENET_CLI=libdrivenet_cli.a
-LIBDRIVENET_UTIL=libdrivenet_util.a
-LIBDRIVENET_CRYPTO=crypto/libdrivenet_crypto.a
-LIBDRIVENETQT=qt/libdrivenetqt.a
+LIBDRIVECHAIN_SERVER=libdrivechain_server.a
+LIBDRIVECHAIN_COMMON=libdrivechain_common.a
+LIBDRIVECHAIN_CONSENSUS=libdrivechain_consensus.a
+LIBDRIVECHAIN_CLI=libdrivechain_cli.a
+LIBDRIVECHAIN_UTIL=libdrivechain_util.a
+LIBDRIVECHAIN_CRYPTO=crypto/libdrivechain_crypto.a
+LIBDRIVECHAINQT=qt/libdrivechainqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
 
 if ENABLE_ZMQ
-LIBDRIVENET_ZMQ=libdrivenet_zmq.a
+LIBDRIVECHAIN_ZMQ=libdrivechain_zmq.a
 endif
-if BUILD_DRIVENET_LIBS
-LIBDRIVENETCONSENSUS=libdrivenetconsensus.la
+if BUILD_DRIVECHAIN_LIBS
+LIBDRIVECHAINCONSENSUS=libdrivechainconsensus.la
 endif
 if ENABLE_WALLET
-LIBDRIVENET_WALLET=libdrivenet_wallet.a
+LIBDRIVECHAIN_WALLET=libdrivechain_wallet.a
 endif
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
@@ -48,33 +48,33 @@ $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
 # Make is not made aware of per-object dependencies to avoid limiting building parallelization
 # But to build the less dependent modules first, we manually select their order here:
 EXTRA_LIBRARIES += \
-  $(LIBDRIVENET_CRYPTO) \
-  $(LIBDRIVENET_UTIL) \
-  $(LIBDRIVENET_COMMON) \
-  $(LIBDRIVENET_CONSENSUS) \
-  $(LIBDRIVENET_SERVER) \
-  $(LIBDRIVENET_CLI) \
-  $(LIBDRIVENET_WALLET) \
-  $(LIBDRIVENET_ZMQ)
+  $(LIBDRIVECHAIN_CRYPTO) \
+  $(LIBDRIVECHAIN_UTIL) \
+  $(LIBDRIVECHAIN_COMMON) \
+  $(LIBDRIVECHAIN_CONSENSUS) \
+  $(LIBDRIVECHAIN_SERVER) \
+  $(LIBDRIVECHAIN_CLI) \
+  $(LIBDRIVECHAIN_WALLET) \
+  $(LIBDRIVECHAIN_ZMQ)
 
-lib_LTLIBRARIES = $(LIBDRIVENETCONSENSUS)
+lib_LTLIBRARIES = $(LIBDRIVECHAINCONSENSUS)
 
 bin_PROGRAMS =
 noinst_PROGRAMS =
 TESTS =
 BENCHMARKS =
 
-if BUILD_DRIVENETD
-  bin_PROGRAMS += drivenetd
+if BUILD_DRIVECHAIND
+  bin_PROGRAMS += drivechaind
 endif
 
-if BUILD_DRIVENET_UTILS
-  bin_PROGRAMS += drivenet-cli drivenet-tx
+if BUILD_DRIVECHAIN_UTILS
+  bin_PROGRAMS += drivechain-cli drivechain-tx
 endif
 
 .PHONY: FORCE check-symbols check-security
-# drivenet core #
-DRIVENET_CORE_H = \
+# drivechain core #
+DRIVECHAIN_CORE_H = \
   addrdb.h \
   addrman.h \
   apiclient.h \
@@ -184,12 +184,12 @@ obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
 	@$(top_srcdir)/share/genbuild.sh "$(abs_top_builddir)/src/obj/build.h" \
 	  "$(abs_top_srcdir)"
-libdrivenet_util_a-clientversion.$(OBJEXT): obj/build.h
+libdrivechain_util_a-clientversion.$(OBJEXT): obj/build.h
 
-# server: shared between drivenetd and drivenet-qt
-libdrivenet_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
-libdrivenet_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libdrivenet_server_a_SOURCES = \
+# server: shared between drivechaind and drivechain-qt
+libdrivechain_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
+libdrivechain_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechain_server_a_SOURCES = \
   addrdb.cpp \
   addrman.cpp \
   apiclient.cpp \
@@ -231,23 +231,23 @@ libdrivenet_server_a_SOURCES = \
   validation.cpp \
   validationinterface.cpp \
   versionbits.cpp \
-  $(DRIVENET_CORE_H)
+  $(DRIVECHAIN_CORE_H)
 
 if ENABLE_ZMQ
-libdrivenet_zmq_a_CPPFLAGS = $(DRIVENET_INCLUDES) $(ZMQ_CFLAGS)
-libdrivenet_zmq_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libdrivenet_zmq_a_SOURCES = \
+libdrivechain_zmq_a_CPPFLAGS = $(DRIVECHAIN_INCLUDES) $(ZMQ_CFLAGS)
+libdrivechain_zmq_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechain_zmq_a_SOURCES = \
   zmq/zmqabstractnotifier.cpp \
   zmq/zmqnotificationinterface.cpp \
   zmq/zmqpublishnotifier.cpp
 endif
 
 
-# wallet: shared between drivenetd and drivenet-qt, but only linked
+# wallet: shared between drivechaind and drivechain-qt, but only linked
 # when wallet enabled
-libdrivenet_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES)
-libdrivenet_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libdrivenet_wallet_a_SOURCES = \
+libdrivechain_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES)
+libdrivechain_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechain_wallet_a_SOURCES = \
   wallet/crypter.cpp \
   wallet/db.cpp \
   wallet/feebumper.cpp \
@@ -258,12 +258,12 @@ libdrivenet_wallet_a_SOURCES = \
   wallet/wallet.cpp \
   wallet/walletdb.cpp \
   wallet/walletutil.cpp \
-  $(DRIVENET_CORE_H)
+  $(DRIVECHAIN_CORE_H)
 
 # crypto primitives library
-crypto_libdrivenet_crypto_a_CPPFLAGS = $(AM_CPPFLAGS)
-crypto_libdrivenet_crypto_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-crypto_libdrivenet_crypto_a_SOURCES = \
+crypto_libdrivechain_crypto_a_CPPFLAGS = $(AM_CPPFLAGS)
+crypto_libdrivechain_crypto_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+crypto_libdrivechain_crypto_a_SOURCES = \
   crypto/aes.cpp \
   crypto/aes.h \
   crypto/chacha20.h \
@@ -283,13 +283,13 @@ crypto_libdrivenet_crypto_a_SOURCES = \
   crypto/sha512.h
 
 if USE_ASM
-crypto_libdrivenet_crypto_a_SOURCES += crypto/sha256_sse4.cpp
+crypto_libdrivechain_crypto_a_SOURCES += crypto/sha256_sse4.cpp
 endif
 
 # consensus: shared between all executables that validate any consensus rules.
-libdrivenet_consensus_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES)
-libdrivenet_consensus_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libdrivenet_consensus_a_SOURCES = \
+libdrivechain_consensus_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES)
+libdrivechain_consensus_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechain_consensus_a_SOURCES = \
   amount.h \
   arith_uint256.cpp \
   arith_uint256.h \
@@ -306,7 +306,7 @@ libdrivenet_consensus_a_SOURCES = \
   primitives/transaction.h \
   pubkey.cpp \
   pubkey.h \
-  script/drivenetconsensus.cpp \
+  script/drivechainconsensus.cpp \
   script/interpreter.cpp \
   script/interpreter.h \
   script/script.cpp \
@@ -321,10 +321,10 @@ libdrivenet_consensus_a_SOURCES = \
   utilstrencodings.h \
   version.h
 
-# common: shared between drivenetd, and drivenet-qt and non-server tools
-libdrivenet_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES)
-libdrivenet_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libdrivenet_common_a_SOURCES = \
+# common: shared between drivechaind, and drivechain-qt and non-server tools
+libdrivechain_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES)
+libdrivechain_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechain_common_a_SOURCES = \
   base58.cpp \
   bech32.cpp \
   chainparams.cpp \
@@ -342,14 +342,14 @@ libdrivenet_common_a_SOURCES = \
   script/sign.cpp \
   script/standard.cpp \
   warnings.cpp \
-  $(DRIVENET_CORE_H)
+  $(DRIVECHAIN_CORE_H)
 
 # util: shared between all executables.
 # This library *must* be included to make sure that the glibc
 # backward-compatibility objects and their sanity checks are linked.
-libdrivenet_util_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES)
-libdrivenet_util_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libdrivenet_util_a_SOURCES = \
+libdrivechain_util_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES)
+libdrivechain_util_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechain_util_a_SOURCES = \
   support/lockedpool.cpp \
   chainparamsbase.cpp \
   clientversion.cpp \
@@ -367,101 +367,101 @@ libdrivenet_util_a_SOURCES = \
   utilmoneystr.cpp \
   utilstrencodings.cpp \
   utiltime.cpp \
-  $(DRIVENET_CORE_H)
+  $(DRIVECHAIN_CORE_H)
 
 if GLIBC_BACK_COMPAT
-libdrivenet_util_a_SOURCES += compat/glibc_compat.cpp
+libdrivechain_util_a_SOURCES += compat/glibc_compat.cpp
 endif
 
-# cli: shared between drivenet-cli and drivenet-qt
-libdrivenet_cli_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES)
-libdrivenet_cli_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libdrivenet_cli_a_SOURCES = \
+# cli: shared between drivechain-cli and drivechain-qt
+libdrivechain_cli_a_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES)
+libdrivechain_cli_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechain_cli_a_SOURCES = \
   rpc/client.cpp \
-  $(DRIVENET_CORE_H)
+  $(DRIVECHAIN_CORE_H)
 
-nodist_libdrivenet_util_a_SOURCES = $(srcdir)/obj/build.h
+nodist_libdrivechain_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
-# drivenetd binary #
-drivenetd_SOURCES = drivenetd.cpp
-drivenetd_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES)
-drivenetd_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-drivenetd_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+# drivechaind binary #
+drivechaind_SOURCES = drivechaind.cpp
+drivechaind_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES)
+drivechaind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+drivechaind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-drivenetd_SOURCES += drivenetd-res.rc
+drivechaind_SOURCES += drivechaind-res.rc
 endif
 
-drivenetd_LDADD = \
-  $(LIBDRIVENET_SERVER) \
-  $(LIBDRIVENET_COMMON) \
+drivechaind_LDADD = \
+  $(LIBDRIVECHAIN_SERVER) \
+  $(LIBDRIVECHAIN_COMMON) \
   $(LIBUNIVALUE) \
-  $(LIBDRIVENET_UTIL) \
-  $(LIBDRIVENET_WALLET) \
-  $(LIBDRIVENET_ZMQ) \
-  $(LIBDRIVENET_CONSENSUS) \
-  $(LIBDRIVENET_CRYPTO) \
+  $(LIBDRIVECHAIN_UTIL) \
+  $(LIBDRIVECHAIN_WALLET) \
+  $(LIBDRIVECHAIN_ZMQ) \
+  $(LIBDRIVECHAIN_CONSENSUS) \
+  $(LIBDRIVECHAIN_CRYPTO) \
   $(LIBLEVELDB) \
   $(LIBLEVELDB_SSE42) \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-drivenetd_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
+drivechaind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
 
-# drivenet-cli binary #
-drivenet_cli_SOURCES = drivenet-cli.cpp
-drivenet_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES) $(EVENT_CFLAGS)
-drivenet_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-drivenet_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+# drivechain-cli binary #
+drivechain_cli_SOURCES = drivechain-cli.cpp
+drivechain_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES) $(EVENT_CFLAGS)
+drivechain_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+drivechain_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-drivenet_cli_SOURCES += drivenet-cli-res.rc
+drivechain_cli_SOURCES += drivechain-cli-res.rc
 endif
 
-drivenet_cli_LDADD = \
-  $(LIBDRIVENET_CLI) \
+drivechain_cli_LDADD = \
+  $(LIBDRIVECHAIN_CLI) \
   $(LIBUNIVALUE) \
-  $(LIBDRIVENET_UTIL) \
-  $(LIBDRIVENET_CRYPTO)
+  $(LIBDRIVECHAIN_UTIL) \
+  $(LIBDRIVECHAIN_CRYPTO)
 
-drivenet_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
+drivechain_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
-# drivenet-tx binary #
-drivenet_tx_SOURCES = drivenet-tx.cpp
-drivenet_tx_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVENET_INCLUDES)
-drivenet_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-drivenet_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+# drivechain-tx binary #
+drivechain_tx_SOURCES = drivechain-tx.cpp
+drivechain_tx_CPPFLAGS = $(AM_CPPFLAGS) $(DRIVECHAIN_INCLUDES)
+drivechain_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+drivechain_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-drivenet_tx_SOURCES += drivenet-tx-res.rc
+drivechain_tx_SOURCES += drivechain-tx-res.rc
 endif
 
-drivenet_tx_LDADD = \
+drivechain_tx_LDADD = \
   $(LIBUNIVALUE) \
-  $(LIBDRIVENET_COMMON) \
-  $(LIBDRIVENET_UTIL) \
-  $(LIBDRIVENET_CONSENSUS) \
-  $(LIBDRIVENET_CRYPTO) \
+  $(LIBDRIVECHAIN_COMMON) \
+  $(LIBDRIVECHAIN_UTIL) \
+  $(LIBDRIVECHAIN_CONSENSUS) \
+  $(LIBDRIVECHAIN_CRYPTO) \
   $(LIBSECP256K1)
 
-drivenet_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
+drivechain_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 #
 
-# drivenetconsensus library #
-if BUILD_DRIVENET_LIBS
-include_HEADERS = script/drivenetconsensus.h
-libdrivenetconsensus_la_SOURCES = $(crypto_libdrivenet_crypto_a_SOURCES) $(libdrivenet_consensus_a_SOURCES)
+# drivechainconsensus library #
+if BUILD_DRIVECHAIN_LIBS
+include_HEADERS = script/drivechainconsensus.h
+libdrivechainconsensus_la_SOURCES = $(crypto_libdrivechain_crypto_a_SOURCES) $(libdrivechain_consensus_a_SOURCES)
 
 if GLIBC_BACK_COMPAT
-  libdrivenetconsensus_la_SOURCES += compat/glibc_compat.cpp
+  libdrivechainconsensus_la_SOURCES += compat/glibc_compat.cpp
 endif
 
-libdrivenetconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
-libdrivenetconsensus_la_LIBADD = $(LIBSECP256K1)
-libdrivenetconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_DRIVENET_INTERNAL
-libdrivenetconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libdrivechainconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
+libdrivechainconsensus_la_LIBADD = $(LIBSECP256K1)
+libdrivechainconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_DRIVECHAIN_INTERNAL
+libdrivechainconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
 endif
 #
@@ -491,12 +491,12 @@ CLEANFILES += obj/build.h
 EXTRA_DIST = $(CTAES_DIST)
 
 
-config/drivenet-config.h: config/stamp-h1
+config/drivechain-config.h: config/stamp-h1
 	@$(MAKE) -C $(top_builddir) $(subdir)/$(@)
-config/stamp-h1: $(top_srcdir)/$(subdir)/config/drivenet-config.h.in $(top_builddir)/config.status
+config/stamp-h1: $(top_srcdir)/$(subdir)/config/drivechain-config.h.in $(top_builddir)/config.status
 	$(AM_V_at)$(MAKE) -C $(top_builddir) $(subdir)/$(@)
-$(top_srcdir)/$(subdir)/config/drivenet-config.h.in:  $(am__configure_deps)
-	$(AM_V_at)$(MAKE) -C $(top_srcdir) $(subdir)/config/drivenet-config.h.in
+$(top_srcdir)/$(subdir)/config/drivechain-config.h.in:  $(am__configure_deps)
+	$(AM_V_at)$(MAKE) -C $(top_srcdir) $(subdir)/config/drivechain-config.h.in
 
 clean-local:
 	-$(MAKE) -C secp256k1 clean

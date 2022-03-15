@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include <config/drivenet-config.h>
+#include <config/drivechain-config.h>
 #endif
 
 #include "init.h"
@@ -185,7 +185,7 @@ void Shutdown()
     /// for example if the data directory was found to be locked.
     /// Be sure that anything that writes files or flushes caches only does this if the respective
     /// module was initialized.
-    RenameThread("drivenet-shutoff");
+    RenameThread("drivechain-shutoff");
     mempool.AddTransactionsUpdated(1);
 
     StopHTTPRPC();
@@ -632,7 +632,7 @@ void CleanupBlockRevFiles()
 void ThreadImport(std::vector<fs::path> vImportFiles)
 {
     const CChainParams& chainparams = Params();
-    RenameThread("drivenet-loadblk");
+    RenameThread("drivechain-loadblk");
 
     {
     CImportingNow imp;
@@ -1832,7 +1832,7 @@ bool AppInitMain()
     }
 
     // ********************************************************* Step 13: finished
-    uiInterface.InitMessage(_("DriveNet ready to TESTDRIVE"));
+    uiInterface.InitMessage(_("DriveChain ready to TESTDRIVE"));
 
     SetRPCWarmupFinished();
 
