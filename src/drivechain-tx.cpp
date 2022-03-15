@@ -56,8 +56,8 @@ static int AppInitRawTx(int argc, char* argv[])
         // First part of help message is specific to this utility
         std::string strUsage = strprintf(_("%s drivechain-tx utility version"), _(PACKAGE_NAME)) + " " + FormatFullVersion() + "\n\n" +
             _("Usage:") + "\n" +
-              "  drivechain-tx [options] <hex-tx> [commands]  " + _("Update hex-encoded DriveChain transaction") + "\n" +
-              "  drivechain-tx [options] -create [commands]   " + _("Create hex-encoded DriveChain transaction") + "\n" +
+              "  drivechain-tx [options] <hex-tx> [commands]  " + _("Update hex-encoded Drivechain transaction") + "\n" +
+              "  drivechain-tx [options] -create [commands]   " + _("Create hex-encoded Drivechain transaction") + "\n" +
               "\n";
 
         fprintf(stdout, "%s", strUsage.c_str());

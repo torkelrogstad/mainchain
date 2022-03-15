@@ -132,7 +132,7 @@ void setupAddressWidget(QValidatedLineEdit *widget, QWidget *parent)
 #if QT_VERSION >= 0x040700
     // We don't want translators to use own addresses in translations
     // and this is the only place, where this address is supplied.
-    widget->setPlaceholderText(QObject::tr("Enter a DriveChain address (e.g. %1)").arg(
+    widget->setPlaceholderText(QObject::tr("Enter a Drivechain address (e.g. %1)").arg(
         QString::fromStdString(DummyAddress(Params()))));
 #endif
     widget->setValidator(new BitcoinAddressEntryValidator(parent));
@@ -620,10 +620,10 @@ fs::path static StartupShortcutPath()
 {
     std::string chain = ChainNameFromCommandLine();
     if (chain == CBaseChainParams::MAIN)
-        return GetSpecialFolderPath(CSIDL_STARTUP) / "DriveChain.lnk";
+        return GetSpecialFolderPath(CSIDL_STARTUP) / "Drivechain.lnk";
     if (chain == CBaseChainParams::TESTNET) // Remove this special case when CBaseChainParams::TESTNET = "testnet4"
-        return GetSpecialFolderPath(CSIDL_STARTUP) / "DriveChain (testnet).lnk";
-    return GetSpecialFolderPath(CSIDL_STARTUP) / strprintf("DriveChain (%s).lnk", chain);
+        return GetSpecialFolderPath(CSIDL_STARTUP) / "Drivechain (testnet).lnk";
+    return GetSpecialFolderPath(CSIDL_STARTUP) / strprintf("Drivechain (%s).lnk", chain);
 }
 
 bool GetStartOnSystemStartup()
@@ -718,8 +718,8 @@ fs::path static GetAutostartFilePath()
 {
     std::string chain = ChainNameFromCommandLine();
     if (chain == CBaseChainParams::MAIN)
-        return GetAutostartDir() / "DriveChain.desktop";
-    return GetAutostartDir() / strprintf("DriveChain-%s.lnk", chain);
+        return GetAutostartDir() / "Drivechain.desktop";
+    return GetAutostartDir() / strprintf("Drivechain-%s.lnk", chain);
 }
 
 bool GetStartOnSystemStartup()
@@ -763,9 +763,9 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         optionFile << "[Desktop Entry]\n";
         optionFile << "Type=Application\n";
         if (chain == CBaseChainParams::MAIN)
-            optionFile << "Name=DriveChain\n";
+            optionFile << "Name=Drivechain\n";
         else
-            optionFile << strprintf("Name=DriveChain (%s)\n", chain);
+            optionFile << strprintf("Name=Drivechain (%s)\n", chain);
         optionFile << "Exec=" << pszExePath << strprintf(" -min -testnet=%d -regtest=%d\n", gArgs.GetBoolArg("-testnet", false), gArgs.GetBoolArg("-regtest", false));
         optionFile << "Terminal=false\n";
         optionFile << "Hidden=false\n";

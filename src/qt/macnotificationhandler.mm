@@ -13,7 +13,7 @@
 - (NSString *)__bundleIdentifier
 {
     if (self == [NSBundle mainBundle]) {
-        return @"org.bitcoinfoundation.DriveChain-Qt";
+        return @"org.bitcoinfoundation.Drivechain-Qt";
     } else {
         return [self __bundleIdentifier];
     }

@@ -81,7 +81,7 @@ src/qt/drivechain-qt.includes
 *.qm
 Makefile
 drivechain-qt
-DriveChain-Qt.app
+Drivechain-Qt.app
 background.tiff*
 
 mainchain.pro.user

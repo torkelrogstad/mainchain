@@ -53,7 +53,7 @@
 #include <boost/thread.hpp>
 
 #if defined(NDEBUG)
-# error "DriveChain cannot be compiled without assertions."
+# error "Drivechain cannot be compiled without assertions."
 #endif
 
 #define MICRO 0.000001
@@ -3432,7 +3432,7 @@ bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa
 
 bool IsDrivechainEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params)
 {
-    return (pindexPrev && pindexPrev->nHeight + 1 >= params.DriveChainHeight);
+    return (pindexPrev && pindexPrev->nHeight + 1 >= params.DrivechainHeight);
 }
 
 // Compute at which vout of the block's coinbase transaction the witness
@@ -3778,11 +3778,11 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     // Enforce Network Fork
     // Special nBits requirement at the specified blockheight.
     // Mainnet BTC nodes will reject this block and all future blocks.
-    if (nHeight == consensusParams.DriveChainHeight) {
+    if (nHeight == consensusParams.DrivechainHeight) {
         const arith_uint256 bnPoWDA = UintToArith256(consensusParams.powLimit);
         if (block.nBits != bnPoWDA.GetCompact()) {
-            LogPrintf("%s: Invalid diffbits for DriveChain DA at height: %u.\n", __func__, nHeight);
-            return state.DoS(100, false, REJECT_INVALID, "bad-diffbits-drivechain-da", false, "Bits invalid for DriveChain DA height block!");
+            LogPrintf("%s: Invalid diffbits for Drivechain DA at height: %u.\n", __func__, nHeight);
+            return state.DoS(100, false, REJECT_INVALID, "bad-diffbits-drivechain-da", false, "Bits invalid for Drivechain DA height block!");
         }
         LogPrintf("%s: Drivechain fork birthday DA activated! Height: %u\n", __func__, nHeight);
     }

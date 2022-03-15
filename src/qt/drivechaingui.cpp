@@ -297,7 +297,7 @@ void BitcoinGUI::createActions()
     tabGroup->addAction(overviewAction);
 
     sendCoinsAction = new QAction(platformStyle->SingleColorIcon(":/icons/send"), tr("&Send"), this);
-    sendCoinsAction->setStatusTip(tr("Send coins to a DriveChain address"));
+    sendCoinsAction->setStatusTip(tr("Send coins to a Drivechain address"));
     sendCoinsAction->setToolTip(sendCoinsAction->statusTip());
     sendCoinsAction->setCheckable(true);
     sendCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
@@ -308,7 +308,7 @@ void BitcoinGUI::createActions()
     sendCoinsMenuAction->setToolTip(sendCoinsMenuAction->statusTip());
 
     receiveCoinsAction = new QAction(platformStyle->SingleColorIcon(":/icons/receiving_addresses"), tr("&Receive"), this);
-    receiveCoinsAction->setStatusTip(tr("Request payments (generates QR codes and DriveChain: URIs)"));
+    receiveCoinsAction->setStatusTip(tr("Request payments (generates QR codes and Drivechain: URIs)"));
     receiveCoinsAction->setToolTip(receiveCoinsAction->statusTip());
     receiveCoinsAction->setCheckable(true);
     receiveCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
@@ -390,11 +390,11 @@ void BitcoinGUI::createActions()
     usedReceivingAddressesAction->setStatusTip(tr("Show the list of used receiving addresses and labels"));
 
     openAction = new QAction(platformStyle->TextColorIcon(":/icons/open"), tr("Open &URI..."), this);
-    openAction->setStatusTip(tr("Open a DriveChain: URI or payment request"));
+    openAction->setStatusTip(tr("Open a Drivechain: URI or payment request"));
 
     showHelpMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/info"), tr("&Command-line options"), this);
     showHelpMessageAction->setMenuRole(QAction::NoRole);
-    showHelpMessageAction->setStatusTip(tr("Show the %1 help message to get a list with possible DriveChain command-line options").arg(tr(PACKAGE_NAME)));
+    showHelpMessageAction->setStatusTip(tr("Show the %1 help message to get a list with possible Drivechain command-line options").arg(tr(PACKAGE_NAME)));
 
     showSidechainTableDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/history"), tr("&Sidechain Tables"), this);
     showSidechainTableDialogAction->setStatusTip(tr("Show Sidechain tables"));
@@ -841,7 +841,7 @@ void BitcoinGUI::updateNetworkState()
 
     bool fNetworking = clientModel->getNetworkActive();
     if (fNetworking) {
-        tooltip = tr("%n active connection(s) to DriveChain network", "", count) + QString(".<br>");
+        tooltip = tr("%n active connection(s) to Drivechain network", "", count) + QString(".<br>");
     } else {
         tooltip = tr("Network activity disabled.") + QString("<br>") + tr("Click to enable network activity again.");
     }
@@ -997,7 +997,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
 
 void BitcoinGUI::message(const QString &title, const QString &message, unsigned int style, bool *ret)
 {
-    QString strTitle = tr("DriveChain"); // default title
+    QString strTitle = tr("Drivechain"); // default title
     // Default to information icon
     int nMBoxIcon = QMessageBox::Information;
     int nNotifyIcon = Notificator::Information;

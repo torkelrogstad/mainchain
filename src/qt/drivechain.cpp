@@ -93,7 +93,7 @@ static void InitMessage(const std::string &message)
  */
 static std::string Translate(const char* psz)
 {
-    return QCoreApplication::translate("DriveChain", psz).toStdString();
+    return QCoreApplication::translate("Drivechain", psz).toStdString();
 }
 
 static QString GetLangTerritory()

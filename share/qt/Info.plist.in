@@ -29,16 +29,16 @@
   <string>????</string>
 
   <key>CFBundleExecutable</key>
-  <string>DriveChain-Qt</string>
+  <string>Drivechain-Qt</string>
 
   <key>CFBundleName</key>
-  <string>DriveChain-Qt</string>
+  <string>Drivechain-Qt</string>
 
   <key>LSHasLocalizedDisplayName</key>
   <true/>
 
   <key>CFBundleIdentifier</key>
-  <string>org.bitcoinfoundation.DriveChain-Qt</string>
+  <string>org.bitcoinfoundation.Drivechain-Qt</string>
 
   <key>CFBundleURLTypes</key>
   <array>

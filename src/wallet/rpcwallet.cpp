@@ -4106,8 +4106,8 @@ static const CRPCCommand commands[] =
 
     { "generating",         "generate",                   &generate,                   {"nblocks","maxtries"} },
 
-    { "DriveChain",         "createsidechaindeposit",     &createsidechaindeposit,     {"nSidechain", "depositaddress", "amount", "fee"} },
-    { "DriveChain",         "createbmmcriticaldatatx",    &createbmmcriticaldatatx,    {"amount", "height", "criticalhash", "nsidechain"}},
+    { "Drivechain",         "createsidechaindeposit",     &createsidechaindeposit,     {"nSidechain", "depositaddress", "amount", "fee"} },
+    { "Drivechain",         "createbmmcriticaldatatx",    &createbmmcriticaldatatx,    {"amount", "height", "criticalhash", "nsidechain"}},
 
     { "CoinNews",           "createopreturntransaction",  &createopreturntransaction,  {"text", "fee"} },
     { "CoinNews",           "broadcastnews",              &broadcastnews,              {"header", "text", "fee"} },

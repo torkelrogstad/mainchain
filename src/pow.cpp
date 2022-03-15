@@ -69,7 +69,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
         bnNew = bnPowLimit;
 
     // Perform Drivechain fork birthday difficulty reset
-    if (pindexLast->nHeight + 1 == params.DriveChainHeight)
+    if (pindexLast->nHeight + 1 == params.DrivechainHeight)
         bnNew = bnPowLimit;
 
     return bnNew.GetCompact();

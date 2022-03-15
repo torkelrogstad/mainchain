@@ -201,7 +201,7 @@ struct CNodeState {
     bool fHaveWitness;
     //! Whether this peer wants witnesses in cmpctblocks/blocktxns
     bool fWantsCmpctWitness;
-    //! Whether this peer supports DriveChain
+    //! Whether this peer supports Drivechain
     bool fHaveDrivechain;
     /**
      * If we've announced NODE_WITNESS to this peer: whether the peer sends witnesses in cmpctblocks/blocktxns,

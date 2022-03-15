@@ -16,8 +16,8 @@ BEGIN
     BEGIN
         BLOCK "040904E4" // U.S. English - multilingual (hex)
         BEGIN
-            VALUE "CompanyName",        "DriveChain"
-            VALUE "FileDescription",    "drivechain-tx (CLI DriveChain transaction editor utility)"
+            VALUE "CompanyName",        "Drivechain"
+            VALUE "FileDescription",    "drivechain-tx (CLI Drivechain transaction editor utility)"
             VALUE "FileVersion",        VER_FILEVERSION_STR
             VALUE "InternalName",       "drivechain-tx"
             VALUE "LegalCopyright",     COPYRIGHT_STR
