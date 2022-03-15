@@ -1,7 +1,7 @@
 DriveChain (BIPs 300+301)
 -------------------------
 
-DriveChain allows Bitcoin to create, delete, send BTC to, and receive BTC from “Layer-2”s called “sidechains”. Sidechains are Altcoins that lack a native “coin” – instead, pre-existing coins [from a different blockchain] must first be sent over.
+DriveChain allows Bitcoin to create, delete, send BTC to, and receive BTC from “Layer-2”s called “sidechains”. Sidechains are Altcoins that lack a native “coin” – instead, BTC must first be sent over.
 
 BIP 300:
 https://github.com/bitcoin/bips/blob/master/bip-0300.mediawiki
