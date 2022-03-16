@@ -1278,7 +1278,7 @@ void BitcoinGUI::setTrayIconVisible(bool fHideTrayIcon)
 
 void BitcoinGUI::showModalOverlay()
 {
-    if (modalOverlay && modalOverlay->isLayerVisible())
+    if (modalOverlay)
         modalOverlay->toggleVisibility();
 }
 
