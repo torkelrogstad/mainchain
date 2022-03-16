@@ -12,6 +12,7 @@
 #include <qt/guiutil.h>
 #include <qt/mempooltablemodel.h>
 #include <qt/miningdialog.h>
+#include <qt/modaloverlay.h>
 #include <qt/networkstyle.h>
 #include <qt/notificator.h>
 #include <qt/openuridialog.h>
@@ -76,9 +77,6 @@ const std::string BitcoinGUI::DEFAULT_UIPLATFORM =
 /** Display name for default wallet name. Uses tilde to avoid name
  * collisions in the future with additional wallets */
 const QString BitcoinGUI::DEFAULT_WALLET = "~Default";
-
-//! The required delta of headers to the estimated number of available headers until we show the IBD progress
-static constexpr int HEADER_HEIGHT_DELTA_SYNC = 24;
 
 BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *networkStyle, QWidget *parent) :
     QMainWindow(parent),
@@ -183,6 +181,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         connect(miningDialog, SIGNAL(WithdrawalDialogRequested()),
                 walletFrame, SLOT(showSidechainWithdrawalDialog()));
 
+        connect(walletFrame, SIGNAL(requestedSyncWarningInfo()), this, SLOT(showModalOverlay()));
+
     } else
 #endif // ENABLE_WALLET
     {
@@ -191,6 +191,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
          */
         setCentralWidget(rpcConsole);
     }
+
+    modalOverlay = new ModalOverlay(this->centralWidget());
 
     // Accept D&D of URIs
     setAcceptDrops(true);
@@ -533,6 +535,8 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
 
         // Show progress
         connect(_clientModel, SIGNAL(showProgress(QString,int)), this, SLOT(showProgress(QString,int)));
+
+        modalOverlay->setKnownBestHeight(_clientModel->getHeaderTipHeight(), QDateTime::fromTime_t(clientModel->getHeaderTipTime()));
 
         rpcConsole->setClientModel(_clientModel);
 #ifdef ENABLE_WALLET
@@ -889,6 +893,13 @@ QFrame* BitcoinGUI::CreateVLine()
 
 void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVerificationProgress, bool header)
 {
+    if (modalOverlay) {
+        if (header)
+            modalOverlay->setKnownBestHeight(count, blockDate);
+        else
+            modalOverlay->tipUpdate(count, blockDate, nVerificationProgress);
+    }
+
     if (!clientModel)
         return;
 
@@ -945,6 +956,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
         if(walletFrame)
         {
             walletFrame->showOutOfSyncWarning(false);
+            modalOverlay->showHide(true, true);
         }
 #endif // ENABLE_WALLET
 
@@ -972,6 +984,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
         if(walletFrame)
         {
             walletFrame->showOutOfSyncWarning(true);
+            modalOverlay->showHide();
         }
 #endif // ENABLE_WALLET
 
@@ -1261,6 +1274,12 @@ void BitcoinGUI::setTrayIconVisible(bool fHideTrayIcon)
     {
         trayIcon->setVisible(!fHideTrayIcon);
     }
+}
+
+void BitcoinGUI::showModalOverlay()
+{
+    if (modalOverlay && modalOverlay->isLayerVisible())
+        modalOverlay->toggleVisibility();
 }
 
 static bool ThreadSafeMessageBox(BitcoinGUI *gui, const std::string& message, const std::string& caption, unsigned int style)

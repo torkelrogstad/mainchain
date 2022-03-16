@@ -112,6 +112,7 @@ QT_FORMS_UI = \
   qt/forms/optionsdialog.ui \
   qt/forms/paymentrequestdialog.ui \
   qt/forms/managenewsdialog.ui \
+  qt/forms/modaloverlay.ui \
   qt/forms/newsqrdialog.ui \
   qt/forms/merkletreedialog.ui \
   qt/forms/miningdialog.ui \
@@ -166,6 +167,7 @@ QT_MOC_CPP = \
   qt/moc_mempooltablemodel.cpp \
   qt/moc_miningdialog.cpp \
   qt/moc_merkletreedialog.cpp \
+  qt/moc_modaloverlay.cpp \
   qt/moc_newstablemodel.cpp \
   qt/moc_newstypestablemodel.cpp \
   qt/moc_newsqrdialog.cpp \
@@ -267,6 +269,7 @@ DRIVECHAIN_QT_H = \
   qt/mempooltablemodel.h \
   qt/miningdialog.h \
   qt/merkletreedialog.h \
+  qt/modaloverlay.h \
   qt/newstablemodel.h \
   qt/newstypestablemodel.h \
   qt/newsqrdialog.h \
@@ -481,6 +484,7 @@ DRIVECHAIN_QT_WALLET_CPP = \
   qt/managenewsdialog.cpp \
   qt/merkletreedialog.cpp \
   qt/miningdialog.cpp \
+  qt/modaloverlay.cpp \
   qt/newstablemodel.cpp \
   qt/newstypestablemodel.cpp \
   qt/newsqrdialog.cpp \
