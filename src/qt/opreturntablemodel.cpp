@@ -187,6 +187,9 @@ void OPReturnTableModel::UpdateModel()
         }
     }
 
+    if (!vObj.size())
+        return;
+
     // Write final batch
     int offset = model.size() ? 2 : 1;
     beginInsertRows(QModelIndex(), model.size(), model.size() + vObj.size() - offset);

@@ -150,6 +150,12 @@ void MemPoolTableModel::setClientModel(ClientModel *model)
 
 void MemPoolTableModel::updateModel()
 {
+    if (!clientModel)
+        return;
+
+    if (clientModel->inInitialBlockDownload())
+        return;
+
     // Get recent mempool entries
     std::vector<TxMempoolInfo> vInfo = mempool.InfoRecent(10);
 

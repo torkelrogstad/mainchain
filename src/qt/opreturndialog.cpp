@@ -189,6 +189,12 @@ void OPReturnDialog::updateOnShow()
 
 void OPReturnDialog::numBlocksChanged(int nHeight, const QDateTime& time)
 {
+    if (!clientModel)
+        return;
+
+    if (clientModel->inInitialBlockDownload())
+        return;
+
     // Update the table model if the dialog is open
     if (this->isVisible())
         Q_EMIT(UpdateTable());

@@ -167,7 +167,10 @@ void NewsTableModel::numBlocksChanged()
 // TODO append new data to the model instead of loading all every time
 void NewsTableModel::UpdateModel()
 {
-    if (!newsTypesModel)
+    if (!newsTypesModel || !clientModel)
+        return;
+
+    if (clientModel->inInitialBlockDownload())
         return;
 
     // Clear old data

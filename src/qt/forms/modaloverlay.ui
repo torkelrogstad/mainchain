@@ -142,7 +142,7 @@ QLabel { color: rgb(40,40,40);  }</string>
                 </font>
                </property>
                <property name="text">
-                <string>Performing intial block download. Please wait while your node synchronizes with the network!</string>
+                <string>Performing initial block download. Please wait while your node synchronizes with the network!</string>
                </property>
               </widget>
              </item>

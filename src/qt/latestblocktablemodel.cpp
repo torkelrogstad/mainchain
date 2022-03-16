@@ -121,6 +121,12 @@ void LatestBlockTableModel::numBlocksChanged()
 
 void LatestBlockTableModel::UpdateModel()
 {
+    if (!clientModel)
+        return;
+
+    if (clientModel->inInitialBlockDownload())
+        return;
+
     // Clear old data
     beginResetModel();
     model.clear();

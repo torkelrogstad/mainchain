@@ -9,12 +9,6 @@
 #include <sidechaindb.h>
 #include <validation.h>
 
-#ifdef ENABLE_WALLET
-#include <wallet/wallet.h>
-#endif
-
-#include <math.h>
-
 #include <QIcon>
 #include <QMetaType>
 #include <QTimer>
@@ -118,24 +112,6 @@ QVariant SidechainEscrowTableModel::headerData(int section, Qt::Orientation orie
 
 void SidechainEscrowTableModel::updateModel()
 {
-#ifdef ENABLE_WALLET
-    // Check for active wallet
-    if (vpwallets.empty())
-        return;
-
-    // Get required locks upfront. This avoids the GUI from getting stuck on
-    // periodical polls if the core is holding the locks for a longer time -
-    // for example, during a wallet rescan.
-    TRY_LOCK(cs_main, lockMain);
-    if(!lockMain)
-        return;
-    TRY_LOCK(vpwallets[0]->cs_wallet, lockWallet);
-    if(!lockWallet)
-        return;
-#endif
-
-    // TODO this is functional but not great
-
     // Clear old data
     beginResetModel();
     model.clear();
