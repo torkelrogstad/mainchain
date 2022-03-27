@@ -1832,7 +1832,7 @@ bool AppInitMain()
     }
 
     // ********************************************************* Step 13: finished
-    uiInterface.InitMessage(_("Drivechain ready to TESTDRIVE"));
+    uiInterface.InitMessage(_("Drivechain ready"));
 
     SetRPCWarmupFinished();
 
