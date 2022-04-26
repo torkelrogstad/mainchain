@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(bmm_commit)
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
     // Generate commit
-    GenerateCriticalHashCommitments(block, Params().GetConsensus());
+    GenerateCriticalHashCommitments(block);
 
     BOOST_REQUIRE(block.vtx[0]->vout.size() == 2);
 

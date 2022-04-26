@@ -658,7 +658,7 @@ BOOST_AUTO_TEST_CASE(IsWithdrawalHashCommit)
         mtx.vin.resize(1);
         mtx.vin[0].prevout.SetNull();
         block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-        GenerateWithdrawalHashCommitment(block, hash, nSidechain, Params().GetConsensus());
+        GenerateWithdrawalHashCommitment(block, hash, nSidechain);
 
         uint256 hashFromCommit;
         uint8_t nSidechainFromCommit;
@@ -722,7 +722,7 @@ BOOST_AUTO_TEST_CASE(IsSidechainActivationCommit)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSidechainActivationCommitment(block, proposal.GetHash(), Params().GetConsensus());
+    GenerateSidechainActivationCommitment(block, proposal.GetHash());
 
     uint256 hashSidechain;
     BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSidechainActivationCommit(hashSidechain));
@@ -739,7 +739,7 @@ BOOST_AUTO_TEST_CASE(IsSidechainUpdateBytes)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
     CScript script;
-    GenerateSCDBUpdateScript(block, script, std::vector<std::vector<SidechainWithdrawalState>>{}, std::vector<SidechainCustomVote>{}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, std::vector<std::vector<SidechainWithdrawalState>>{}, std::vector<SidechainCustomVote>{});
 
     BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBUpdate());
 }
@@ -829,7 +829,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote});
 
     BOOST_CHECK(script.IsSCDBUpdate());
 
@@ -920,7 +920,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_3_withdrawals)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote});
 
     BOOST_CHECK(script.IsSCDBUpdate());
 
@@ -1017,7 +1017,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic_four_withdrawals)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote});
 
     BOOST_CHECK(script.IsSCDBUpdate());
 
@@ -1146,7 +1146,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote, vote2}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote, vote2});
 
     BOOST_CHECK(script.IsSCDBUpdate());
 
@@ -1278,7 +1278,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_withdraw)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote2}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, vOldScores, std::vector<SidechainCustomVote>{vote2});
 
     BOOST_CHECK(script.IsSCDBUpdate());
 
@@ -1364,7 +1364,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_withdraw)
         vOldScores.push_back(scdbTest.GetState(s.nSidechain));
     }
     CScript script2;
-    GenerateSCDBUpdateScript(block2, script2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4, vote5}, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block2, script2, vOldScores, std::vector<SidechainCustomVote>{vote3, vote4, vote5});
 
     BOOST_CHECK(script2.IsSCDBUpdate());
 
@@ -1484,7 +1484,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
         vOldScores.push_back(scdbTestCopy.GetState(s.nSidechain));
     }
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, vUserVotes, Params().GetConsensus());
+    GenerateSCDBUpdateScript(block, script, vOldScores, vUserVotes);
 
     BOOST_CHECK(script.IsSCDBUpdate());
 

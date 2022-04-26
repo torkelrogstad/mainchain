@@ -242,7 +242,7 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
     CBlock block;
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
 
-    GenerateSidechainActivationCommitment(block, proposal.GetHash(), Params().GetConsensus());
+    GenerateSidechainActivationCommitment(block, proposal.GetHash());
     if (block.vtx.front()->vout.size() != 2)
         return false;
 

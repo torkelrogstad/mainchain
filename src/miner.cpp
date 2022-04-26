@@ -267,7 +267,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
         // For now, if there are fresh (uncommited, unknown to SCDB) Withdrawal(s)
         // we will commit the most recent in the block we are generating.
-        GenerateWithdrawalHashCommitment(*pblock, hash, s.nSidechain, chainparams.GetConsensus());
+        GenerateWithdrawalHashCommitment(*pblock, hash, s.nSidechain);
 
         // Keep track of new Withdrawal(s) by nSidechain for later
         mapNewWithdrawal[s.nSidechain] = hash;
@@ -376,7 +376,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
             if (!hashSCDB.IsNull()) {
                 // Generate SCDB merkle root hash commitment
-                GenerateSCDBHashMerkleRootCommitment(*pblock, hashSCDB, chainparams.GetConsensus());
+                GenerateSCDBHashMerkleRootCommitment(*pblock, hashSCDB);
 
                 // The miner should be passing only the new Withdrawal(s) when checking
                 // MT update here.
@@ -403,7 +403,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     }
                     LogPrintf("%s: Miner generating update bytes at height %u.\n", __func__, nHeight);
                     CScript script;
-                    GenerateSCDBUpdateScript(*pblock, script, vState, vCustomVote, chainparams.GetConsensus());
+                    GenerateSCDBUpdateScript(*pblock, script, vState, vCustomVote);
 
                     // Make sure that we can read the update bytes
                     std::vector<SidechainWithdrawalState> vParsed;
@@ -427,7 +427,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
 
         // Generate critical hash commitments (usually for BMM commitments)
-        GenerateCriticalHashCommitments(*pblock, chainparams.GetConsensus());
+        GenerateCriticalHashCommitments(*pblock);
 
         // Scan through our sidechain proposals and commit the first one we find
         // that hasn't already been commited and is tracked by SCDB.
@@ -452,7 +452,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                 if (fFound)
                     continue;
 
-                GenerateSidechainProposalCommitment(*pblock, p, chainparams.GetConsensus());
+                GenerateSidechainProposalCommitment(*pblock, p);
                 hashProposal = p.GetHash();
                 LogPrintf("%s: Generated sidechain proposal commitment for:\n%s\n", __func__, p.ToString());
                 break;
@@ -472,7 +472,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             if (fAnySidechain || scdb.GetAckSidechain(s.proposal.GetHash())) {
                 // Don't generate more than one commit for the same SC #
                 if (mapCommit.find(s.proposal.nSidechain) == mapCommit.end()) {
-                    GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash(), chainparams.GetConsensus());
+                    GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash());
                     mapCommit[s.proposal.nSidechain] = true;
                 }
             }

@@ -3491,7 +3491,7 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc
     return commitment;
 }
 
-void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& consensusParams)
+void GenerateCriticalHashCommitments(CBlock& block)
 {
     /*
      * M8 (v1)
@@ -3501,7 +3501,7 @@ void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& con
     if (block.vtx.size() < 2)
         return;
 
-    std::vector<CCriticalData> vCriticalData = GetCriticalDataRequests(block, consensusParams);
+    std::vector<CCriticalData> vCriticalData = GetCriticalDataRequests(block);
     std::vector<CTxOut> vout;
     for (const CCriticalData& d : vCriticalData) {
         CTxOut out;
@@ -3531,7 +3531,7 @@ void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& con
     }
 }
 
-void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& consensusParams)
+void GenerateLNCriticalHashCommitment(CBlock& block)
 {
     /*
      * M8 (v2)
@@ -3576,7 +3576,7 @@ void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& co
     }
 }
 
-void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB, const Consensus::Params& consensusParams)
+void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB)
 {
     /*
      * "M1, M2, M3, M4"
@@ -3605,7 +3605,7 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain, const Consensus::Params& consensusParams)
+void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain)
 {
     /*
      * M3
@@ -3636,7 +3636,7 @@ void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const 
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams)
+void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain)
 {
     CTxOut out;
     out.nValue = 0;
@@ -3650,7 +3650,7 @@ void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidecha
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams)
+void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash)
 {
     CTxOut out;
     out.nValue = 0;
@@ -3670,7 +3670,7 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, c
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams)
+void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes)
 {
     // Create output that bytes will be added to
     CTxOut out;
@@ -3750,7 +3750,7 @@ CScript GetNewsUSDailyHeader()
     return script;
 }
 
-std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block, const Consensus::Params& consensusParams)
+std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block)
 {
     std::vector<CCriticalData> vCriticalData;
 

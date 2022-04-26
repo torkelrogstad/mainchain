@@ -441,28 +441,28 @@ void UpdateUncommittedBlockStructures(CBlock& block, const CBlockIndex* pindexPr
 std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBlockIndex* pindexPrev, const Consensus::Params& consensusParams);
 
 /** Produce BMM h* (or other critical data) coinbase commitment(s) for a block */
-void GenerateCriticalHashCommitments(CBlock& block, const Consensus::Params& consensusParams);
+void GenerateCriticalHashCommitments(CBlock& block);
 
 /** Produce a BMM h* coinbase commitment for a block (with lightning)*/
-void GenerateLNCriticalHashCommitment(CBlock& block, const Consensus::Params& consensusParams);
+void GenerateLNCriticalHashCommitment(CBlock& block);
 
 /** Produce the SCDB hashMerkleRoot coinbase commitment for a block */
-void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB, const Consensus::Params& consensusParams);
+void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB);
 
 /** Produce withdrawal hash coinbase commitment for a block */
-void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain, const Consensus::Params& consensusParams);
+void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain);
 
-void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain, const Consensus::Params& consensusParams);
+void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain);
 
-void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash, const Consensus::Params& consensusParams);
+void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash);
 
-void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes, const Consensus::Params& consensusParams);
+void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes);
 
 CScript GetNewsTokyoDailyHeader();
 CScript GetNewsUSDailyHeader();
 
 /** Return a vector of all of the critical data requests found in a block */
-std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block, const Consensus::Params& consensusParams);
+std::vector<CCriticalData> GetCriticalDataRequests(const CBlock& block);
 
 /** RAII wrapper for VerifyDB: Verify consistency of the block and coin databases */
 class CVerifyDB {
