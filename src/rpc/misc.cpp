@@ -1022,25 +1022,34 @@ UniValue receivewithdrawalbundle(const JSONRPCRequest& request)
 
 UniValue verifybmm(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() != 2)
+    if (request.fHelp || request.params.size() != 3)
         throw std::runtime_error(
             "verifybmm\n"
             "Check if a mainchain block includes BMM for a sidechain h*\n"
             "\nArguments:\n"
             "1. \"blockhash\"      (string, required) mainchain blockhash with h*\n"
             "2. \"bmmhash\"        (string, required) h* to locate\n"
+            "3. \"nsidechain\"     (number, required) sidechain number\n"
             "\nExamples:\n"
-            + HelpExampleCli("verifybmm", "\"blockhash\", \"bmmhash\"")
-            + HelpExampleRpc("verifybmm", "\"blockhash\", \"bmmhash\"")
+            + HelpExampleCli("verifybmm", "\"blockhash\", \"bmmhash\", \"nsidechain\"")
+            + HelpExampleRpc("verifybmm", "\"blockhash\", \"bmmhash\", \"nsidechain\"")
             );
 
     uint256 hashBlock = uint256S(request.params[0].get_str());
     uint256 hashBMM = uint256S(request.params[1].get_str());
+    int nSidechain = request.params[2].get_int();
+
+    // Is nSidechain valid?
+    if (!scdb.IsSidechainActive(nSidechain)) {
+        std::string strError = "Invalid sidechain number!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
 
     if (!mapBlockIndex.count(hashBlock)) {
         std::string strError = "Block not found";
         LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
     CBlockIndex* pblockindex = mapBlockIndex[hashBlock];
@@ -1048,7 +1057,7 @@ UniValue verifybmm(const JSONRPCRequest& request)
     {
         std::string strError = "pblockindex null";
         LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
     CBlock block;
@@ -1056,13 +1065,13 @@ UniValue verifybmm(const JSONRPCRequest& request)
     {
         std::string strError = "Failed to read block from disk";
         LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
     if (!block.vtx.size()) {
         std::string strError = "No txns in block";
         LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
     bool fBMMFound = false;
@@ -1070,30 +1079,38 @@ UniValue verifybmm(const JSONRPCRequest& request)
     for (const CTxOut& out : txCoinbase.vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
 
-        if (scriptPubKey.size() < sizeof(uint256) + 5)
+        uint256 hashCritical = uint256();
+        std::vector<unsigned char> vBytes;
+        if (!scriptPubKey.IsCriticalHashCommit(hashCritical, vBytes))
             continue;
-        if (scriptPubKey[0] != OP_RETURN)
+
+        // Create critical data object and validate BMM
+        CCriticalData data;
+        data.hashCritical = hashCritical;
+        data.vBytes = vBytes;
+
+        uint8_t nSidechainBMM;
+        std::string strPrevBlock = "";
+        if (!data.IsBMMRequest(nSidechainBMM, strPrevBlock))
             continue;
 
-        // TODO add script function to check for commit & return data
+        // Check sidechain number
+        if (nSidechain != nSidechainBMM)
+            continue;
 
-        // Get h*
-        std::vector<unsigned char> vch (scriptPubKey.begin() + 5, scriptPubKey.begin() + 37);
+        // Check prev block bytes
+        if (strPrevBlock != block.hashPrevBlock.ToString().substr(56, 63))
+            continue;
 
-        // TODO return the bytes
-        // Get Bytes
-        if (scriptPubKey.size() > 37) {
-            std::vector<unsigned char> vchBytes(scriptPubKey.begin() + 37, scriptPubKey.end());
-        }
-
-        if (hashBMM == uint256(vch))
+        // Check h*
+        if (hashBMM == data.hashCritical)
             fBMMFound = true;
     }
 
     if (!fBMMFound) {
         std::string strError = "h* not found in block";
         LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
     UniValue ret(UniValue::VOBJ);
@@ -2112,7 +2129,7 @@ static const CRPCCommand commands[] =
     { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"addressbytes"}},
     { "Drivechain",  "countsidechaindeposits",        &countsidechaindeposits,          {"nsidechain"}},
     { "Drivechain",  "receivewithdrawalbundle",       &receivewithdrawalbundle,         {"nsidechain","rawtx"}},
-    { "Drivechain",  "verifybmm",                     &verifybmm,                       {"blockhash", "bmmhash"}},
+    { "Drivechain",  "verifybmm",                     &verifybmm,                       {"blockhash", "bmmhash", "nsidechain"}},
     { "Drivechain",  "verifydeposit",                 &verifydeposit,                   {"blockhash", "txid", "ntx"}},
     { "Drivechain",  "listpreviousblockhashes",       &listpreviousblockhashes,         {}},
     { "Drivechain",  "listactivesidechains",          &listactivesidechains,            {}},

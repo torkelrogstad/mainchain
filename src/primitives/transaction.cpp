@@ -155,8 +155,8 @@ std::string CTransaction::ToString() const
     for (unsigned int i = 0; i < vout.size(); i++)
         str += "    " + vout[i].ToString() + "\n";
     if (!criticalData.IsNull()) {
-        str += strprintf("Critical Data:\nbytes.size=%s\nhashCritical=%s",
-        criticalData.bytes.size(),
+        str += strprintf("Critical Data:\nvBytes.size=%s\nhashCritical=%s",
+        criticalData.vBytes.size(),
         criticalData.hashCritical.ToString());
     }
     return str;
@@ -172,68 +172,27 @@ bool CCriticalData::IsBMMRequest() const
 
 bool CCriticalData::IsBMMRequest(uint8_t& nSidechain, std::string& strPrevBlock) const
 {
-    // Check for h* commit flag in critical data bytes
     if (IsNull())
         return false;
     if (hashCritical.IsNull())
         return false;
-    if (bytes.size() < 9)
+    if (vBytes.size() != 8)
         return false;
 
-    if (bytes[0] != 0x00 || bytes[1] != 0xbf || bytes[2] != 0x00)
+    if (vBytes[0] != 0x00 || vBytes[1] != 0xbf || vBytes[2] != 0x00)
         return false;
 
-    int intSidechain = -1;
-    size_t nSideNumBytes = 0;
-    if (bytes[3] == 0x00)
-    {
-        // Special case for sidechain 0
-        intSidechain = 0;
-        nSideNumBytes = 0;
-    }
-    else
-    if (bytes[3] == 0x01)
-    {
-        intSidechain = CScriptNum(std::vector<unsigned char>{bytes[4]}, false).getint();
-        nSideNumBytes = 1;
-    }
-    else
-    if (bytes[3] == 0x02)
-    {
-        intSidechain = CScriptNum(std::vector<unsigned char>{bytes[4], bytes[5]}, false).getint();
-        nSideNumBytes = 2;
-    }
-    else
-    {
-        // Only 0 - 255 are allowed
-        return false;
-    }
-
-    if (intSidechain < 0 || intSidechain > 255)
-        return false;
-
-    nSidechain = (uint8_t)intSidechain;
+    nSidechain = vBytes[3];
 
     // Read prev block bytes
-
-    // Header bytes + sidechain number push + number bytes
-    const size_t nPrevPos = 3 + 1 + nSideNumBytes;
-    std::vector<unsigned char> prevBytes;
-    if (bytes[nPrevPos] == 0x04) {
-        // Copy 4 char prev block reference
-        prevBytes = std::vector<unsigned char>(bytes.begin() + nPrevPos + 1, bytes.end());
-    } else {
-        return false;
-    }
-
-    std::string strHex = "";
-    for (size_t i = 0; i < prevBytes.size(); i++)
-        strHex += prevBytes[i];
-
-    if (strHex.size() != 4)
+    std::vector<unsigned char> vPrevBytes;
+    vPrevBytes = std::vector<unsigned char>(vBytes.begin() + 4, vBytes.end());
+    if (vPrevBytes.size() != 4)
         return false;
 
-    strPrevBlock = strHex;
+    strPrevBlock = HexStr(vPrevBytes);
+    if (strPrevBlock.size() != 8)
+        return false;
 
     return true;
 }

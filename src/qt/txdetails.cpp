@@ -94,6 +94,8 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     uint256 hashSidechain = uint256();
     // Critical hash commit
     uint256 hashCritical = uint256();
+    // Critical data bytes
+    std::vector<unsigned char> vBytes;
     // SCDB hash merkle root
     uint256 hashMT = uint256();
 
@@ -146,7 +148,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             AddTreeItem(INDEX_WITNESS_PROGRAM, subItem);
         }
         else
-        if (scriptPubKey.IsCriticalHashCommit(hashCritical)) {
+        if (scriptPubKey.IsCriticalHashCommit(hashCritical, vBytes)) {
             // Create a critical hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));

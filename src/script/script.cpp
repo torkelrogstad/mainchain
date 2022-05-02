@@ -237,7 +237,7 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
     return false;
 }
 
-bool CScript::IsCriticalHashCommit(uint256& hash) const
+bool CScript::IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vBytes) const
 {
     // Check script size
     size_t size = this->size();
@@ -256,6 +256,9 @@ bool CScript::IsCriticalHashCommit(uint256& hash) const
 
     if (hash.IsNull())
         return false;
+
+    if (size > 37)
+        vBytes = std::vector<unsigned char>(this->begin() + 37, this->end());
 
     return true;
 }

@@ -638,7 +638,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         std::string strPrevBlock = "";
         if (tx.criticalData.IsBMMRequest(nSidechain, strPrevBlock)) {
             std::string strTip = chainActive.Tip()->GetBlockHash().ToString();
-            strTip = strTip.substr(strTip.size() - 4, strTip.size() - 1);
+            strTip = strTip.substr(strTip.size() - 8, strTip.size() - 1);
             if (strPrevBlock != strTip)
                 return state.DoS(0, false, REJECT_INVALID, "bmm-invalid-prev-bytes", true);
         }
@@ -3516,8 +3516,8 @@ void GenerateCriticalHashCommitments(CBlock& block)
         memcpy(&out.scriptPubKey[5], &d.hashCritical, 32);
 
         // Add bytes (optional)
-        if (!d.bytes.empty())
-            out.scriptPubKey += CScript(d.bytes.begin(), d.bytes.end());
+        if (!d.vBytes.empty())
+            out.scriptPubKey += CScript(d.vBytes.begin(), d.vBytes.end());
 
         vout.push_back(out);
     }
@@ -3561,8 +3561,8 @@ void GenerateLNCriticalHashCommitment(CBlock& block)
         memcpy(&out.scriptPubKey[38], &prevBlockHash, 32);
 
         // Add bytes (optional)
-        if (!d.bytes.empty())
-            out.scriptPubKey += CScript(d.bytes.begin(), d.bytes.end());
+        if (!d.vBytes.empty())
+            out.scriptPubKey += CScript(d.vBytes.begin(), d.vBytes.end());
 
         vout.push_back(out);
     }
@@ -3915,8 +3915,8 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
                     return state.DoS(100, false, REJECT_INVALID, "bad-critical-data-locktime", true, strprintf("%s : critical data transaction locktime does not match block height - 1", __func__));
 
                 // TODO move?
-                // Check size of critical data extra bytes
-                if (tx->criticalData.bytes.size() > MAX_CRITICAL_DATA_BYTES)
+                // Check size of critical data bytes
+                if (tx->criticalData.vBytes.size() > MAX_CRITICAL_DATA_BYTES)
                     return state.DoS(100, false, REJECT_INVALID, "bad-critical-data-bytes", true, strprintf("%s : extra bytes size > MAX_CRITICAL_DATA_BYTES", __func__));
 
                 // Check for hashCritical commitment in coinbase
@@ -3924,8 +3924,10 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
                 for (const CTxOut& out : block.vtx[0]->vout) {
                     const CScript &scriptPubKey = out.scriptPubKey;
                     uint256 hashCritical = uint256();
-                    if (scriptPubKey.IsCriticalHashCommit(hashCritical)) {
-                        if (tx->criticalData.hashCritical == hashCritical) {
+                    std::vector<unsigned char> vBytes;
+                    if (scriptPubKey.IsCriticalHashCommit(hashCritical, vBytes)) {
+                        if (tx->criticalData.hashCritical == hashCritical &&
+                                tx->criticalData.vBytes == vBytes) {
                             fFound = true;
                             break;
                         }
@@ -3947,19 +3949,27 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
                                 strprintf("%s : Invalid (inactive) sidechain number: %u in BMM commitment", __func__, nSidechain));
                     }
 
+                    // Check sidechain number
                     if (nSidechain >= vSidechainBMM.size()) {
                         return state.DoS(100, false, REJECT_INVALID,
                                 "bad-critical-bmm-nsidechain-invalid", true,
                                 strprintf("%s : Invalid sidechain number: %u in BMM commitment", __func__, nSidechain));
                     }
 
+                    // Check Prev block bytes
+                    if (strPrevBlock != block.hashPrevBlock.ToString().substr(56, 63)) {
+                        return state.DoS(100, false, REJECT_INVALID,
+                                "bad-critical-bmm-prevblock-invalid", true,
+                                strprintf("%s : Invalid prev block bytes: %s in BMM commitment", __func__, strPrevBlock));
+                    }
+
+                    // Max 1 BMM commit per sidechain per block
                     if (vSidechainBMM[nSidechain] == false)
                         vSidechainBMM[nSidechain] = true;
                     else
                         return state.DoS(100, false, REJECT_INVALID,
                                 "bad-critical-bmm-nsidechain-multiple", true,
                                 strprintf("%s : Multiple BMM h* requests for a single Sidechain", __func__));
-
                 }
             }
         }

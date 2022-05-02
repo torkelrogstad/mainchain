@@ -185,7 +185,7 @@ struct CMutableTransaction;
 class CCriticalData
 {
 public:
-    std::vector<unsigned char> bytes;
+    std::vector<unsigned char> vBytes;
     uint256 hashCritical;
 
     CCriticalData()
@@ -197,27 +197,28 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(bytes);
+        READWRITE(vBytes);
         READWRITE(hashCritical);
     }
 
     void SetNull()
     {
-        bytes.clear();
+        vBytes.clear();
         hashCritical.SetNull();
     }
 
     bool IsNull() const
     {
-        return (bytes.empty() && hashCritical.IsNull());
+        return (vBytes.empty() && hashCritical.IsNull());
     }
 
+    // Check if critical data is a BMM request
     bool IsBMMRequest() const;
     bool IsBMMRequest(uint8_t& nSidechain, std::string& strPrevBlock) const;
 
     friend bool operator==(const CCriticalData& a, const CCriticalData& b)
     {
-        return (a.bytes == b.bytes &&
+        return (a.vBytes == b.vBytes &&
                 a.hashCritical == b.hashCritical);
     }
 };

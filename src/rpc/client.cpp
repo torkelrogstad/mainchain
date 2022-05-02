@@ -155,6 +155,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listwithdrawalstatus", 0, "nsidechain" },
     { "listcachedwithdrawaltx", 0, "nsidechain" },
     { "verifydeposit", 2, "nTx" },
+    { "verifybmm", 2, "nsidechain" },
     // Echo with conversion (For testing only)
     { "echojson", 0, "arg0" },
     { "echojson", 1, "arg1" },
