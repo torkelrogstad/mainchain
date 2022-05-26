@@ -57,4 +57,6 @@ private:
     void UpdateOutputHMAC();
 };
 
+std::string HexToBinStr(const std::string strHex);
+
 #endif // HASHCALCDIALOG_H

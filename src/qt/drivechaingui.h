@@ -31,6 +31,7 @@ class SidechainPage;
 class SidechainWithdrawalTableModel;
 class MemPoolTableModel;
 class MiningDialog;
+class PaperWalletDialog;
 class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
@@ -123,6 +124,7 @@ private:
     QAction *showHelpMessageAction;
     QAction *showSidechainTableDialogAction;
     QAction *showMiningDialogAction;
+    QAction *showPaperWalletDialogAction;
     QAction *showHashCalcDialogAction;
     QAction *showBlockExplorerDialogAction;
 
@@ -140,6 +142,8 @@ private:
     SidechainTableDialog *sidechainTableDialog;
     /** Mining dialog */
     MiningDialog *miningDialog;
+    /** Paper Wallet dialog */
+    PaperWalletDialog *paperWalletDialog;
     /** Hash calculator dialog */
     HashCalcDialog *hashCalcDialog;
     /** Block explorer dialog */
@@ -240,6 +244,9 @@ private Q_SLOTS:
 
     /** Show mining dialog */
     void showMiningDialog();
+
+    /** Show paper wallet dialog */
+    void showPaperWalletDialog();
 
     /** Show hash calculator dialog */
     void showHashCalcDialog();

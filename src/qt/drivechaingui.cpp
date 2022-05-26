@@ -18,6 +18,7 @@
 #include <qt/openuridialog.h>
 #include <qt/optionsdialog.h>
 #include <qt/optionsmodel.h>
+#include <qt/paperwalletdialog.h>
 #include <qt/platformstyle.h>
 #include <qt/rpcconsole.h>
 #include <qt/utilitydialog.h>
@@ -116,6 +117,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     showHelpMessageAction(0),
     showSidechainTableDialogAction(0),
     showMiningDialogAction(0),
+    showPaperWalletDialogAction(0),
     showHashCalcDialogAction(0),
     showBlockExplorerDialogAction(0),
     trayIcon(0),
@@ -168,6 +170,9 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 
         miningDialog = new MiningDialog(platformStyle);
         miningDialog->setParent(this, Qt::Window);
+
+        paperWalletDialog = new PaperWalletDialog(platformStyle);
+        paperWalletDialog->setParent(this, Qt::Window);
 
         hashCalcDialog = new HashCalcDialog(platformStyle);
         hashCalcDialog->setParent(this, Qt::Window);
@@ -404,6 +409,9 @@ void BitcoinGUI::createActions()
     showMiningDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_mined"), tr("&Mining"), this);
     showMiningDialogAction->setStatusTip(tr("Show mining window"));
 
+    showPaperWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/wallet"), tr("&Paper Wallet"), this);
+    showPaperWalletDialogAction->setStatusTip(tr("Show paper wallet window"));
+
     showHashCalcDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/calculator"), tr("&Hash Calculator"), this);
     showHashCalcDialogAction->setStatusTip(tr("Show hash calculator window"));
 
@@ -432,6 +440,7 @@ void BitcoinGUI::createActions()
         connect(openAction, SIGNAL(triggered()), this, SLOT(openClicked()));
         connect(showSidechainTableDialogAction, SIGNAL(triggered()), this, SLOT(showSidechainTableDialog()));
         connect(showMiningDialogAction, SIGNAL(triggered()), this, SLOT(showMiningDialog()));
+        connect(showPaperWalletDialogAction, SIGNAL(triggered()), this, SLOT(showPaperWalletDialog()));
         connect(showHashCalcDialogAction, SIGNAL(triggered()), this, SLOT(showHashCalcDialog()));
         connect(showBlockExplorerDialogAction, SIGNAL(triggered()), this, SLOT(showBlockExplorerDialog()));
     }
@@ -468,6 +477,7 @@ void BitcoinGUI::createMenuBar()
     if (walletFrame)
     {
         tools->addAction(showMiningDialogAction);
+        tools->addAction(showPaperWalletDialogAction);
         tools->addAction(showHashCalcDialogAction);
         tools->addAction(showBlockExplorerDialogAction);
         tools->addAction(signVerifyMessageAction);
@@ -711,6 +721,7 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addAction(openRPCConsoleAction);
     trayIconMenu->addAction(showSidechainTableDialogAction);
     trayIconMenu->addAction(showMiningDialogAction);
+    trayIconMenu->addAction(showPaperWalletDialogAction);
     trayIconMenu->addAction(showHashCalcDialogAction);
     trayIconMenu->addAction(showBlockExplorerDialogAction);
     trayIconMenu->addAction(signVerifyMessageAction);
@@ -778,6 +789,11 @@ void BitcoinGUI::showSidechainTableDialog()
 void BitcoinGUI::showMiningDialog()
 {
     miningDialog->show();
+}
+
+void BitcoinGUI::showPaperWalletDialog()
+{
+    paperWalletDialog->show();
 }
 
 void BitcoinGUI::showHashCalcDialog()

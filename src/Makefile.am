@@ -80,6 +80,7 @@ DRIVECHAIN_CORE_H = \
   apiclient.h \
   base58.h \
   bech32.h \
+  bip39words.h \
   bloom.h \
   blockencodings.h \
   chain.h \

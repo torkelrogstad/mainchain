@@ -421,7 +421,7 @@ AC_DEFUN([_DRIVECHAIN_QT_FIND_LIBS_WITH_PKGCONFIG],[
       QT_LIB_PREFIX=Qt
       drivechain_qt_got_major_vers=4
     fi
-    qt5_modules="Qt5Core Qt5Gui Qt5Network Qt5Widgets"
+    qt5_modules="Qt5Core Qt5Gui Qt5Network Qt5Widgets Qt5PrintSupport"
     qt4_modules="QtCore QtGui QtNetwork"
     DRIVECHAIN_QT_CHECK([
       if test "x$drivechain_qt_want_version" = xqt5 || ( test "x$drivechain_qt_want_version" = xauto && test "x$auto_priority_version" = xqt5 ); then
@@ -467,7 +467,7 @@ AC_DEFUN([_DRIVECHAIN_QT_FIND_LIBS_WITHOUT_PKGCONFIG],[
   TEMP_LIBS="$LIBS"
   DRIVECHAIN_QT_CHECK([
     if test "x$qt_include_path" != x; then
-      QT_INCLUDES="-I$qt_include_path -I$qt_include_path/QtCore -I$qt_include_path/QtGui -I$qt_include_path/QtWidgets -I$qt_include_path/QtNetwork -I$qt_include_path/QtTest -I$qt_include_path/QtDBus"
+      QT_INCLUDES="-I$qt_include_path -I$qt_include_path/QtCore -I$qt_include_path/QtGui -I$qt_include_path/QtWidgets -I$qt_include_path/QtNetwork -I$qt_include_path/QtTest -I$qt_include_path/QtDBus -I$qt_include_path/QtPrintSupport"
       CPPFLAGS="$QT_INCLUDES $CPPFLAGS"
     fi
   ])
@@ -475,6 +475,7 @@ AC_DEFUN([_DRIVECHAIN_QT_FIND_LIBS_WITHOUT_PKGCONFIG],[
   DRIVECHAIN_QT_CHECK([AC_CHECK_HEADER([QtPlugin],,DRIVECHAIN_QT_FAIL(QtCore headers missing))])
   DRIVECHAIN_QT_CHECK([AC_CHECK_HEADER([QApplication],, DRIVECHAIN_QT_FAIL(QtGui headers missing))])
   DRIVECHAIN_QT_CHECK([AC_CHECK_HEADER([QLocalSocket],, DRIVECHAIN_QT_FAIL(QtNetwork headers missing))])
+  DRIVECHAIN_QT_CHECK([AC_CHECK_HEADER([QPrinter],, DRIVECHAIN_QT_FAIL(QtPrintSupport headers missing))])
 
   DRIVECHAIN_QT_CHECK([
     if test "x$drivechain_qt_want_version" = xauto; then
@@ -508,6 +509,7 @@ AC_DEFUN([_DRIVECHAIN_QT_FIND_LIBS_WITHOUT_PKGCONFIG],[
   DRIVECHAIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}Core]   ,[main],,DRIVECHAIN_QT_FAIL(lib${QT_LIB_PREFIX}Core not found)))
   DRIVECHAIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}Gui]    ,[main],,DRIVECHAIN_QT_FAIL(lib${QT_LIB_PREFIX}Gui not found)))
   DRIVECHAIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}Network],[main],,DRIVECHAIN_QT_FAIL(lib${QT_LIB_PREFIX}Network not found)))
+  DRIVECHAIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}PrintSupport],[main],,DRIVECHAIN_QT_FAIL(lib${QT_LIB_PREFIX}PrintSupport not found)))
   if test "x$drivechain_qt_got_major_vers" = x5; then
     DRIVECHAIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}Widgets],[main],,DRIVECHAIN_QT_FAIL(lib${QT_LIB_PREFIX}Widgets not found)))
   fi

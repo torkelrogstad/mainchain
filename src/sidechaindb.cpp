@@ -583,7 +583,6 @@ std::vector<SidechainWithdrawalState> SidechainDB::GetState(uint8_t nSidechain) 
     if (!HasState() || !IsSidechainActive(nSidechain))
         return std::vector<SidechainWithdrawalState>();
 
-    // TODO See comment in UpdateSCDBIndex about accessing vector by nSidechain
     return vWithdrawalStatus[nSidechain];
 }
 
