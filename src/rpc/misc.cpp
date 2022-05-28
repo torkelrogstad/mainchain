@@ -719,10 +719,10 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
             "Optionally limited to count. Note that this only has access to "
             "deposits which are currently cached.\n"
             "\nArguments:\n"
-            "1. \"sidechainkey\"  (string, required) The sidechain key\n"
-            "2. \"txid\"          (string, optional) Only return deposits after this deposit TXID\n"
-            "3. \"n\"             (numeric, optional, required if txid is set) The output index of the previous argument txn\n"
-            "4. \"count\"         (numeric, optional) The number of most recent deposits to list\n"
+            "1. \"nsidechain\"  (numeric, required) The sidechain number\n"
+            "2. \"txid\"        (string, optional) Only return deposits after this deposit TXID\n"
+            "3. \"n\"           (numeric, optional, required if txid is set) The output index of the previous argument txn\n"
+            "4. \"count\"       (numeric, optional) The number of most recent deposits to list\n"
             "\nExamples:\n"
             + HelpExampleCli("listsidechaindeposits", "\"sidechainkey\", \"count\"")
             + HelpExampleRpc("listsidechaindeposits", "\"sidechainkey\", \"count\"")
@@ -738,14 +738,26 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     }
 #endif
 
-    // Check address bytes (sha256 hash)
-    std::string strSidechain = request.params[0].get_str();
-    uint256 hashSidechain = uint256S(strSidechain);
-    if (hashSidechain.IsNull()) {
-        std::string strError = "Invalid sidechain key!";
-        LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_MISC_ERROR, strError);
-    }
+    // Check sidechain number
+    int nSidechain = request.params[0].get_int();
+    if (nSidechain < 0 || nSidechain > 255)
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number!");
+
+    // Convert sidechain number to sidechain key
+
+    const uint8_t nSC = nSidechain;
+    const unsigned char vchSC[1] = { nSC };
+
+    std::vector<unsigned char> vch256;
+    vch256.resize(CSHA256::OUTPUT_SIZE);
+    CSHA256().Write(&vchSC[0], 1).Finalize(&vch256[0]);
+
+    CKey key;
+    key.Set(vch256.begin(), vch256.end(), false);
+    if (!key.IsValid())
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Private key outside allowed range");
+
+    CBitcoinSecret vchSecret(key);
 
     // If TXID was passed in, make sure we also received N
     if (request.params.size() > 1 && request.params.size() < 3) {
@@ -771,11 +783,6 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     if (request.params.size() > 2) {
         nKnown = request.params[2].get_int();
     }
-
-    // Figure out the base58 encoding of the private key
-    CKey key;
-    key.Set(hashSidechain.begin(), hashSidechain.end(), false);
-    CBitcoinSecret vchSecret(key);
 
     // Get number of recent deposits to return (default is all cached deposits)
     bool fLimit = false;
@@ -1358,7 +1365,7 @@ UniValue getsidechainactivationstatus(const JSONRPCRequest& request)
 
 UniValue createsidechainproposal(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() < 4 || request.params.size() > 7)
+    if (request.fHelp || request.params.size() < 3 || request.params.size() > 6)
         throw std::runtime_error(
             "createsidechainproposal\n"
             "Generates a sidechain proposal to be included in the next block " \
@@ -1371,10 +1378,9 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
             "1. \"nsidechain\"   (numeric, required) sidechain slot number\n"
             "2. \"title\"        (string, required) sidechain title\n"
             "3. \"description\"  (string, required) sidechain description\n"
-            "4. \"keyhash\"      (string, required) any SHA256 hash (used to generate private key)\n"
-            "5. \"version\"      (numeric, optional) sidechain / proposal version\n"
-            "6. \"hashid1\"      (string, optional) 256 bits used to identify sidechain\n"
-            "7. \"hashid2\"      (string, optional) 160 bits used to identify sidechain\n"
+            "4. \"version\"      (numeric, optional) sidechain / proposal version\n"
+            "5. \"hashid1\"      (string, optional) 256 bits used to identify sidechain\n"
+            "6. \"hashid2\"      (string, optional) 160 bits used to identify sidechain\n"
             "\nExamples:\n"
             + HelpExampleCli("createsidechainproposal", "")
             + HelpExampleRpc("createsidechainproposal", "")
@@ -1386,21 +1392,20 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
 
     std::string strTitle = request.params[1].get_str();
     std::string strDescription = request.params[2].get_str();
-    std::string strHash = request.params[3].get_str();
 
     int nVersion = -1;
-    if (request.params.size() >= 5)
-        nVersion = request.params[4].get_int();
+    if (request.params.size() >= 4)
+        nVersion = request.params[3].get_int();
 
     std::string strHashID1 = "";
     std::string strHashID2 = "";
-    if (request.params.size() >= 6) {
-        strHashID1 = request.params[5].get_str();
+    if (request.params.size() >= 5) {
+        strHashID1 = request.params[4].get_str();
         if (strHashID1.size() != 64)
             throw JSONRPCError(RPC_MISC_ERROR, "HashID1 size invalid!");
     }
-    if (request.params.size() == 7) {
-        strHashID2 = request.params[6].get_str();
+    if (request.params.size() == 6) {
+        strHashID2 = request.params[5].get_str();
         if (strHashID2.size() != 40)
             throw JSONRPCError(RPC_MISC_ERROR, "HashID2 size invalid!");
     }
@@ -1413,12 +1418,15 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     if (strDescription.empty())
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Sidechain must have a description!");
 
-    uint256 hash = uint256S(strHash);
-    if (hash.IsNull())
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Invalid sidechain key hash!");
+    const uint8_t nSC = nSidechain;
+    const unsigned char vchSC[1] = { nSC };
+
+    std::vector<unsigned char> vch256;
+    vch256.resize(CSHA256::OUTPUT_SIZE);
+    CSHA256().Write(&vchSC[0], 1).Finalize(&vch256[0]);
 
     CKey key;
-    key.Set(hash.begin(), hash.end(), false);
+    key.Set(vch256.begin(), vch256.end(), false);
     if (!key.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Private key outside allowed range");
 
@@ -1456,7 +1464,7 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     scdb.CacheSidechainHashToAck(proposal.GetHash());
 
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("nSidechain", proposal.nVersion));
+    obj.push_back(Pair("nSidechain", proposal.nSidechain));
     obj.push_back(Pair("title", proposal.title));
     obj.push_back(Pair("description", proposal.description));
     obj.push_back(Pair("privatekey", proposal.strPrivKey));
@@ -2126,7 +2134,7 @@ static const CRPCCommand commands[] =
     /* Drivechain rpc commands (mainly used by sidechains) */
     { "Drivechain",  "createcriticaldatatx",          &createcriticaldatatx,            {"amount", "height", "criticalhash"}},
     { "Drivechain",  "listsidechainctip",             &listsidechainctip,               {"nsidechain"}},
-    { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"addressbytes"}},
+    { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain"}},
     { "Drivechain",  "countsidechaindeposits",        &countsidechaindeposits,          {"nsidechain"}},
     { "Drivechain",  "receivewithdrawalbundle",       &receivewithdrawalbundle,         {"nsidechain","rawtx"}},
     { "Drivechain",  "verifybmm",                     &verifybmm,                       {"blockhash", "bmmhash", "nsidechain"}},

@@ -24,8 +24,6 @@ public:
 public Q_SLOTS:
     void on_pushButtonCreate_clicked();
 
-    void on_toolButtonKeyHash_clicked();
-
     void on_toolButtonIDHash1_clicked();
 
     void on_toolButtonIDHash2_clicked();
