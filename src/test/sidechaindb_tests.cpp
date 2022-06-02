@@ -1071,7 +1071,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom)
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
     // Activate second sidechain
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0, true));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 
     // Add initial withdrawals to scdbTest
@@ -1202,7 +1202,7 @@ BOOST_AUTO_TEST_CASE(update_helper_multi_custom_multi_withdraw)
     proposal2.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
 
     // Activate third sidechain
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0, true));
+    BOOST_CHECK(ActivateSidechain(scdbTest, proposal2, 0));
     BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 3);
 
     // Add initial withdrawals to scdbTest
@@ -1402,7 +1402,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
         proposal.nSidechain = i;
         proposal.title = "sidechain" + std::to_string(i);
 
-        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0, true));
+        BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
 
         nSidechains++;
 
@@ -1667,7 +1667,7 @@ BOOST_AUTO_TEST_CASE(txn_to_deposit)
     // txn matches deposit example.
 
     // Serialized transaction
-    std::string strTx1 = "0200000001021cfe01d1bbc1fdaa99126c0baba3573689fbd5f932a014b08612800b1329c40000000049483045022100a58e545a71f2c9cb03e06c0d8aff1a62f6bc204480db8650eeb0a3908d332aaf022038f9ae490fd3ed1825c1397c9ae41cd3aed7711b4e2d99a3a10e380506539da101ffffffff03807a7723010000001976a91470a3e11a039059d01bbf463af74c79c22a6270fd88ac0000000000000000246a227367596b444665487a745544583171384a4e726d614631435165723179527142507700e1f505000000001976a91458c63096724814c3dcdf088b9bb0dc48e6e1a89c88ac00000000";
+    std::string strTx1 = "02000000011aeb87c9c992ddc8a39e7659eae88b4160980978fc03dbfa35328c07278d4de600000000484730440220417b0d700a06d205fafa9762876889cf68bcf5e4c01afd289cd9d343c022440c0220725a1a3766dc4021641ae7652788f48bded8554fc216b40ae5c68423ea82416c01ffffffff0380f69f0b010000001976a914a27085ec6c1dba30b631c6e197373b626773837388ac0000000000000000066a04616263640065cd1d000000001976a914cea73972efbfee83fbaba9021c6a0d88d3adf34a88ac00000000";
 
     // Deserialize
     CMutableTransaction mtx;

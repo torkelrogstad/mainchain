@@ -4,9 +4,12 @@
 
 #include <sidechain.h>
 
+#include <base58.h>
 #include <clientversion.h>
 #include <core_io.h>
+#include <crypto/sha256.h>
 #include <hash.h>
+#include <key.h>
 #include <script/script.h>
 #include <streams.h>
 #include <utilstrencodings.h>
@@ -113,6 +116,8 @@ bool Sidechain::DeserializeFromProposalScript(const CScript& script)
     if (vch.empty())
         return false;
 
+    // Deserialize proposal
+
     const char *vch0 = (const char *) &vch.begin()[0];
     CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
@@ -124,11 +129,36 @@ bool Sidechain::DeserializeFromProposalScript(const CScript& script)
     nVersion = sidechain.nVersion;
     title = sidechain.title;
     description = sidechain.description;
-    strKeyID = sidechain.strKeyID;
-    scriptPubKey = sidechain.scriptPubKey;
-    strPrivKey = sidechain.strPrivKey;
     hashID1 = sidechain.hashID1;
     hashID2 = sidechain.hashID2;
+
+    // Now re-create key data from sidechain number
+
+    const uint8_t nSC = nSidechain;
+    const unsigned char vchSC[1] = { nSC };
+
+    std::vector<unsigned char> vch256;
+    vch256.resize(CSHA256::OUTPUT_SIZE);
+    CSHA256().Write(&vchSC[0], 1).Finalize(&vch256[0]);
+
+    CKey key;
+    key.Set(vch256.begin(), vch256.end(), false);
+    if (!key.IsValid())
+        return false;
+
+    CBitcoinSecret vchSecret(key);
+    if (!vchSecret.IsValid())
+        return false;
+
+    CPubKey pubkey = key.GetPubKey();
+    if (!key.VerifyPubKey(pubkey))
+        return false;
+
+    CKeyID vchAddress = pubkey.GetID();
+
+    strKeyID = HexStr(vchAddress);
+    scriptPubKey = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
+    strPrivKey = vchSecret.ToString();
 
     return true;
 }

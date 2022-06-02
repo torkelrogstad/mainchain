@@ -187,28 +187,10 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn) {
                            sigOpCost, lp);
 }
 
-bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, bool fGenerateKey)
+bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight)
 {
-    // Generate new KeyID, deposit script, private key if asked
-    if (fGenerateKey) {
-        uint256 hash = GetRandHash();
-
-        CKey key;
-        key.Set(hash.begin(), hash.end(), false);
-
-        CBitcoinSecret vchSecret(key);
-
-        CPubKey pubkey = key.GetPubKey();
-        CKeyID vchAddress = pubkey.GetID();
-
-        CScript script = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
-
-        proposal.strKeyID = HexStr(vchAddress);
-        proposal.scriptPubKey = script;
-        proposal.strPrivKey = vchSecret.ToString();
-    }
-
     /* Activate a sidechain for testing purposes */
+
     unsigned int nActive = scdbTest.GetActiveSidechainCount();
 
     // Create transaction output with sidechain proposal
@@ -219,8 +201,7 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
     if (!out.scriptPubKey.IsSidechainProposalCommit())
         return false;
 
-    uint256 hashBlock1 = GetRandHash();
-    scdbTest.Update(nHeight, hashBlock1, scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out});
+    scdbTest.Update(nHeight, GetRandHash(), scdbTest.GetHashBlockLastSeen(), std::vector<CTxOut>{out});
 
     std::vector<SidechainActivationStatus> vActivation;
     vActivation = scdbTest.GetSidechainActivationStatus();
@@ -228,7 +209,7 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
     if (vActivation.size() != 1)
         return false;
 
-    if (vActivation.front().proposal.GetHash() != proposal.GetHash())
+    if (vActivation.front().proposal.GetProposalScript() != proposal.GetProposalScript())
         return false;
 
     // Use the function from validation to generate the commit, and then
@@ -241,6 +222,34 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, b
 
     CBlock block;
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+
+    const uint8_t nSC = proposal.nSidechain;
+    const unsigned char vchSC[1] = { nSC };
+
+    std::vector<unsigned char> vch256;
+    vch256.resize(CSHA256::OUTPUT_SIZE);
+    CSHA256().Write(&vchSC[0], 1).Finalize(&vch256[0]);
+
+    CKey key;
+    key.Set(vch256.begin(), vch256.end(), false);
+
+    CBitcoinSecret vchSecret(key);
+
+    if (!key.IsValid())
+        return false;
+
+    CPubKey pubkey = key.GetPubKey();
+    if (!key.VerifyPubKey(pubkey))
+        return false;
+
+    CKeyID vchAddress = pubkey.GetID();
+
+    // Generate deposit script
+    CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    proposal.strPrivKey = vchSecret.ToString();
+    proposal.strKeyID = HexStr(vchAddress);
+    proposal.scriptPubKey = sidechainScript;
 
     GenerateSidechainActivationCommitment(block, proposal.GetHash());
     if (block.vtx.front()->vout.size() != 2)

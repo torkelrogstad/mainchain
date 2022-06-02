@@ -230,9 +230,6 @@ void SidechainDB::CacheSidechainProposals(const std::vector<Sidechain>& vSidecha
 {
     // TODO change container improve performance
     for (const Sidechain& s : vSidechainProposalIn) {
-        // Make sure the proposal isn't known yet
-        if (!IsSidechainUnique(s))
-            continue;
         // Make sure this proposal isn't already cached in our proposals
         bool fFound = false;
         for (const Sidechain& p : vSidechainProposal) {
@@ -754,35 +751,6 @@ bool SidechainDB::IsSidechainActive(uint8_t nSidechain) const
         return false;
 
     return vSidechain[nSidechain].fActive;
-}
-
-bool SidechainDB::IsSidechainUnique(const Sidechain& sidechain) const
-{
-    // Check list of active sidechains
-    std::vector<Sidechain> vActive = GetActiveSidechains();
-    for (const Sidechain& s : vActive) {
-        if (sidechain.title == s.title ||
-                sidechain.strKeyID == s.strKeyID ||
-                sidechain.scriptPubKey == s.scriptPubKey ||
-                sidechain.strPrivKey == s.strPrivKey)
-        {
-            return false;
-        }
-    }
-
-    // Check list of sidechain proposals
-    for (const SidechainActivationStatus& s : vActivationStatus) {
-        Sidechain proposal = s.proposal;
-        if (sidechain.title == proposal.title ||
-                sidechain.strKeyID == proposal.strKeyID ||
-                sidechain.scriptPubKey == proposal.scriptPubKey ||
-                sidechain.strPrivKey == proposal.strPrivKey)
-        {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 void SidechainDB::RemoveExpiredWithdrawals()
@@ -1335,6 +1303,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
+
     if (!hashBlockLastSeen.IsNull() && hashPrevBlock != hashBlockLastSeen) {
         if (fDebug)
             LogPrintf("SCDB %s: Failed: previous block hash: %s does not match hashBlockLastSeen: %s at height: %u\n",
@@ -1393,6 +1362,8 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
      * Update hashBlockLastSeen.
      */
 
+
+
     // Scan for sidechain proposal commitments
     std::vector<Sidechain> vProposal;
     for (const CTxOut& out : vout) {
@@ -1407,6 +1378,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
         vProposal.push_back(proposal);
     }
+
     // Maximum of 1 sidechain proposal per block
     if (vProposal.size() > 1) {
         if (fDebug)
@@ -1415,14 +1387,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                     nHeight);
         return false;
     }
-    // Check if proposal is unique
-    if (vProposal.size() == 1 && !IsSidechainUnique(vProposal.front())) {
-        if (fDebug)
-            LogPrintf("SCDB %s: Invalid: block with non-unique sidechain proposal at height: %u\n",
-                    __func__,
-                    nHeight);
-        return false;
-    }
+
     // Update SCDB
     if (!fJustCheck && vProposal.size() == 1) {
         SidechainActivationStatus status;
@@ -1466,6 +1431,9 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                         hashSidechain.ToString());
             return false;
         }
+
+
+
 
         // Check that there is only 1 sidechain activation commit per
         // sidechain slot number per block

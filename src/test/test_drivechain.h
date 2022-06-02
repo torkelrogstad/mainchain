@@ -121,7 +121,7 @@ struct TestMemPoolEntryHelper
     TestMemPoolEntryHelper &SigOpsCost(unsigned int _sigopsCost) { sigOpCost = _sigopsCost; return *this; }
 };
 
-bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight, bool fGenerateKey = false);
+bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight);
 
 CBlock getBlock13b8a();
 

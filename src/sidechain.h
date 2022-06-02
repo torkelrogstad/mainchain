@@ -108,9 +108,6 @@ struct Sidechain {
     inline void SerializeProposal(Stream& s) {
         s << nSidechain;
         s << nVersion;
-        s << strKeyID;
-        s << strPrivKey;
-        s << scriptPubKey;
         s << title;
         s << description;
         s << hashID1;
@@ -122,9 +119,6 @@ struct Sidechain {
     inline void DeserializeProposal(Stream& s) {
         s >> nSidechain;
         s >> nVersion;
-        s >> strKeyID;
-        s >> strPrivKey;
-        s >> scriptPubKey;
         s >> title;
         s >> description;
         s >> hashID1;
