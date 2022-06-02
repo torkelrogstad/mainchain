@@ -11,6 +11,7 @@
 
 #include <base58.h>
 #include <core_io.h>
+#include <crypto/sha256.h>
 #include <key.h>
 #include <sidechain.h>
 #include <sidechaindb.h>
@@ -38,11 +39,12 @@ SidechainProposalDialog::~SidechainProposalDialog()
 
 void SidechainProposalDialog::on_toolButtonIDHash1_clicked()
 {
-    // TODO display message based on current selected version
-    // TODO move text into static const
     QMessageBox::information(this, tr("Drivechain - information"),
-        tr("Release tarball hash:\n\n"
-           "hash of the original gitian software build of this sidechain.\n\n"
+        tr("These fields are optional but highly recommended.\n\n"
+           "Description:\n"
+           "Brief description of the sidechain's purpose and where to find more information.\n\n"
+           "Release tarball hash:\n"
+           "hash of the original gitian software build of this sidechain.\n"
            "Use the sha256sum utility to generate this hash, or copy the hash "
            "when it is printed to the console after gitian builds complete.\n\n"
            "Example:\n"
@@ -116,15 +118,6 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
         return;
     }
 
-    // TODO maybe we should allow sidechains with no description? Anyways this
-    // isn't a consensus rule right now
-    if (strDescription.empty()) {
-        QMessageBox::critical(this, tr("Drivechain - error"),
-            tr("Sidechain must have a description!"),
-            QMessageBox::Ok);
-        return;
-    }
-
     if (nVersion > SIDECHAIN_VERSION_MAX) {
         QMessageBox::critical(this, tr("Drivechain - error"),
             tr("This sidechain has an invalid version number (too high)!"),
@@ -152,7 +145,12 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     }
 
     CPubKey pubkey = key.GetPubKey();
-    assert(key.VerifyPubKey(pubkey));
+    if (!key.VerifyPubKey(pubkey)) {
+        QMessageBox::critical(this, tr("Drivechain - error"),
+            tr("Failed to verify pubkey!"),
+            QMessageBox::Ok);
+        return;
+    }
     CKeyID vchAddress = pubkey.GetID();
 
     if (!strHashID1.empty() && strHashID1.size() != 64) {
@@ -168,7 +166,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
         return;
     }
 
-    // Generate script hex
+    // Generate deposit script
     CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
 
     Sidechain proposal;

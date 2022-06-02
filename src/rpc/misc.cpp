@@ -9,6 +9,7 @@
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <crypto/ripemd160.h>
+#include <crypto/sha256.h>
 #include <httpserver.h>
 #include <init.h>
 #include <merkleblock.h>
@@ -1365,7 +1366,7 @@ UniValue getsidechainactivationstatus(const JSONRPCRequest& request)
 
 UniValue createsidechainproposal(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() < 3 || request.params.size() > 6)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 6)
         throw std::runtime_error(
             "createsidechainproposal\n"
             "Generates a sidechain proposal to be included in the next block " \
@@ -1377,7 +1378,7 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
             "\nArguments:\n"
             "1. \"nsidechain\"   (numeric, required) sidechain slot number\n"
             "2. \"title\"        (string, required) sidechain title\n"
-            "3. \"description\"  (string, required) sidechain description\n"
+            "3. \"description\"  (string, optional) sidechain description\n"
             "4. \"version\"      (numeric, optional) sidechain / proposal version\n"
             "5. \"hashid1\"      (string, optional) 256 bits used to identify sidechain\n"
             "6. \"hashid2\"      (string, optional) 160 bits used to identify sidechain\n"
@@ -1391,7 +1392,10 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number!");
 
     std::string strTitle = request.params[1].get_str();
-    std::string strDescription = request.params[2].get_str();
+
+    std::string strDescription = "";
+    if (request.params.size() >= 3)
+        strDescription = request.params[2].get_str();
 
     int nVersion = -1;
     if (request.params.size() >= 4)
@@ -1413,11 +1417,6 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     if (strTitle.empty())
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Sidechain must have a title!");
 
-    // TODO maybe we should allow sidechains with no description? Anyways this
-    // isn't a consensus rule right now
-    if (strDescription.empty())
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Sidechain must have a description!");
-
     const uint8_t nSC = nSidechain;
     const unsigned char vchSC[1] = { nSC };
 
@@ -1435,7 +1434,9 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key encoding");
 
     CPubKey pubkey = key.GetPubKey();
-    assert(key.VerifyPubKey(pubkey));
+    if (!key.VerifyPubKey(pubkey))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Failed to verify pubkey");
+
     CKeyID vchAddress = pubkey.GetID();
 
     // Generate deposit script
