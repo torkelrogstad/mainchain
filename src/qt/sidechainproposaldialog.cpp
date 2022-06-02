@@ -26,9 +26,7 @@ SidechainProposalDialog::SidechainProposalDialog(const PlatformStyle *_platformS
 {
     ui->setupUi(this);
 
-    ui->toolButtonSoftwareHashes->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
-    ui->toolButtonIDHash1->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
-    ui->toolButtonIDHash2->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
+    ui->toolButtonHelp->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_0"));
     ui->pushButtonCreate->setIcon(platformStyle->SingleColorIcon(":/icons/transaction_confirmed"));
 }
 
@@ -37,7 +35,7 @@ SidechainProposalDialog::~SidechainProposalDialog()
     delete ui;
 }
 
-void SidechainProposalDialog::on_toolButtonIDHash1_clicked()
+void SidechainProposalDialog::on_toolButtonHelp_clicked()
 {
     QMessageBox::information(this, tr("Drivechain - information"),
         tr("These fields are optional but highly recommended.\n\n"
@@ -51,31 +49,13 @@ void SidechainProposalDialog::on_toolButtonIDHash1_clicked()
            "sha256sum Drivechain-12-0.21.00-x86_64-linux-gnu.tar.gz\n\n"
            "Result:\n"
            "fd9637e427f1e967cc658bfe1a836d537346ce3a6dd0746878129bb5bc646680  Drivechain-12-0.21.00-x86_64-linux-gnu.tar.gz\n\n"
-           "Paste the resulting hash into this field."),
-        QMessageBox::Ok);
-}
-
-void SidechainProposalDialog::on_toolButtonIDHash2_clicked()
-{
-    // TODO display message based on current selected version
-    // TODO move text into static const
-    QMessageBox::information(this, tr("Drivechain - information"),
-        tr("Build commit hash (160 bits):\n\n"
+           "Build commit hash (160 bits):\n"
            "If the software was developed using git, the build commit hash "
-           "should match the commit hash of the first sidechain release.\n\n"
+           "should match the commit hash of the first sidechain release.\n"
            "To verify it later, you can look up this commit in the repository "
-           "history."),
-        QMessageBox::Ok);
-}
-
-void SidechainProposalDialog::on_toolButtonSoftwareHashes_clicked()
-{
-    // TODO display message based on current selected version
-    // TODO move text into static const
-    QMessageBox::information(this, tr("Drivechain - information"),
-        tr("These help users find the sidechain node software. "
-           "Only this software can filter out invalid withdrawals. \n\n"
-           "These fields are optional but highly recommended."),
+           "history.\n\n"
+           "These help users find the sidechain node software. "
+           "Only this software can filter out invalid withdrawals."),
         QMessageBox::Ok);
 }
 
@@ -86,7 +66,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     std::string strHashID1 = ui->lineEditIDHash1->text().toStdString();
     std::string strHashID2 = ui->lineEditIDHash2->text().toStdString();
     int nVersion = ui->spinBoxVersion->value();
-    int nSidechain = ui->spinBoxNSidechain->value();
+    int nSidechain = ui->lineEditNumber->text().toInt();
 
     if (nSidechain < 0 || nSidechain > 255) {
         QMessageBox::critical(this, tr("Drivechain - error"),
