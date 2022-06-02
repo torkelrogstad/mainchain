@@ -5,6 +5,7 @@
 #include <qt/paperwalletdialog.h>
 #include <qt/forms/ui_paperwalletdialog.h>
 
+#include <qt/guiutil.h>
 #include <qt/hashcalcdialog.h> // For HexToBinStr TODO remove
 #include <qt/platformstyle.h>
 
@@ -39,7 +40,7 @@ PaperWalletDialog::PaperWalletDialog(const PlatformStyle *_platformStyle, QWidge
     // Setup word list table
     ui->tableWidgetWords->setColumnCount(3);
     ui->tableWidgetWords->setHorizontalHeaderLabels(
-                QStringList() << "Binary" << "Index" << "Word");
+                QStringList() << "Bitstream" << "Index" << "Word");
     ui->tableWidgetWords->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 
     ui->tableWidgetWords->setColumnWidth(COLUMN_BIN, COLUMN_BIN_WIDTH);
@@ -52,6 +53,15 @@ PaperWalletDialog::PaperWalletDialog(const PlatformStyle *_platformStyle, QWidge
 PaperWalletDialog::~PaperWalletDialog()
 {
     delete ui;
+}
+
+void PaperWalletDialog::on_pushButtonCopyWords_clicked()
+{
+    QString words = "";
+    for (const WordTableObject& o : vWords)
+        words += o.word + " ";
+
+    GUIUtil::setClipboard(words);
 }
 
 void PaperWalletDialog::on_pushButtonPrint_clicked()
@@ -88,8 +98,6 @@ void PaperWalletDialog::on_pushButtonPrint_clicked()
 
 //    painter.drawText(10, 10, "Hello second page!");
 //    painter.end();
-
-    std::cerr << "Printing done!\n";
 }
 
 void PaperWalletDialog::on_pushButtonHelp_clicked()
@@ -197,9 +205,17 @@ void PaperWalletDialog::UpdateWords()
         ui->tableWidgetWords->setItem(nRow, COLUMN_INDEX, itemIndex);
 
         // Word
+        QString word = "";
+
+        if (nRow < 9)
+            word += " ";
+
+        word += QString::number(nRow + 1) + ". ";
+        word += o.word;
+
         QTableWidgetItem *itemWord = new QTableWidgetItem();
         itemWord->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        itemWord->setText(o.word);
+        itemWord->setText(word);
         itemWord->setFlags(itemWord->flags() & ~Qt::ItemIsEditable);
         ui->tableWidgetWords->setItem(nRow, COLUMN_WORD, itemWord);
 
@@ -215,11 +231,7 @@ std::vector<WordTableObject> PaperWalletDialog::EntropyToWordList(const std::vec
     if (!vchEntropy.size() || (vchEntropy.size() * 8) % 32)
         return std::vector<WordTableObject>();
 
-    // Number of bits must be <= 256
-    if ((vchEntropy.size() * 8) % 32)
-        return std::vector<WordTableObject>();
-
-    // SHA256 hash of entropy is 32 bytes
+    // SHA256 hash of entropy must be 32 bytes
     if (vchEntropyHash.size() != 32)
         return std::vector<WordTableObject>();
 

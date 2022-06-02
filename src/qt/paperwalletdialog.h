@@ -52,6 +52,7 @@ public:
     ~PaperWalletDialog();
 
 private Q_SLOTS:
+    void on_pushButtonCopyWords_clicked();
     void on_pushButtonPrint_clicked();
     void on_pushButtonHelp_clicked();
     void on_lineEditEntropy_textChanged(QString text);
