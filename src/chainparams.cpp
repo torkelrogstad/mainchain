@@ -89,13 +89,13 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1479168000;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1510704000;
 
-        consensus.DrivechainHeight = 729792;
+        consensus.DrivechainHeight = 739872;
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000028822fef1c230963535a90d");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x000000000000000000007e7cee73fd5375267134ac63bed2d61f7af8d89e7d4e"); // 711000
+        consensus.defaultAssumeValid = uint256S("0x00000000000000000002a77fba33a57dff4ac1b61c204769f809f9109a5584e1"); // 739300
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -147,6 +147,7 @@ public:
                 {295000, uint256S("0x00000000000000004d9b4ef50f0f9d686fd69db2e03af35a100370c64632a983")},
                 {700000, uint256S("0x0000000000000000000590fc0f3eba193a278534220b2b37e9849e1a770ca959")},
                 {711000, uint256S("0x000000000000000000007e7cee73fd5375267134ac63bed2d61f7af8d89e7d4e")},
+                {739300, uint256S("0x00000000000000000002a77fba33a57dff4ac1b61c204769f809f9109a5584e1")},
             }
         };
 
