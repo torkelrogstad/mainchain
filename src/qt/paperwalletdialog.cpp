@@ -14,8 +14,8 @@
 #include <QPainter>
 #include <QPdfWriter>
 //#include <QPdfDocument> // TODO update Qt version?
-#include <QPrinter>
-#include <QPrintDialog>
+//#include <QPrinter>
+//#include <QPrintDialog>
 #include <QScrollBar>
 #include <QString>
 #include <QTextStream>
@@ -68,15 +68,15 @@ void PaperWalletDialog::on_pushButtonPrint_clicked()
 {
     // TODO
 
-    QPrinter printer;
-    printer.setOutputFormat(QPrinter::NativeFormat);
+    // QPrinter printer;
+    // printer.setOutputFormat(QPrinter::NativeFormat);
 
     // Let user select printer or file destination
-    QPrintDialog dialog(&printer, this);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
+    // QPrintDialog dialog(&printer, this);
+    // if (dialog.exec() != QDialog::Accepted)
+    //    return;
 
-    QFile file(":/doc/paperwallet");
+    // QFile file(":/doc/paperwallet");
 
 //    QPdfDocument pdf;
 
