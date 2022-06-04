@@ -54,7 +54,7 @@ void SidechainProposalDialog::on_toolButtonHelp_clicked()
            "should match the commit hash of the first sidechain release.\n"
            "To verify it later, you can look up this commit in the repository "
            "history.\n\n"
-           "These help users find the sidechain node software. "
+           "These help users find the sidechain full node software. "
            "Only this software can filter out invalid withdrawals."),
         QMessageBox::Ok);
 }

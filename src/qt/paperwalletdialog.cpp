@@ -200,7 +200,7 @@ void PaperWalletDialog::UpdateWords()
         // Index
         QTableWidgetItem *itemIndex = new QTableWidgetItem();
         itemIndex->setTextAlignment(Qt::AlignRight| Qt::AlignVCenter);
-        itemIndex->setText(o.index);
+        itemIndex->setText(o.index + " ");
         itemIndex->setFlags(itemIndex->flags() & ~Qt::ItemIsEditable);
         ui->tableWidgetWords->setItem(nRow, COLUMN_INDEX, itemIndex);
 
