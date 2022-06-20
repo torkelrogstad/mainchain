@@ -51,6 +51,64 @@ std::string HexToBinStr(const std::string strHex)
     return strBin;
 }
 
+std::string BinToHexStr(const std::string strBin)
+{
+    std::string strHex= "";
+    for (size_t i = 0; (i + 4) < strBin.size(); i += 4) {
+        std::string strBits = strBin.substr(i, 4);
+
+        if (strBits == "0000")
+            strHex += '0';
+        else
+        if (strBits == "0001")
+            strHex += '1';
+        else
+        if (strBits == "0010")
+            strHex += '2';
+        else
+        if (strBits == "0011")
+            strHex += '3';
+        else
+        if (strBits == "0100")
+            strHex += '4';
+        else
+        if (strBits == "0101")
+            strHex += '5';
+        else
+        if (strBits == "0110")
+            strHex += '6';
+        else
+        if (strBits == "0111")
+            strHex += '7';
+        else
+        if (strBits == "1000")
+            strHex += '8';
+        else
+        if (strBits == "1001")
+            strHex += '9';
+        else
+        if (strBits == "1010")
+            strHex += 'a';
+        else
+        if (strBits == "1011")
+            strHex += 'b';
+        else
+        if (strBits == "1100")
+            strHex += 'c';
+        else
+        if (strBits == "1101")
+            strHex += 'd';
+        else
+        if (strBits == "1110")
+            strHex += 'e';
+        else
+        if (strBits == "1111")
+            strHex += 'f';
+    }
+
+    return strHex;
+}
+
 HashCalcDialog::HashCalcDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::HashCalcDialog),

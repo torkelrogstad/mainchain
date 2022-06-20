@@ -58,5 +58,7 @@ private:
 };
 
 std::string HexToBinStr(const std::string strHex);
+std::string BinToHexStr(const std::string strBin);
+
 
 #endif // HASHCALCDIALOG_H
