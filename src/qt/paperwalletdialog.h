@@ -18,6 +18,7 @@ class PaperWalletDialog;
 QT_BEGIN_NAMESPACE
 class QString;
 class QListWidgetItem;
+class QTableWidgetItem;
 QT_END_NAMESPACE
 
 // Word list table columns
@@ -33,6 +34,7 @@ enum
 {
     COLUMN_BIN_WIDTH = 160,
     COLUMN_INDEX_WIDTH = 80,
+    COLUMN_INDEX_RESTORE_WIDTH = 180,
     COLUMN_WORD_WIDTH = 150,
 };
 
@@ -56,6 +58,9 @@ private Q_SLOTS:
     void on_pushButtonPrint_clicked();
     void on_pushButtonHelp_clicked();
     void on_lineEditEntropy_textChanged(QString text);
+    void on_radioButtonCreate_toggled(bool fChecked);
+    void on_radioButtonRestore_toggled(bool fChecked);
+    void on_tableWidgetWords_itemChanged(QTableWidgetItem* item);
 
 private:
     Ui::PaperWalletDialog *ui;
@@ -65,10 +70,9 @@ private:
 
     std::vector<WordTableObject> EntropyToWordList(const std::vector<unsigned char>& vchEntropy, const std::vector<unsigned char>& vchEntropyHash);
 
-    void UpdateWords();
+    void Clear();
 };
 
-bool EntropyToKeys(const std::vector<unsigned char>& vchEntropy, std::string& strXPub, std::string& strXPriv, std::vector<std::string>& vChildAddr);
-
+bool EntropyToKeys(const std::vector<unsigned char>& vchEntropy, std::string& strXPub, std::string& strXPriv, std::string& strV3, std::vector<std::string>& vChildAddr);
 
 #endif // PAPERWALLETDIALOG_H
