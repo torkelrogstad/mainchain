@@ -3827,7 +3827,7 @@ UniValue createbmmcriticaldatatx(const JSONRPCRequest& request)
             "\nArguments:\n"
             "1. \"amount\"         (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be spent.\n"
             "2. \"height\"         (numeric, required) The block height this transaction must be included in.\n"
-            "Note: If 0 is passed in for height, current block height will be used"
+            "Note: If 0 is passed in for height, current block height will be used\n"
             "3. \"criticalhash\"   (string, required) h* you want added to a coinbase\n"
             "4. \"nsidechain\"     (numeric, required) Sidechain requesting BMM\n"
             "5. \"prevbytes\"      (string, required) a portion of the previous block hash\n"
