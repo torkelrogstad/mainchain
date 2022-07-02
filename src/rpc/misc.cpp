@@ -1985,7 +1985,7 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
 
     UniValue ret(UniValue::VARR);
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("nsidechains", (uint64_t)data.vWithdrawalStatus.size()));
+    obj.push_back(Pair("M4 hash", data.hashMT.ToString()));
     ret.push_back(obj);
     for (auto& x : data.vWithdrawalStatus) {
         for (auto& y : x) {
@@ -1993,7 +1993,7 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
             obj.push_back(Pair("nsidechain", y.nSidechain));
             obj.push_back(Pair("nblocksleft", y.nBlocksLeft));
             obj.push_back(Pair("nworkscore", y.nWorkScore));
-            obj.push_back(Pair("hash", y.hash.ToString()));
+            obj.push_back(Pair("withdrawalbundle", y.hash.ToString()));
             ret.push_back(obj);
         }
     }

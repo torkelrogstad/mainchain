@@ -7,8 +7,9 @@
 #define BITCOIN_TXDB_H
 
 #include <coins.h>
-#include <dbwrapper.h>
 #include <chain.h>
+#include <dbwrapper.h>
+#include <sidechain.h>
 
 #include <map>
 #include <string>

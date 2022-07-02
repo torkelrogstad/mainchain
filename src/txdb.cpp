@@ -9,7 +9,6 @@
 #include <hash.h>
 #include <random.h>
 #include <pow.h>
-#include <sidechain.h>
 #include <uint256.h>
 #include <util.h>
 #include <utilstrencodings.h>

@@ -38,6 +38,7 @@ class HelpMessageDialog;
 class ModalOverlay;
 class HashCalcDialog;
 class BlockExplorer;
+class SCDBMerkleRootHistoryDialog;
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -127,6 +128,8 @@ private:
     QAction *showPaperWalletDialogAction;
     QAction *showHashCalcDialogAction;
     QAction *showBlockExplorerDialogAction;
+    QAction *showSCDBMerkleRootDialogAction;
+
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -148,6 +151,8 @@ private:
     HashCalcDialog *hashCalcDialog;
     /** Block explorer dialog */
     BlockExplorer *blockExplorerDialog;
+    /** SCDB M4 & vote history explorer dialog */
+    SCDBMerkleRootHistoryDialog *scdbMerkleRootDialog;
 #endif
 
     /** Keep track of previous number of blocks, to detect progress */
@@ -253,6 +258,9 @@ private Q_SLOTS:
 
     /** Show block explorer dialog */
     void showBlockExplorerDialog();
+
+    /** Show SCDB M4 dialog */
+    void showSCDBMerkleRootDialog();
 
 #endif // ENABLE_WALLET
     /** Show configuration dialog */

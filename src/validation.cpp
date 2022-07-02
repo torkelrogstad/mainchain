@@ -2359,6 +2359,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     // only a list of sidechain hashes per block. Then if we need to re-activate
     // an old sidechain we can look it up by hash.
     SidechainBlockData data;
+    data.hashMT = scdb.GetSCDBHash();
     data.vWithdrawalStatus = scdb.GetState();
     data.vActivationStatus = scdb.GetSidechainActivationStatus();
     data.vSidechain = scdb.GetSidechains();
