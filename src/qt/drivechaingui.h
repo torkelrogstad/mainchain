@@ -39,6 +39,7 @@ class ModalOverlay;
 class HashCalcDialog;
 class BlockExplorer;
 class SCDBMerkleRootHistoryDialog;
+class CreateWalletDialog;
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -126,10 +127,11 @@ private:
     QAction *showSidechainTableDialogAction;
     QAction *showMiningDialogAction;
     QAction *showPaperWalletDialogAction;
+    QAction *showCreateWalletDialogAction;
+    QAction *showRestoreWalletDialogAction;
     QAction *showHashCalcDialogAction;
     QAction *showBlockExplorerDialogAction;
     QAction *showSCDBMerkleRootDialogAction;
-
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -147,6 +149,8 @@ private:
     MiningDialog *miningDialog;
     /** Paper Wallet dialog */
     PaperWalletDialog *paperWalletDialog;
+    /** Create / restore Wallet dialog */
+    CreateWalletDialog *createWalletDialog;
     /** Hash calculator dialog */
     HashCalcDialog *hashCalcDialog;
     /** Block explorer dialog */
@@ -252,6 +256,12 @@ private Q_SLOTS:
 
     /** Show paper wallet dialog */
     void showPaperWalletDialog();
+
+    /** Show create wallet dialog */
+    void showCreateWalletDialog();
+
+    /** Show restore wallet dialog */
+    void showRestoreWalletDialog();
 
     /** Show hash calculator dialog */
     void showHashCalcDialog();

@@ -57,6 +57,7 @@
         <file alias="fontbigger">res/icons/fontbigger.png</file>
         <file alias="fontsmaller">res/icons/fontsmaller.png</file>
         <file alias="prompticon">res/icons/chevron.png</file>
+        <file alias="print">res/icons/print.png</file>
         <file alias="transaction_abandoned">res/icons/transaction_abandoned.png</file>
         <file alias="hd_enabled">res/icons/hd_enabled.png</file>
         <file alias="hd_disabled">res/icons/hd_disabled.png</file>
@@ -70,7 +71,8 @@
         <file alias="search">res/icons/search.png</file>
         <file alias="flip">res/icons/flip.png</file>
         <file alias="broadcastnews">res/icons/broadcastnews.png</file>
-        <file alias="wallet">res/icons/wallet.png</file>
+        <file alias="createwallet">res/icons/createwallet.png</file>
+        <file alias="restorewallet">res/icons/restorewallet.png</file>
         <file alias="paperwallet">res/doc/wallet.pdf</file>
     </qresource>
     <qresource prefix="/movies">

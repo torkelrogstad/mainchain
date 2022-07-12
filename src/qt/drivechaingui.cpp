@@ -6,6 +6,7 @@
 
 #include <qt/blockexplorer.h>
 #include <qt/clientmodel.h>
+#include <qt/createwalletdialog.h>
 #include <qt/drivechainunits.h>
 #include <qt/hashcalcdialog.h>
 #include <qt/guiconstants.h>
@@ -119,6 +120,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     showSidechainTableDialogAction(0),
     showMiningDialogAction(0),
     showPaperWalletDialogAction(0),
+    showCreateWalletDialogAction(0),
+    showRestoreWalletDialogAction(0),
     showHashCalcDialogAction(0),
     showBlockExplorerDialogAction(0),
     showSCDBMerkleRootDialogAction(0),
@@ -175,6 +178,9 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 
         paperWalletDialog = new PaperWalletDialog(platformStyle);
         paperWalletDialog->setParent(this, Qt::Window);
+
+        createWalletDialog = new CreateWalletDialog(platformStyle);
+        createWalletDialog->setParent(this, Qt::Window);
 
         hashCalcDialog = new HashCalcDialog(platformStyle);
         hashCalcDialog->setParent(this, Qt::Window);
@@ -374,21 +380,22 @@ void BitcoinGUI::createActions()
     aboutQtAction = new QAction(platformStyle->TextColorIcon(":/icons/about_qt"), tr("About &Qt"), this);
     aboutQtAction->setStatusTip(tr("Show information about Qt"));
     aboutQtAction->setMenuRole(QAction::AboutQtRole);
-    optionsAction = new QAction(platformStyle->TextColorIcon(":/icons/options"), tr("&Options..."), this);
+    optionsAction = new QAction(platformStyle->TextColorIcon(":/icons/options"), tr("&Options"), this);
     optionsAction->setStatusTip(tr("Modify configuration options for %1").arg(tr(PACKAGE_NAME)));
     optionsAction->setMenuRole(QAction::PreferencesRole);
     optionsAction->setEnabled(false);
     toggleHideAction = new QAction(platformStyle->TextColorIcon(":/icons/about"), tr("&Show / Hide"), this);
     toggleHideAction->setStatusTip(tr("Show or hide the main Window"));
 
-    encryptWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
+    encryptWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/lock_closed"), tr("&Encrypt Wallet"), this);
     encryptWalletAction->setStatusTip(tr("Encrypt the private keys that belong to your wallet"));
     encryptWalletAction->setCheckable(true);
-    backupWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/filesave"), tr("&Backup Wallet..."), this);
+    backupWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/filesave"), tr("&Backup Wallet"), this);
     backupWalletAction->setStatusTip(tr("Backup wallet to another location"));
-    changePassphraseAction = new QAction(platformStyle->TextColorIcon(":/icons/key"), tr("&Change Passphrase..."), this);
+    changePassphraseAction = new QAction(platformStyle->TextColorIcon(":/icons/key"), tr("&Change Passphrase"), this);
     changePassphraseAction->setStatusTip(tr("Change the passphrase used for wallet encryption"));
-    signVerifyMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/verify"), tr("Verify or Sign &message..."), this);
+    signVerifyMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/verify"), tr("Sign / Verify &Message"), this);
+
     signVerifyMessageAction->setStatusTip(tr("Sign or verify messages to prove ownership"));
 
     openRPCConsoleAction = new QAction(platformStyle->TextColorIcon(":/icons/debugwindow"), tr("&Debug window"), this);
@@ -396,12 +403,12 @@ void BitcoinGUI::createActions()
     // initially disable the debug window menu item
     openRPCConsoleAction->setEnabled(false);
 
-    usedSendingAddressesAction = new QAction(platformStyle->TextColorIcon(":/icons/address-book"), tr("&Sending addresses..."), this);
+    usedSendingAddressesAction = new QAction(platformStyle->TextColorIcon(":/icons/address-book"), tr("&Sending addresses"), this);
     usedSendingAddressesAction->setStatusTip(tr("Show the list of used sending addresses and labels"));
-    usedReceivingAddressesAction = new QAction(platformStyle->TextColorIcon(":/icons/address-book"), tr("&Receiving addresses..."), this);
+    usedReceivingAddressesAction = new QAction(platformStyle->TextColorIcon(":/icons/address-book"), tr("&Receiving addresses"), this);
     usedReceivingAddressesAction->setStatusTip(tr("Show the list of used receiving addresses and labels"));
 
-    openAction = new QAction(platformStyle->TextColorIcon(":/icons/open"), tr("Open &URI..."), this);
+    openAction = new QAction(platformStyle->TextColorIcon(":/icons/open"), tr("Open &URI"), this);
     openAction->setStatusTip(tr("Open a Drivechain: URI or payment request"));
 
     showHelpMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/info"), tr("&Command-line options"), this);
@@ -414,8 +421,14 @@ void BitcoinGUI::createActions()
     showMiningDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_mined"), tr("&Mining"), this);
     showMiningDialogAction->setStatusTip(tr("Show mining window"));
 
-    showPaperWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/wallet"), tr("&Paper Wallet"), this);
+    showPaperWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/print"), tr("&Paper Wallet"), this);
     showPaperWalletDialogAction->setStatusTip(tr("Show paper wallet window"));
+
+    showCreateWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/createwallet"), tr("&Create Wallet"), this);
+    showCreateWalletDialogAction->setStatusTip(tr("Show create wallet window"));
+
+    showRestoreWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/restorewallet"), tr("&Restore Wallet"), this);
+    showRestoreWalletDialogAction->setStatusTip(tr("Show restore wallet window"));
 
     showHashCalcDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/calculator"), tr("&Hash Calculator"), this);
     showHashCalcDialogAction->setStatusTip(tr("Show hash calculator window"));
@@ -423,7 +436,7 @@ void BitcoinGUI::createActions()
     showBlockExplorerDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/search"), tr("&Block Explorer"), this);
     showBlockExplorerDialogAction->setStatusTip(tr("Show block explorer window"));
 
-    showSCDBMerkleRootDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/search"), tr("&SC merkle root / M4 History"), this);
+    showSCDBMerkleRootDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/history"), tr("&SC Merkle Root (M4)"), this);
     showSCDBMerkleRootDialogAction->setStatusTip(tr("Show sidechain merkle root (M4) explorer"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
@@ -449,6 +462,8 @@ void BitcoinGUI::createActions()
         connect(showSidechainTableDialogAction, SIGNAL(triggered()), this, SLOT(showSidechainTableDialog()));
         connect(showMiningDialogAction, SIGNAL(triggered()), this, SLOT(showMiningDialog()));
         connect(showPaperWalletDialogAction, SIGNAL(triggered()), this, SLOT(showPaperWalletDialog()));
+        connect(showCreateWalletDialogAction, SIGNAL(triggered()), this, SLOT(showCreateWalletDialog()));
+        connect(showRestoreWalletDialogAction, SIGNAL(triggered()), this, SLOT(showRestoreWalletDialog()));
         connect(showHashCalcDialogAction, SIGNAL(triggered()), this, SLOT(showHashCalcDialog()));
         connect(showBlockExplorerDialogAction, SIGNAL(triggered()), this, SLOT(showBlockExplorerDialog()));
         connect(showSCDBMerkleRootDialogAction, SIGNAL(triggered()), this, SLOT(showSCDBMerkleRootDialog()));
@@ -485,10 +500,12 @@ void BitcoinGUI::createMenuBar()
     QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
     if (walletFrame)
     {
-        tools->addAction(showMiningDialogAction);
+        tools->addAction(showCreateWalletDialogAction);
+        tools->addAction(showRestoreWalletDialogAction);
         tools->addAction(showPaperWalletDialogAction);
-        tools->addAction(showHashCalcDialogAction);
         tools->addAction(showBlockExplorerDialogAction);
+        tools->addAction(showMiningDialogAction);
+        tools->addAction(showHashCalcDialogAction);
         tools->addAction(signVerifyMessageAction);
         tools->addAction(showSCDBMerkleRootDialogAction);
     }
@@ -733,6 +750,8 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addAction(showSidechainTableDialogAction);
     trayIconMenu->addAction(showMiningDialogAction);
     trayIconMenu->addAction(showPaperWalletDialogAction);
+    trayIconMenu->addAction(showCreateWalletDialogAction);
+    trayIconMenu->addAction(showRestoreWalletDialogAction);
     trayIconMenu->addAction(showHashCalcDialogAction);
     trayIconMenu->addAction(showBlockExplorerDialogAction);
     trayIconMenu->addAction(signVerifyMessageAction);
@@ -807,6 +826,18 @@ void BitcoinGUI::showMiningDialog()
 void BitcoinGUI::showPaperWalletDialog()
 {
     paperWalletDialog->show();
+}
+
+void BitcoinGUI::showCreateWalletDialog()
+{
+    createWalletDialog->SetCreateMode();
+    createWalletDialog->show();
+}
+
+void BitcoinGUI::showRestoreWalletDialog()
+{
+    createWalletDialog->SetRestoreMode();
+    createWalletDialog->show();
 }
 
 void BitcoinGUI::showHashCalcDialog()
