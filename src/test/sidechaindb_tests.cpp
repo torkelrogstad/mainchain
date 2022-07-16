@@ -1612,15 +1612,6 @@ BOOST_AUTO_TEST_CASE(custom_vote_cache)
     BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ invalidVote }));
     vVoteOut = scdb.GetCustomVoteCache();
     BOOST_CHECK(vVoteOut.empty());
-
-    SidechainCustomVote nullHash;
-    nullHash.nSidechain = 2;
-    nullHash.hash.SetNull();
-    nullHash.vote = SCDB_DOWNVOTE;
-
-    BOOST_CHECK(!scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ nullHash }));
-    vVoteOut = scdb.GetCustomVoteCache();
-    BOOST_CHECK(vVoteOut.empty());
 }
 
 BOOST_AUTO_TEST_CASE(has_sidechain_script)
