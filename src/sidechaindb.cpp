@@ -170,8 +170,8 @@ bool SidechainDB::CacheCustomVotes(const std::vector<SidechainCustomVote>& vCust
 {
     // Check for valid vote type and non-null Withdrawal hash.
     for (const SidechainCustomVote& v : vCustomVote) {
-        // Check Withdrawal hash is not null
-        if (v.hash.IsNull())
+        // If the vote type is upvote, the withdrawal bundle hash is required
+        if (v.vote == SCDB_UPVOTE && v.hash.IsNull())
             return false;
         // Check that vote type is valid
         if (v.vote != SCDB_UPVOTE && v.vote != SCDB_DOWNVOTE

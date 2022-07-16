@@ -182,7 +182,7 @@ struct SidechainCustomVote
     bool operator==(const SidechainCustomVote& v) const
     {
         return (vote == v.vote && nSidechain == v.nSidechain
-                && hash== v.hash);
+                && hash == v.hash);
     }
 
     ADD_SERIALIZE_METHODS

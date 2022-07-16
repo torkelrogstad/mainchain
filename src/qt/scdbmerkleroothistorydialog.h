@@ -14,6 +14,12 @@ QT_BEGIN_NAMESPACE
 class QTreeWidgetItem;
 QT_END_NAMESPACE
 
+enum TreeItemRoles {
+    UserRole = Qt::UserRole,
+    NumRole, // Sidechain number
+    HashRole // Withdrawal bundle hash
+};
+
 namespace Ui {
 class SCDBMerkleRootHistoryDialog;
 }
@@ -35,10 +41,11 @@ private:
     const PlatformStyle *platformStyle;
     ClientModel *clientModel = nullptr;
 
-    void AddTreeItem(int index, const QString& hashMT, const int nHeight, QTreeWidgetItem *item);
+    void AddHistoryTreeItem(int index, const QString& hashMT, const int nHeight, QTreeWidgetItem *item);
 
 private Q_SLOTS:
     void numBlocksChanged();
+    void on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column);
 };
 
 #endif // SCDBMERKLEROOTHISTORYDIALOG_H

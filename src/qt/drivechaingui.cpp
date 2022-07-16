@@ -436,7 +436,7 @@ void BitcoinGUI::createActions()
     showBlockExplorerDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/search"), tr("&Block Explorer"), this);
     showBlockExplorerDialogAction->setStatusTip(tr("Show block explorer window"));
 
-    showSCDBMerkleRootDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/history"), tr("&SC Merkle Root (M4)"), this);
+    showSCDBMerkleRootDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_inout"), tr("&Sidechains"), this);
     showSCDBMerkleRootDialogAction->setStatusTip(tr("Show sidechain merkle root (M4) explorer"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));

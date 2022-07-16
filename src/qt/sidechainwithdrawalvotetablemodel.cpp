@@ -228,7 +228,7 @@ void SidechainWithdrawalVoteTableModel::UpdateModel()
         // default vote
         if (fCustomVotes) {
             // Set vote to default abstain, and then look for a custom vote and
-            // update the vote type if foudn
+            // update the vote type if found
             object.vote = SCDB_ABSTAIN;
             for (const SidechainCustomVote& v : vCustomVote) {
                 if (v.hash == s.hash && v.nSidechain == s.nSidechain) {

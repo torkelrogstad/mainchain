@@ -12,6 +12,7 @@
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <sidechain.h>
+#include <sidechaindb.h>
 #include <streams.h>
 #include <txdb.h>
 #include <validation.h>
@@ -31,7 +32,104 @@ SCDBMerkleRootHistoryDialog::~SCDBMerkleRootHistoryDialog()
 
 void SCDBMerkleRootHistoryDialog::Update()
 {
-    ui->treeWidget->clear();
+    ui->treeWidgetVote->setUpdatesEnabled(false);
+    ui->treeWidgetHistory->setUpdatesEnabled(false);
+
+    // Update vote tree
+
+    ui->treeWidgetVote->clear();
+
+    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    int index = 0;
+    for (size_t i = 0; i < vSidechain.size(); i++) {
+        std::vector<SidechainWithdrawalState> vWithdrawal;
+        vWithdrawal = scdb.GetState(vSidechain[i].nSidechain);
+
+        QTreeWidgetItem *topItem = new QTreeWidgetItem();
+        topItem->setText(0, "SC #" + QString::number(vSidechain[i].nSidechain) + " " + QString::fromStdString(vSidechain[i].title));
+        ui->treeWidgetVote->insertTopLevelItem(i, topItem);
+
+        if (!vWithdrawal.size()) {
+            index++;
+            continue;
+        }
+
+        // Abstain
+        QTreeWidgetItem *subItemAbstain = new QTreeWidgetItem();
+        subItemAbstain->setText(0, "Abstain");
+        subItemAbstain->setCheckState(0, Qt::Unchecked);
+        subItemAbstain->setData(0, NumRole, vSidechain[i].nSidechain);
+        subItemAbstain->setData(0, HashRole, "");
+        topItem->addChild(subItemAbstain);
+
+        // Alarm
+        QTreeWidgetItem *subItemAlarm = new QTreeWidgetItem();
+        subItemAlarm->setText(0, "Alarm");
+        subItemAlarm->setCheckState(0, Qt::Unchecked);
+        subItemAlarm->setData(0, NumRole, vSidechain[i].nSidechain);
+        subItemAlarm->setData(0, HashRole, "");
+        topItem->addChild(subItemAlarm);
+
+        std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+
+        // Other vote options
+        bool fUpvote = false;
+        for (size_t i = 0; i < vWithdrawal.size(); i++) {
+            for (const SidechainCustomVote& v : vCustomVote) {
+                if (v.nSidechain == vWithdrawal[i].nSidechain &&
+                        v.vote == SCDB_UPVOTE &&
+                        v.hash == vWithdrawal[i].hash) {
+                    fUpvote = true;
+                    break;
+                }
+            }
+
+            QTreeWidgetItem *subItemWT = new QTreeWidgetItem();
+            subItemWT->setText(0, QString::fromStdString(vWithdrawal[i].hash.ToString()));
+            subItemWT->setCheckState(0, fUpvote ? Qt::Checked : Qt::Unchecked);
+            subItemWT->setData(0, NumRole, vWithdrawal[i].nSidechain);
+            subItemWT->setData(0, HashRole, QString::fromStdString(vWithdrawal[i].hash.ToString()));
+
+            QTreeWidgetItem *subItemBlocks = new QTreeWidgetItem();
+            subItemBlocks->setText(0, "Blocks left: " + QString::number(vWithdrawal[i].nBlocksLeft));
+            subItemWT->addChild(subItemBlocks);
+
+            QTreeWidgetItem *subItemScore = new QTreeWidgetItem();
+            subItemScore->setText(0, "Work score: " + QString::number(vWithdrawal[i].nWorkScore));
+            subItemWT->addChild(subItemScore);
+
+            topItem->addChild(subItemWT);
+        }
+
+        // Update check state of abstain and alarm item based on custom votes
+        bool fDownvote = false;
+        if (!fUpvote) {
+            // Check for downvotes and check abstain checkbox if we find none
+            for (const SidechainCustomVote& v : vCustomVote) {
+                if (v.nSidechain == vSidechain[i].nSidechain &&
+                        v.vote == SCDB_DOWNVOTE) {
+                    fDownvote = true;
+                    break;
+                }
+            }
+        }
+        if (fDownvote) {
+            subItemAlarm->setCheckState(0, Qt::Checked);
+        }
+        else
+        if (!fUpvote && !fDownvote) {
+            subItemAbstain->setCheckState(0, Qt::Checked);
+        }
+
+        index++;
+    }
+    ui->treeWidgetVote->collapseAll();
+    ui->treeWidgetVote->expandToDepth(0);
+    ui->treeWidgetVote->setColumnWidth(0, 600);
+
+    // Update history tree
+
+    ui->treeWidgetHistory->clear();
 
     int nHeight = chainActive.Height();
     int nBlocksToDisplay = 6;
@@ -44,7 +142,7 @@ void SCDBMerkleRootHistoryDialog::Update()
         if (pindex->GetBlockHash() == Params().GetConsensus().hashGenesisBlock) {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "Genesis block has no score data");
-            AddTreeItem(i, "N/A", nHeight - i, subItem);
+            AddHistoryTreeItem(i, "N/A", nHeight - i, subItem);
             continue;
         }
 
@@ -52,7 +150,7 @@ void SCDBMerkleRootHistoryDialog::Update()
         if (!psidechaintree->GetBlockData(pindex->GetBlockHash(), data)) {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "No score data for this block");
-            AddTreeItem(i, "N/A", nHeight - i, subItem);
+            AddHistoryTreeItem(i, "N/A", nHeight - i, subItem);
             continue;
         }
 
@@ -62,7 +160,6 @@ void SCDBMerkleRootHistoryDialog::Update()
         std::vector<uint256> vLeaf; // Keep track of state hashes to compute M4
         QString strM4Ser = "";
         for (const std::vector<SidechainWithdrawalState>& vScore : data.vWithdrawalStatus) {
-
             if (vScore.empty()) {
                 nSidechain++;
                 continue;
@@ -122,7 +219,7 @@ void SCDBMerkleRootHistoryDialog::Update()
 
             // Add SC item parent to tree
             subItemSC->setText(0, "Sidechain# " + QString::number(nSidechain));
-            AddTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSC);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSC);
 
             fDataFound = true;
             nSidechain++;
@@ -159,29 +256,32 @@ void SCDBMerkleRootHistoryDialog::Update()
             subItemMerkleHash->setText(0, QString::fromStdString(hashM4.ToString()));
             subItemMerkle->addChild(subItemMerkleHash);
 
-            AddTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSer);
-            AddTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemTree);
-            AddTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemMerkle);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSer);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemTree);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemMerkle);
         } else {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "No score data for this block");
-            AddTreeItem(i, "N/A", nHeight - i, subItem);
+            AddHistoryTreeItem(i, "N/A", nHeight - i, subItem);
         }
     }
-    ui->treeWidget->collapseAll();
-    ui->treeWidget->resizeColumnToContents(0);
+    ui->treeWidgetHistory->collapseAll();
+    ui->treeWidgetHistory->resizeColumnToContents(0);
+
+    ui->treeWidgetVote->setUpdatesEnabled(true);
+    ui->treeWidgetHistory->setUpdatesEnabled(true);
 }
 
-void SCDBMerkleRootHistoryDialog::AddTreeItem(int index, const QString& hashMT, const int nHeight, QTreeWidgetItem *item)
+void SCDBMerkleRootHistoryDialog::AddHistoryTreeItem(int index, const QString& hashMT, const int nHeight, QTreeWidgetItem *item)
 {
     if (!item || index < 0)
         return;
 
-    QTreeWidgetItem *topItem = ui->treeWidget->topLevelItem(index);
+    QTreeWidgetItem *topItem = ui->treeWidgetHistory->topLevelItem(index);
     if (!topItem) {
-        topItem = new QTreeWidgetItem(ui->treeWidget);
+        topItem = new QTreeWidgetItem(ui->treeWidgetHistory);
         topItem->setText(0, "Block #" + QString::number(nHeight) + " M4: " + hashMT);
-        ui->treeWidget->insertTopLevelItem(index, topItem);
+        ui->treeWidgetHistory->insertTopLevelItem(index, topItem);
     }
 
     if (!topItem)
@@ -194,6 +294,65 @@ void SCDBMerkleRootHistoryDialog::numBlocksChanged()
 {
     if (this->isVisible())
         Update();
+}
+
+void SCDBMerkleRootHistoryDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column)
+{
+    QTreeWidgetItem* parent = item->parent();
+    if (!parent)
+        return;
+
+    ui->treeWidgetVote->setUpdatesEnabled(false);
+
+    bool fChecked = (item->checkState(0) == Qt::Checked);
+    int nChildren = parent->childCount();
+
+    if (nChildren < 2)
+        return;
+
+    if (fChecked) {
+        // Uncheck other boxes when a new one is checked
+        for (int i = 0; i < nChildren; i++) {
+            QTreeWidgetItem *child = parent->child(i);
+            if (fChecked && child != item)
+                child->setCheckState(0, Qt::Unchecked);
+        }
+    } else {
+        bool fCheckFound = false;
+        for (int i = 0; i < nChildren; i++) {
+            QTreeWidgetItem *child = parent->child(i);
+            if (child->checkState(0) == Qt::Checked) {
+                fCheckFound = true;
+                break;
+            }
+        }
+
+        // Switch back to abstain if nothing is checked
+        if (!fCheckFound)
+            parent->child(0)->setCheckState(0, Qt::Checked);
+    }
+
+    // Update users custom vote settings
+    SidechainCustomVote vote;
+
+    vote.nSidechain = item->data(0, NumRole).toUInt();
+
+    if (parent->child(0)->checkState(0) == Qt::Checked) {
+        vote.vote = SCDB_ABSTAIN;
+    }
+    else
+    if (parent->child(1)->checkState(0) == Qt::Checked) {
+        vote.vote = SCDB_DOWNVOTE;
+    }
+    else
+    {
+        vote.vote = SCDB_UPVOTE;
+        vote.hash = uint256S(item->data(0, HashRole).toString().toStdString());
+    }
+
+    scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ vote });
+
+    ui->treeWidgetVote->setUpdatesEnabled(true);
 }
 
 void SCDBMerkleRootHistoryDialog::setClientModel(ClientModel *model)
