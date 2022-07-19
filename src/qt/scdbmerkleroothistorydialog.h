@@ -33,7 +33,7 @@ public:
     ~SCDBMerkleRootHistoryDialog();
 
     void setClientModel(ClientModel *model);
-    void Update();
+    void UpdateOnShow();
 
 private:
     Ui::SCDBMerkleRootHistoryDialog *ui;
@@ -42,6 +42,10 @@ private:
     ClientModel *clientModel = nullptr;
 
     void AddHistoryTreeItem(int index, const QString& hashMT, const int nHeight, QTreeWidgetItem *item);
+
+    void UpdateVoteTree();
+    void UpdateNextTree();
+    void UpdateHistoryTree();
 
 private Q_SLOTS:
     void numBlocksChanged();

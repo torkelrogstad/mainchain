@@ -855,7 +855,7 @@ void BitcoinGUI::showBlockExplorerDialog()
 void BitcoinGUI::showSCDBMerkleRootDialog()
 {
     scdbMerkleRootDialog->show();
-    scdbMerkleRootDialog->Update();
+    scdbMerkleRootDialog->UpdateOnShow();
 }
 
 void BitcoinGUI::openClicked()

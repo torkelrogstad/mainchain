@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1889</width>
-    <height>942</height>
+    <width>1197</width>
+    <height>676</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,6 +33,12 @@
        </item>
        <item>
         <widget class="QTreeWidget" name="treeWidgetVote">
+         <property name="maximumSize">
+          <size>
+           <width>820</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="font">
           <font>
            <family>Noto Mono</family>
@@ -80,7 +86,24 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QTextBrowser" name="textBrowserNextBlock"/>
+          <widget class="QTreeWidget" name="treeWidgetNext">
+           <property name="font">
+            <font>
+             <family>Noto Mono</family>
+            </font>
+           </property>
+           <property name="textElideMode">
+            <enum>Qt::ElideRight</enum>
+           </property>
+           <attribute name="headerVisible">
+            <bool>false</bool>
+           </attribute>
+           <column>
+            <property name="text">
+             <string notr="true">1</string>
+            </property>
+           </column>
+          </widget>
          </item>
         </layout>
        </item>
@@ -97,6 +120,12 @@
           <font>
            <family>Noto Mono</family>
           </font>
+         </property>
+         <property name="sizeAdjustPolicy">
+          <enum>QAbstractScrollArea::AdjustToContents</enum>
+         </property>
+         <property name="textElideMode">
+          <enum>Qt::ElideRight</enum>
          </property>
          <property name="columnCount">
           <number>1</number>

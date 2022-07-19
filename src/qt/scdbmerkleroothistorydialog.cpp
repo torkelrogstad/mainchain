@@ -30,13 +30,18 @@ SCDBMerkleRootHistoryDialog::~SCDBMerkleRootHistoryDialog()
     delete ui;
 }
 
-void SCDBMerkleRootHistoryDialog::Update()
+void SCDBMerkleRootHistoryDialog::UpdateOnShow()
 {
-    ui->treeWidgetVote->setUpdatesEnabled(false);
-    ui->treeWidgetHistory->setUpdatesEnabled(false);
+    UpdateVoteTree();
+    UpdateNextTree();
+    UpdateHistoryTree();
+}
 
+void SCDBMerkleRootHistoryDialog::UpdateVoteTree()
+{
     // Update vote tree
 
+    ui->treeWidgetVote->setUpdatesEnabled(false);
     ui->treeWidgetVote->clear();
 
     std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
@@ -127,8 +132,161 @@ void SCDBMerkleRootHistoryDialog::Update()
     ui->treeWidgetVote->expandToDepth(0);
     ui->treeWidgetVote->setColumnWidth(0, 600);
 
+    ui->treeWidgetVote->setUpdatesEnabled(true);
+}
+
+void SCDBMerkleRootHistoryDialog::UpdateNextTree()
+{
+    // Update the next M4 tree
+
+    ui->treeWidgetNext->setUpdatesEnabled(false);
+    ui->treeWidgetNext->clear();
+
+    QTreeWidgetItem* topItem = new QTreeWidgetItem(ui->treeWidgetNext);
+    ui->treeWidgetNext->insertTopLevelItem(0, topItem);
+
+    std::vector<std::vector<SidechainWithdrawalState>> vState = scdb.GetState();
+
+    // Loop through state here and add sub items for sc# & score change
+    bool fDataFound = false;
+    int nSidechain = 0;
+    std::vector<uint256> vLeaf; // Keep track of state hashes to compute M4
+    QString strM4Ser = "";
+    for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
+        if (vScore.empty()) {
+            nSidechain++;
+            continue;
+        }
+
+        // Create sidechain item
+        QTreeWidgetItem *subItemSC = new QTreeWidgetItem();
+
+        // Create sidechain children items
+        for (const SidechainWithdrawalState& s : vScore) {
+            // Look up our vote setting
+            char vote = SCDB_ABSTAIN;
+            std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+            for (const SidechainCustomVote& v : vCustomVote) {
+                if (v.nSidechain == s.nSidechain) {
+                    vote = v.vote;
+                    break;
+                }
+            }
+
+            QTreeWidgetItem *subItemScore = new QTreeWidgetItem();
+
+            // Figure out next score based on vote settings
+            QString strScore = "";
+            int nNewScore = 0;
+            if (vote == SCDB_UPVOTE) {
+                strScore = " (Upvote / ACK)";
+                nNewScore = s.nWorkScore + 1;
+            }
+            else
+            if (vote == SCDB_ABSTAIN)
+            {
+                strScore = " (Abstain)";
+                nNewScore = s.nWorkScore;
+            }
+            else
+            if (vote == SCDB_DOWNVOTE)
+            {
+                strScore = " (Downvote / NACK)";
+                nNewScore = s.nWorkScore - 1;
+            }
+
+            subItemScore->setText(0, "Work score: " + QString::number(s.nWorkScore) + " -> " + QString::number(nNewScore) + strScore);
+            subItemSC->addChild(subItemScore);
+
+            QTreeWidgetItem *subItemBlocks = new QTreeWidgetItem();
+            subItemBlocks->setText(0, "Blocks remaining: " + QString::number(s.nBlocksLeft) + " -> " + QString::number(s.nBlocksLeft - 1));
+            subItemSC->addChild(subItemBlocks);
+
+            QTreeWidgetItem *subItemHash = new QTreeWidgetItem();
+            subItemHash->setText(0, "Withdrawal bundle hash:\n" + QString::fromStdString(s.hash.ToString()));
+            subItemSC->addChild(subItemHash);
+
+            // Update with next vote state to get new serialization & hash
+            SidechainWithdrawalState nextState = s;
+            nextState.nBlocksLeft -= 1;
+            nextState.nWorkScore = nNewScore;
+
+            CDataStream ssSer(SER_DISK, CLIENT_VERSION);
+            ssSer << nextState;
+
+            QString strSer = QString::fromStdString(HexStr(ssSer.str()));
+
+            QTreeWidgetItem *subItemSCSer = new QTreeWidgetItem();
+            subItemSCSer->setText(0, "Serialization:\n" + strSer);
+            subItemSC->addChild(subItemSCSer);
+
+            vLeaf.push_back(nextState.GetHash());
+            strM4Ser += "SC# " + QString::number(s.nSidechain) + ": " + strSer + ", ";
+        }
+
+        // Add SC item parent to tree
+        subItemSC->setText(0, "Sidechain# " + QString::number(nSidechain) + " vote state");
+        topItem->addChild(subItemSC);
+
+        fDataFound = true;
+        nSidechain++;
+    }
+
+    uint256 hashM4 = uint256();
+    if (fDataFound) {
+        // Create M4 tree object
+        QTreeWidgetItem *subItemTree = new QTreeWidgetItem();
+        subItemTree->setText(0, "M4 merkle root leaf nodes (SHA256D(serialization))");
+
+        // Create M4 raw serialization object
+        QTreeWidgetItem *subItemSer = new QTreeWidgetItem();
+        subItemSer->setText(0, "M4 serialization data");
+
+        QTreeWidgetItem *subItemSerData = new QTreeWidgetItem();
+        subItemSerData->setText(0, strM4Ser);
+        subItemSer->addChild(subItemSerData);
+
+        QString strLeaves = "";
+        for (const uint256& u : vLeaf)
+            strLeaves += QString::fromStdString(u.ToString()) + " ";
+
+        // Create M4 tree leaf nodes object
+        QTreeWidgetItem *subItemLeaves = new QTreeWidgetItem();
+        subItemLeaves->setText(0, strLeaves);
+        subItemTree->addChild(subItemLeaves);
+
+        // Create M4 merkle root object
+        QTreeWidgetItem *subItemMerkle = new QTreeWidgetItem();
+        subItemMerkle->setText(0, "M4 merkle root hash");
+
+        QTreeWidgetItem *subItemMerkleHash = new QTreeWidgetItem();
+        hashM4 = ComputeMerkleRoot(vLeaf);
+        subItemMerkleHash->setText(0, QString::fromStdString(hashM4.ToString()));
+        subItemMerkle->addChild(subItemMerkleHash);
+
+        topItem->addChild(subItemSer);
+        topItem->addChild(subItemTree);
+        topItem->addChild(subItemMerkle);
+    } else {
+        QTreeWidgetItem *subItem = new QTreeWidgetItem();
+        subItem->setText(0, "No score data for this block");
+        topItem->addChild(subItem);
+    }
+
+    topItem->setText(0, "Block #" + QString::number(chainActive.Height() + 1) + " M4: " + QString::fromStdString(hashM4.ToString()));
+
+    ui->treeWidgetNext->collapseAll();
+    ui->treeWidgetNext->resizeColumnToContents(0);
+    ui->treeWidgetNext->expandToDepth(1);
+
+    ui->treeWidgetNext->setUpdatesEnabled(true);
+}
+
+void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
+{
     // Update history tree
 
+    ui->treeWidgetHistory->setUpdatesEnabled(false);
     ui->treeWidgetHistory->clear();
 
     int nHeight = chainActive.Height();
@@ -175,7 +333,6 @@ void SCDBMerkleRootHistoryDialog::Update()
 
             // Create sidechain children items
             for (const SidechainWithdrawalState& s : vScore) {
-
                 // Look up old work score
                 uint16_t nPrevScore = 0;
                 if (prevData.vWithdrawalStatus.size() > s.nSidechain) {
@@ -218,7 +375,7 @@ void SCDBMerkleRootHistoryDialog::Update()
             }
 
             // Add SC item parent to tree
-            subItemSC->setText(0, "Sidechain# " + QString::number(nSidechain));
+            subItemSC->setText(0, "Sidechain# " + QString::number(nSidechain) + " vote state");
             AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSC);
 
             fDataFound = true;
@@ -268,7 +425,6 @@ void SCDBMerkleRootHistoryDialog::Update()
     ui->treeWidgetHistory->collapseAll();
     ui->treeWidgetHistory->resizeColumnToContents(0);
 
-    ui->treeWidgetVote->setUpdatesEnabled(true);
     ui->treeWidgetHistory->setUpdatesEnabled(true);
 }
 
@@ -293,7 +449,7 @@ void SCDBMerkleRootHistoryDialog::AddHistoryTreeItem(int index, const QString& h
 void SCDBMerkleRootHistoryDialog::numBlocksChanged()
 {
     if (this->isVisible())
-        Update();
+        UpdateOnShow();
 }
 
 void SCDBMerkleRootHistoryDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column)
@@ -353,6 +509,8 @@ void SCDBMerkleRootHistoryDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem 
     scdb.CacheCustomVotes(std::vector<SidechainCustomVote>{ vote });
 
     ui->treeWidgetVote->setUpdatesEnabled(true);
+
+    UpdateNextTree();
 }
 
 void SCDBMerkleRootHistoryDialog::setClientModel(ClientModel *model)
