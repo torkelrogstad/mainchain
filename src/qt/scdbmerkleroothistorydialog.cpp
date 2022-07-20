@@ -344,10 +344,10 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
 
                 QTreeWidgetItem *subItemScore = new QTreeWidgetItem();
                 QString strScore = " (Abstain)";
-                if (nPrevScore > s.nWorkScore)
+                if (nPrevScore < s.nWorkScore)
                     strScore = " (Upvote / ACK)";
                 else
-                if (nPrevScore < s.nWorkScore)
+                if (nPrevScore > s.nWorkScore)
                     strScore = " (Downvote / NACK)";
 
                 subItemScore->setText(0, "Work score: " + QString::number(nPrevScore) + " -> " + QString::number(s.nWorkScore) + strScore);
