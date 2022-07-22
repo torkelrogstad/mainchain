@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1197</width>
-    <height>676</height>
+    <width>1383</width>
+    <height>504</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,7 +27,7 @@
        <item>
         <widget class="QLabel" name="label_4">
          <property name="text">
-          <string>Sidechain withdrawal vote settings:</string>
+          <string>Which withdrawal do you ACK? (one per sidechain only!):</string>
          </property>
         </widget>
        </item>
@@ -74,9 +74,32 @@
         <number>0</number>
        </property>
        <item>
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>SCDB (sidechain database) withdrawal score state:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_6">
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QTextBrowser" name="textBrowserSCDB">
+           <property name="font">
+            <font>
+             <family>Noto Mono</family>
+            </font>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Next sidechain merkle root commitment if block is mined with our settings:</string>
+          <string>SCDB hash commit (H(SCDB)) if next block is mined with our votes:</string>
          </property>
         </widget>
        </item>
@@ -110,7 +133,7 @@
        <item>
         <widget class="QLabel" name="label_2">
          <property name="text">
-          <string>Sidechain merkle root commitment (M4) history:</string>
+          <string>Sidechain withdrawal score &amp; H(SCDB) commitment history:</string>
          </property>
         </widget>
        </item>

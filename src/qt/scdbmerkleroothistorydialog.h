@@ -41,9 +41,10 @@ private:
     const PlatformStyle *platformStyle;
     ClientModel *clientModel = nullptr;
 
-    void AddHistoryTreeItem(int index, const QString& hashMT, const int nHeight, QTreeWidgetItem *item);
+    void AddHistoryTreeItem(int index, const QString& hashSCDB, const int nHeight, QTreeWidgetItem *item);
 
     void UpdateVoteTree();
+    void UpdateSCDBText();
     void UpdateNextTree();
     void UpdateHistoryTree();
 

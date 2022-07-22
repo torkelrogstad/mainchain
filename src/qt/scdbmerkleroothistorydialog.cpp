@@ -34,6 +34,7 @@ void SCDBMerkleRootHistoryDialog::UpdateOnShow()
 {
     UpdateVoteTree();
     UpdateNextTree();
+    UpdateSCDBText();
     UpdateHistoryTree();
 }
 
@@ -44,8 +45,9 @@ void SCDBMerkleRootHistoryDialog::UpdateVoteTree()
     ui->treeWidgetVote->setUpdatesEnabled(false);
     ui->treeWidgetVote->clear();
 
-    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
     int index = 0;
+    std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
+    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
     for (size_t i = 0; i < vSidechain.size(); i++) {
         std::vector<SidechainWithdrawalState> vWithdrawal;
         vWithdrawal = scdb.GetState(vSidechain[i].nSidechain);
@@ -75,7 +77,6 @@ void SCDBMerkleRootHistoryDialog::UpdateVoteTree()
         subItemAlarm->setData(0, HashRole, "");
         topItem->addChild(subItemAlarm);
 
-        std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
 
         // Other vote options
         bool fUpvote = false;
@@ -131,13 +132,79 @@ void SCDBMerkleRootHistoryDialog::UpdateVoteTree()
     ui->treeWidgetVote->collapseAll();
     ui->treeWidgetVote->expandToDepth(0);
     ui->treeWidgetVote->setColumnWidth(0, 600);
-
     ui->treeWidgetVote->setUpdatesEnabled(true);
+}
+
+void SCDBMerkleRootHistoryDialog::UpdateSCDBText()
+{
+    ui->textBrowserSCDB->clear();
+
+    std::vector<std::vector<SidechainWithdrawalState>> vState = scdb.GetState();
+    std::vector<QString> vSerStr; // SidechainWithdrawalState serialization
+    std::vector<uint256> vLeaf; // Keep track of state hashes
+    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+    for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
+        if (vScore.empty())
+            continue;
+
+        for (const SidechainWithdrawalState& s : vScore) {
+            // Look up our vote setting
+            char vote = SCDB_ABSTAIN;
+            for (const SidechainCustomVote& v : vCustomVote) {
+                if (v.nSidechain == s.nSidechain) {
+                    vote = v.vote;
+                    break;
+                }
+            }
+
+            // Figure out next score based on vote settings
+            int nNewScore = 0;
+            if (vote == SCDB_UPVOTE)
+                nNewScore = s.nWorkScore + 1;
+            else
+            if (vote == SCDB_ABSTAIN)
+                nNewScore = s.nWorkScore;
+            else
+            if (vote == SCDB_DOWNVOTE)
+                nNewScore = s.nWorkScore - 1;
+
+            // Update with next vote state to get new serialization & hash
+            SidechainWithdrawalState nextState = s;
+            nextState.nBlocksLeft -= 1;
+            nextState.nWorkScore = nNewScore;
+
+            CDataStream ssSer(SER_DISK, CLIENT_VERSION);
+            ssSer << nextState;
+
+            vSerStr.push_back(QString::fromStdString(HexStr(ssSer.str())));
+            vLeaf.push_back(nextState.GetHash());
+        }
+    }
+
+    if (vSerStr.size()) {
+        ui->textBrowserSCDB->insertPlainText("Serialization of SCDB withdrawal status:\n");
+
+        for (const QString& s : vSerStr)
+            ui->textBrowserSCDB->insertPlainText(s + "\n");
+
+        ui->textBrowserSCDB->insertPlainText("\nSHA256D(Serialization) merkle tree nodes:\n");
+
+        for (const uint256& u : vLeaf)
+            ui->textBrowserSCDB->insertPlainText(QString::fromStdString(u.ToString()) + "\n");
+
+        ui->textBrowserSCDB->insertPlainText("\nMerkle root:\n");
+
+        uint256 hashSCDB = ComputeMerkleRoot(vLeaf);
+        ui->textBrowserSCDB->insertPlainText(QString::fromStdString(hashSCDB.ToString()) + "\n");
+
+    } else {
+        ui->textBrowserSCDB->setText("No score data for next block");
+    }
 }
 
 void SCDBMerkleRootHistoryDialog::UpdateNextTree()
 {
-    // Update the next M4 tree
+    // Update the next block state tree
 
     ui->treeWidgetNext->setUpdatesEnabled(false);
     ui->treeWidgetNext->clear();
@@ -150,8 +217,9 @@ void SCDBMerkleRootHistoryDialog::UpdateNextTree()
     // Loop through state here and add sub items for sc# & score change
     bool fDataFound = false;
     int nSidechain = 0;
-    std::vector<uint256> vLeaf; // Keep track of state hashes to compute M4
-    QString strM4Ser = "";
+    std::vector<uint256> vLeaf; // Keep track of state hashes to compute H(SCDB)
+    QString strSerAll = "";
+    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
     for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
         if (vScore.empty()) {
             nSidechain++;
@@ -165,7 +233,6 @@ void SCDBMerkleRootHistoryDialog::UpdateNextTree()
         for (const SidechainWithdrawalState& s : vScore) {
             // Look up our vote setting
             char vote = SCDB_ABSTAIN;
-            std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
             for (const SidechainCustomVote& v : vCustomVote) {
                 if (v.nSidechain == s.nSidechain) {
                     vote = v.vote;
@@ -221,47 +288,47 @@ void SCDBMerkleRootHistoryDialog::UpdateNextTree()
             subItemSC->addChild(subItemSCSer);
 
             vLeaf.push_back(nextState.GetHash());
-            strM4Ser += "SC# " + QString::number(s.nSidechain) + ": " + strSer + ", ";
+            strSerAll += "Sidechain #" + QString::number(s.nSidechain) + ": " + strSer + ", ";
         }
 
         // Add SC item parent to tree
-        subItemSC->setText(0, "Sidechain# " + QString::number(nSidechain) + " vote state");
+        subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
         topItem->addChild(subItemSC);
 
         fDataFound = true;
         nSidechain++;
     }
 
-    uint256 hashM4 = uint256();
+    uint256 hashSCDB = uint256();
     if (fDataFound) {
-        // Create M4 tree object
+        // Create H(SCDB) tree object
         QTreeWidgetItem *subItemTree = new QTreeWidgetItem();
-        subItemTree->setText(0, "M4 merkle root leaf nodes (SHA256D(serialization))");
+        subItemTree->setText(0, "H(SCDB) merkle root leaf nodes (SHA256D(serialization))");
 
-        // Create M4 raw serialization object
+        // Create H(SCDB) raw serialization object
         QTreeWidgetItem *subItemSer = new QTreeWidgetItem();
-        subItemSer->setText(0, "M4 serialization data");
+        subItemSer->setText(0, "H(SCDB) serialization data");
 
         QTreeWidgetItem *subItemSerData = new QTreeWidgetItem();
-        subItemSerData->setText(0, strM4Ser);
+        subItemSerData->setText(0, strSerAll);
         subItemSer->addChild(subItemSerData);
 
         QString strLeaves = "";
         for (const uint256& u : vLeaf)
             strLeaves += QString::fromStdString(u.ToString()) + " ";
 
-        // Create M4 tree leaf nodes object
+        // Create H(SCDB) tree leaf nodes object
         QTreeWidgetItem *subItemLeaves = new QTreeWidgetItem();
         subItemLeaves->setText(0, strLeaves);
         subItemTree->addChild(subItemLeaves);
 
-        // Create M4 merkle root object
+        // Create H(SCDB) merkle root object
         QTreeWidgetItem *subItemMerkle = new QTreeWidgetItem();
-        subItemMerkle->setText(0, "M4 merkle root hash");
+        subItemMerkle->setText(0, "H(SCDB) merkle root hash");
 
         QTreeWidgetItem *subItemMerkleHash = new QTreeWidgetItem();
-        hashM4 = ComputeMerkleRoot(vLeaf);
-        subItemMerkleHash->setText(0, QString::fromStdString(hashM4.ToString()));
+        hashSCDB = ComputeMerkleRoot(vLeaf);
+        subItemMerkleHash->setText(0, QString::fromStdString(hashSCDB.ToString()));
         subItemMerkle->addChild(subItemMerkleHash);
 
         topItem->addChild(subItemSer);
@@ -273,12 +340,11 @@ void SCDBMerkleRootHistoryDialog::UpdateNextTree()
         topItem->addChild(subItem);
     }
 
-    topItem->setText(0, "Block #" + QString::number(chainActive.Height() + 1) + " M4: " + QString::fromStdString(hashM4.ToString()));
+    topItem->setText(0, "Block #" + QString::number(chainActive.Height() + 1) + " H(SCDB): " + QString::fromStdString(hashSCDB.ToString()));
 
     ui->treeWidgetNext->collapseAll();
     ui->treeWidgetNext->resizeColumnToContents(0);
     ui->treeWidgetNext->expandToDepth(1);
-
     ui->treeWidgetNext->setUpdatesEnabled(true);
 }
 
@@ -315,8 +381,8 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
         // Loop through state here and add sub items for sc# & score change
         bool fDataFound = false;
         int nSidechain = 0;
-        std::vector<uint256> vLeaf; // Keep track of state hashes to compute M4
-        QString strM4Ser = "";
+        std::vector<uint256> vLeaf; // Keep track of state hashes to compute H(SCDB)
+        QString strSerAll = "";
         for (const std::vector<SidechainWithdrawalState>& vScore : data.vWithdrawalStatus) {
             if (vScore.empty()) {
                 nSidechain++;
@@ -371,11 +437,11 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
                 subItemSC->addChild(subItemSCSer);
 
                 vLeaf.push_back(s.GetHash());
-                strM4Ser += "SC# " + QString::number(s.nSidechain) + ": " + strSer + ", ";
+                strSerAll += "Sidechain #" + QString::number(s.nSidechain) + ": " + strSer + ", ";
             }
 
             // Add SC item parent to tree
-            subItemSC->setText(0, "Sidechain# " + QString::number(nSidechain) + " vote state");
+            subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
             AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSC);
 
             fDataFound = true;
@@ -383,34 +449,34 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
         }
 
         if (fDataFound) {
-            // Create M4 tree object
+            // Create H(SCDB) tree object
             QTreeWidgetItem *subItemTree = new QTreeWidgetItem();
-            subItemTree->setText(0, "M4 merkle root leaf nodes (SHA256D(serialization))");
+            subItemTree->setText(0, "H(SCDB) merkle root leaf nodes (SHA256D(serialization))");
 
-            // Create M4 raw serialization object
+            // Create H(SCDB) raw serialization object
             QTreeWidgetItem *subItemSer = new QTreeWidgetItem();
-            subItemSer->setText(0, "M4 serialization data");
+            subItemSer->setText(0, "H(SCDB) serialization data");
 
             QTreeWidgetItem *subItemSerData = new QTreeWidgetItem();
-            subItemSerData->setText(0, strM4Ser);
+            subItemSerData->setText(0, strSerAll);
             subItemSer->addChild(subItemSerData);
 
             QString strLeaves = "";
             for (const uint256& u : vLeaf)
                 strLeaves += QString::fromStdString(u.ToString()) + " ";
 
-            // Create M4 tree leaf nodes object
+            // Create H(SCDB) tree leaf nodes object
             QTreeWidgetItem *subItemLeaves = new QTreeWidgetItem();
             subItemLeaves->setText(0, strLeaves);
             subItemTree->addChild(subItemLeaves);
 
-            // Create M4 merkle root object
+            // Create H(SCDB) merkle root object
             QTreeWidgetItem *subItemMerkle = new QTreeWidgetItem();
-            subItemMerkle->setText(0, "M4 merkle root hash");
+            subItemMerkle->setText(0, "H(SCDB) merkle root hash");
 
             QTreeWidgetItem *subItemMerkleHash = new QTreeWidgetItem();
-            uint256 hashM4 = ComputeMerkleRoot(vLeaf);
-            subItemMerkleHash->setText(0, QString::fromStdString(hashM4.ToString()));
+            uint256 hashSCDB = ComputeMerkleRoot(vLeaf);
+            subItemMerkleHash->setText(0, QString::fromStdString(hashSCDB.ToString()));
             subItemMerkle->addChild(subItemMerkleHash);
 
             AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSer);
@@ -422,13 +488,13 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
             AddHistoryTreeItem(i, "N/A", nHeight - i, subItem);
         }
     }
+
     ui->treeWidgetHistory->collapseAll();
     ui->treeWidgetHistory->resizeColumnToContents(0);
-
     ui->treeWidgetHistory->setUpdatesEnabled(true);
 }
 
-void SCDBMerkleRootHistoryDialog::AddHistoryTreeItem(int index, const QString& hashMT, const int nHeight, QTreeWidgetItem *item)
+void SCDBMerkleRootHistoryDialog::AddHistoryTreeItem(int index, const QString& hashSCDB, const int nHeight, QTreeWidgetItem *item)
 {
     if (!item || index < 0)
         return;
@@ -436,7 +502,7 @@ void SCDBMerkleRootHistoryDialog::AddHistoryTreeItem(int index, const QString& h
     QTreeWidgetItem *topItem = ui->treeWidgetHistory->topLevelItem(index);
     if (!topItem) {
         topItem = new QTreeWidgetItem(ui->treeWidgetHistory);
-        topItem->setText(0, "Block #" + QString::number(nHeight) + " M4: " + hashMT);
+        topItem->setText(0, "Block #" + QString::number(nHeight) + " H(SCDB): " + hashSCDB);
         ui->treeWidgetHistory->insertTopLevelItem(index, topItem);
     }
 
@@ -511,6 +577,7 @@ void SCDBMerkleRootHistoryDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem 
     ui->treeWidgetVote->setUpdatesEnabled(true);
 
     UpdateNextTree();
+    UpdateSCDBText();
 }
 
 void SCDBMerkleRootHistoryDialog::setClientModel(ClientModel *model)
