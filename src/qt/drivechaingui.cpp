@@ -23,7 +23,6 @@
 #include <qt/platformstyle.h>
 #include <qt/rpcconsole.h>
 #include <qt/utilitydialog.h>
-#include <qt/scdbmerkleroothistorydialog.h>
 #include <qt/sidechainpage.h>
 #include <qt/sidechaintabledialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
@@ -124,7 +123,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     showRestoreWalletDialogAction(0),
     showHashCalcDialogAction(0),
     showBlockExplorerDialogAction(0),
-    showSCDBMerkleRootDialogAction(0),
+    showSidechainM4DialogAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -188,14 +187,12 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         blockExplorerDialog = new BlockExplorer(platformStyle);
         blockExplorerDialog->setParent(this, Qt::Window);
 
-        scdbMerkleRootDialog = new SCDBMerkleRootHistoryDialog(platformStyle);
-        scdbMerkleRootDialog->setParent(this, Qt::Window);
 
         connect(miningDialog, SIGNAL(ActivationDialogRequested()),
                 walletFrame, SLOT(showSidechainActivationDialog()));
 
         connect(miningDialog, SIGNAL(WithdrawalDialogRequested()),
-                walletFrame, SLOT(showSidechainWithdrawalDialog()));
+                walletFrame, SLOT(showSidechainM4Dialog()));
 
         connect(walletFrame, SIGNAL(requestedSyncWarningInfo()), this, SLOT(showModalOverlay()));
 
@@ -436,8 +433,8 @@ void BitcoinGUI::createActions()
     showBlockExplorerDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/search"), tr("&Block Explorer"), this);
     showBlockExplorerDialogAction->setStatusTip(tr("Show block explorer window"));
 
-    showSCDBMerkleRootDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_inout"), tr("&Sidechains"), this);
-    showSCDBMerkleRootDialogAction->setStatusTip(tr("Show sidechain merkle root (M4) explorer"));
+    showSidechainM4DialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_inout"), tr("&Sidechains"), this);
+    showSidechainM4DialogAction->setStatusTip(tr("Show sidechain vote settings & M4 explorer"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -466,7 +463,7 @@ void BitcoinGUI::createActions()
         connect(showRestoreWalletDialogAction, SIGNAL(triggered()), this, SLOT(showRestoreWalletDialog()));
         connect(showHashCalcDialogAction, SIGNAL(triggered()), this, SLOT(showHashCalcDialog()));
         connect(showBlockExplorerDialogAction, SIGNAL(triggered()), this, SLOT(showBlockExplorerDialog()));
-        connect(showSCDBMerkleRootDialogAction, SIGNAL(triggered()), this, SLOT(showSCDBMerkleRootDialog()));
+        connect(showSidechainM4DialogAction, SIGNAL(triggered()), this, SLOT(showSidechainM4Dialog()));
     }
 #endif // ENABLE_WALLET
 
@@ -507,7 +504,7 @@ void BitcoinGUI::createMenuBar()
         tools->addAction(showMiningDialogAction);
         tools->addAction(showHashCalcDialogAction);
         tools->addAction(signVerifyMessageAction);
-        tools->addAction(showSCDBMerkleRootDialogAction);
+        tools->addAction(showSidechainM4DialogAction);
     }
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
@@ -583,7 +580,6 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
         }
 
         blockExplorerDialog->setClientModel(_clientModel);
-        scdbMerkleRootDialog->setClientModel(_clientModel);
 
 #endif // ENABLE_WALLET
         OptionsModel* optionsModel = _clientModel->getOptionsModel();
@@ -755,7 +751,7 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addAction(showHashCalcDialogAction);
     trayIconMenu->addAction(showBlockExplorerDialogAction);
     trayIconMenu->addAction(signVerifyMessageAction);
-    trayIconMenu->addAction(showSCDBMerkleRootDialogAction);
+    trayIconMenu->addAction(showSidechainM4DialogAction);
 
 #ifndef Q_OS_MAC // This is built-in on Mac
     trayIconMenu->addSeparator();
@@ -852,10 +848,9 @@ void BitcoinGUI::showBlockExplorerDialog()
     blockExplorerDialog->scrollRight();
 }
 
-void BitcoinGUI::showSCDBMerkleRootDialog()
+void BitcoinGUI::showSidechainM4Dialog()
 {
-    scdbMerkleRootDialog->show();
-    scdbMerkleRootDialog->UpdateOnShow();
+    if (walletFrame) walletFrame->showSidechainM4Dialog();
 }
 
 void BitcoinGUI::openClicked()

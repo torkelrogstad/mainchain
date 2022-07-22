@@ -348,8 +348,8 @@ void WalletView::showSidechainActivationDialog()
         sidechainPage->ShowActivationDialog();
 }
 
-void WalletView::showSidechainWithdrawalDialog()
+void WalletView::showSidechainM4Dialog()
 {
     if (sidechainPage)
-        sidechainPage->ShowWithdrawalDialog();
+        sidechainPage->ShowM4Dialog();
 }
