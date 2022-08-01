@@ -25,7 +25,6 @@ class uint256;
 struct Sidechain;
 struct SidechainActivationStatus;
 struct SidechainBlockData;
-struct SidechainCustomVote;
 struct SidechainCTIP;
 struct SidechainDeposit;
 struct SidechainWithdrawalState;
@@ -49,7 +48,7 @@ public:
     void AddDeposits(const std::vector<SidechainDeposit>& vDeposit);
 
     /** Add a new withdrawal bundle to SCDB */
-    bool AddWithdrawal(uint8_t nSidechain, const uint256& hash, int nHeight, bool fDebug = false);
+    bool AddWithdrawal(uint8_t nSidechain, const uint256& hash, bool fDebug = false);
 
     /** Add spent withdrawals to SCDB */
     void AddSpentWithdrawals(const std::vector<SidechainSpentWithdrawal>& vSpent);
@@ -64,7 +63,7 @@ public:
     void CacheSidechains(const std::vector<Sidechain>& vSidechainIn);
 
     /** Add a users custom vote to the in-memory cache */
-    bool CacheCustomVotes(const std::vector<SidechainCustomVote>& vCustomVote);
+    bool CacheCustomVotes(const std::vector<std::string>& vote);
 
     /** Add SidechainActivationStatus to the in-memory cache */
     void CacheSidechainActivationStatus(const std::vector<SidechainActivationStatus>& vActivationStatusIn);
@@ -112,7 +111,7 @@ public:
     bool GetCachedWithdrawalTx(const uint256& hash, CMutableTransaction& mtx) const;
 
     /** Return vector of cached custom withdrawal votes */
-    std::vector<SidechainCustomVote> GetCustomVoteCache() const;
+    std::vector<std::string> GetVotes() const;
 
     /** Return vector of cached deposits for nSidechain. */
     std::vector<SidechainDeposit> GetDeposits(uint8_t nSidechain) const;
@@ -133,8 +132,8 @@ public:
     /** Return serialization hash of SCDB latest verification(s) */
     uint256 GetSCDBHash() const;
 
-    /** Return what the SCDB hash would be if the updates are applied */
-    uint256 GetSCDBHashIfUpdate(const std::vector<SidechainWithdrawalState>& vNewScores, int nHeight, const std::map<uint8_t, uint256>& mapNewWithdrawal = {}, bool fRemoveExpired = false) const;
+    /** Return what the SCDB hash would be if the votes are applied */
+    uint256 GetSCDBHashIfUpdate(const std::vector<std::string>& vVote, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {}) const;
 
     /** Get the sidechain that relates to nSidechain if it exists */
     bool GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const;
@@ -164,10 +163,6 @@ public:
 
     /** Return cached but uncommitted withdrawal transaction hash(s) for nSidechain */
     std::vector<uint256> GetUncommittedWithdrawalCache(uint8_t nSidechain) const;
-
-    /** Returns SCDB withdrawal state with single vote type applied to all of
-     * the most recent withdrawal for each sidechain in the cache */
-    std::vector<SidechainWithdrawalState> GetLatestStateWithVote(const char& vote, const std::map<uint8_t, uint256>& mapNewWithdrawal) const;
 
     /** Return cached withdrawal transaction(s) */
     std::vector<std::pair<uint8_t, CMutableTransaction>> GetWithdrawalTxCache() const;
@@ -241,12 +236,12 @@ public:
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
 
     /** Update / add multiple withdrawals to SCDB */
-    bool UpdateSCDBIndex(const std::vector<SidechainWithdrawalState>& vNewScores, bool fDebug = false, const std::map<uint8_t, uint256>& mapNewWithdrawal = {}, bool fSkipDec = false, bool fRemoveExpired = false);
+    bool UpdateSCDBIndex(const std::vector<std::string>& vVote, bool fDebug = false, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {});
 
     /** Read the SCDB hash in a new block and try to synchronize our SCDB by
      * testing possible work score updates until the SCDB hash of our SCDB
      * matches the one from the new block. Return false if no match found. */
-    bool UpdateSCDBMatchMT(int nHeight, const uint256& hashMerkleRoot, const std::vector<SidechainWithdrawalState>& vScores = {}, const std::map<uint8_t, uint256>& mapNewWithdrawal = {});
+    bool UpdateSCDBMatchMT(const uint256& hashMerkleRoot, const std::vector<std::string>& vVote = {}, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {});
 
 private:
     /**
@@ -280,9 +275,8 @@ private:
     /** Activation status of proposed sidechains */
     std::vector<SidechainActivationStatus> vActivationStatus;
 
-    /** Cache of votes set by the user. These can be set via GUI on the
-     * sidechain manage page, or command line params / config file */
-    std::vector<SidechainCustomVote> vCustomVoteCache;
+    /** Cache of withdrawal vote settings created by the user */
+    std::vector<std::string> vVoteCache;
 
     /** Cache of deposits for each sidechain. TODO optimize with caching
      * so that we don't have to keep all of these in memory.
@@ -332,7 +326,7 @@ private:
 bool DecodeWithdrawalFees(const CScript& script, CAmount& amount);
 
 /** Read an SCDB update script and return new scores by reference if valid */
-bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<SidechainWithdrawalState>& vNewScores);
+bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<std::string>& vVote);
 
 /** Sort deposits by CTIP UTXO spending order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);

@@ -1153,14 +1153,14 @@ void CTxMemPool::UpdateCTIPFromBlock(const std::map<uint8_t, SidechainCTIP>& map
     std::vector<Sidechain> vSidechain = scdb.GetActiveSidechains();
     if (mapActiveSidechain.empty()) {
         for (const Sidechain& s : vSidechain)
-            mapActiveSidechain[s.nSidechain] = s.GetHash();
+            mapActiveSidechain[s.nSidechain] = s.GetSerHash();
     }
 
     // Check if any sidechains have changed since we last updated our cache
     for (const Sidechain& s : vSidechain) {
-        if (mapActiveSidechain.count(s.nSidechain) && mapActiveSidechain[s.nSidechain] != s.GetHash()) {
+        if (mapActiveSidechain.count(s.nSidechain) && mapActiveSidechain[s.nSidechain] != s.GetSerHash()) {
             // Cache updated sidechain hash
-            mapActiveSidechain[s.nSidechain] = s.GetHash();
+            mapActiveSidechain[s.nSidechain] = s.GetSerHash();
 
             // If the sidechain has changed, remove old deposits from mempool
             auto itRem = mapLastSidechainDeposit.find(s.nSidechain);

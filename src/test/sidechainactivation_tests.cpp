@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE(activate_fail)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSidechainActivationCommitment(block, proposal.GetHash());
+    GenerateSidechainActivationCommitment(block, proposal.GetSerHash());
 
     // Add votes until the sidechain is half way activated
     for (int i = 1; i <= SIDECHAIN_ACTIVATION_PERIOD / 2; i++) {
@@ -502,7 +502,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSidechainActivationCommitment(block, vActivation.front().proposal.GetHash());
+    GenerateSidechainActivationCommitment(block, vActivation.front().proposal.GetSerHash());
 
     // Add the requirement to replace
     for (int i = 1; i <= SIDECHAIN_REPLACEMENT_PERIOD - 1; i++)
@@ -574,7 +574,7 @@ BOOST_AUTO_TEST_CASE(replace_sidechain_fail)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSidechainActivationCommitment(block, vActivation.front().proposal.GetHash());
+    GenerateSidechainActivationCommitment(block, vActivation.front().proposal.GetSerHash());
 
     // Add half of the requirement to replace
     for (int i = 1; i <= SIDECHAIN_REPLACEMENT_PERIOD / 2; i++)
@@ -655,8 +655,8 @@ BOOST_AUTO_TEST_CASE(per_block_activation_limit_pass)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSidechainActivationCommitment(block, vActivation.front().proposal.GetHash());
-    GenerateSidechainActivationCommitment(block, vActivation.back().proposal.GetHash());
+    GenerateSidechainActivationCommitment(block, vActivation.front().proposal.GetSerHash());
+    GenerateSidechainActivationCommitment(block, vActivation.back().proposal.GetSerHash());
 
     // Add votes until the sidechains are activated
     int nHeight = 2;
@@ -667,7 +667,7 @@ BOOST_AUTO_TEST_CASE(per_block_activation_limit_pass)
             CMutableTransaction mtxFinal = CMutableTransaction(*block.vtx[0]);
             mtxFinal.vout.clear();
             block.vtx[0] = MakeTransactionRef(std::move(mtx));
-            GenerateSidechainActivationCommitment(block, vActivation.back().proposal.GetHash());
+            GenerateSidechainActivationCommitment(block, vActivation.back().proposal.GetSerHash());
         }
         BOOST_CHECK(scdbTest.Update(nHeight, GetRandHash(), scdbTest.GetHashBlockLastSeen(), block.vtx.front()->vout));
         nHeight++;
@@ -736,8 +736,8 @@ BOOST_AUTO_TEST_CASE(per_block_activation_limit_fail)
     mtx.vin.resize(1);
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-    GenerateSidechainActivationCommitment(block, proposal1.GetHash());
-    GenerateSidechainActivationCommitment(block, proposal2.GetHash());
+    GenerateSidechainActivationCommitment(block, proposal1.GetSerHash());
+    GenerateSidechainActivationCommitment(block, proposal2.GetSerHash());
 
     // Acking two sidechains in one block with the same sidechain number should
     // fail

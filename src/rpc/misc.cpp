@@ -1356,7 +1356,7 @@ UniValue getsidechainactivationstatus(const JSONRPCRequest& request)
         obj.push_back(Pair("keyid", s.proposal.strKeyID));
         obj.push_back(Pair("nage", s.nAge));
         obj.push_back(Pair("nfail", s.nFail));
-        obj.push_back(Pair("proposalhash", s.proposal.GetHash().ToString()));
+        obj.push_back(Pair("proposalhash", s.proposal.GetSerHash().ToString()));
 
         ret.push_back(obj);
     }
@@ -1462,7 +1462,7 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     scdb.CacheSidechainProposals(std::vector<Sidechain>{proposal});
 
     // Cache the hash of the sidechain to ACK it
-    scdb.CacheSidechainHashToAck(proposal.GetHash());
+    scdb.CacheSidechainHashToAck(proposal.GetSerHash());
 
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("nSidechain", proposal.nSidechain));
@@ -1479,14 +1479,14 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
 
 UniValue setwithdrawalvote(const JSONRPCRequest& request)
 {
-    if (request.fHelp || request.params.size() != 3)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 3)
         throw std::runtime_error(
             "setwithdrawalvote\n"
             "Set custom vote for sidechain Withdrawal.\n"
             "\nArguments:\n"
-            "1. vote (\"upvote\"/\"downvote\"/\"abstain\")  (string, required) vote\n"
+            "1. vote (\"upvote\"/\"downvote\"/\"abstain\")  (string, required) Vote\n"
             "2. nsidechain                            (numeric, required) Sidechain number of Withdrawal\n"
-            "3. hash                                  (string, required) Hash of the withdrawal\n"
+            "3. hash                                  (string, optional) Hash of the withdrawal\n"
             "\nExamples:\n"
             + HelpExampleCli("setwithdrawalvote", "")
             + HelpExampleRpc("setwithdrawalvote", "")
@@ -1502,33 +1502,34 @@ UniValue setwithdrawalvote(const JSONRPCRequest& request)
     if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
-    std::string strHash = request.params[2].get_str();
-    if (strHash.size() != 64)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash length");
+    if (strVote == "upvote" && request.params.size() != 3)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Withdrawal hash required for upvote");
+
+    std::string strHash = "";
+    if (request.params.size() == 3) {
+        strHash = request.params[2].get_str();
+        if (strHash.size() != 64)
+            throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash length");
+    }
 
     uint256 hash = uint256S(strHash);
-    if (hash.IsNull())
+    if (request.params.size() == 3 && hash.IsNull())
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Withdrawal hash");
 
-    SidechainCustomVote vote;
-    vote.nSidechain = nSidechain;
-    vote.hash = hash;
+    // Get current votes
+    std::vector<std::string> vVote = scdb.GetVotes();
 
-    if (strVote == "upvote") {
-        vote.vote = SCDB_UPVOTE;
-    }
+    if (strVote == "upvote")
+        vVote[nSidechain] = strHash;
     else
-    if (strVote == "downvote") {
-        vote.vote = SCDB_DOWNVOTE;
-    }
+    if (strVote == "downvote")
+        vVote[nSidechain] = SCDB_DOWNVOTE;
     else
-    if (strVote == "abstain") {
-        vote.vote = SCDB_ABSTAIN;
-    }
+    if (strVote == "abstain")
+        vVote[nSidechain] = SCDB_ABSTAIN;
 
-    // TODO improve error message
-    if (!scdb.CacheCustomVotes(std::vector<SidechainCustomVote> {vote}))
-        throw JSONRPCError(RPC_MISC_ERROR, "Failed to cache Withdrawal vote!");
+    if (!scdb.CacheCustomVotes(vVote))
+        throw JSONRPCError(RPC_MISC_ERROR, "Failed to cache withdrawal votes!");
 
     return NullUniValue;
 }
@@ -1560,28 +1561,24 @@ UniValue listwithdrawalvotes(const JSONRPCRequest& request)
             + HelpExampleRpc("listwithdrawalvotes", "")
             );
 
-    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+    std::vector<std::string> vVote = scdb.GetVotes();
 
     UniValue ret(UniValue::VARR);
 
-    for (const SidechainCustomVote& v : vCustomVote) {
+    for (size_t i = 0; i < vVote.size(); i++) {
         std::string strVote = "";
-        if (v.vote == SCDB_UPVOTE) {
-            strVote = "upvote";
-        }
+        if (vVote[i].size() == 64)
+            strVote = "Upvote " + vVote[i];
         else
-        if (v.vote == SCDB_DOWNVOTE) {
-            strVote = "downvote";
-        }
+        if (vVote[i].front() == SCDB_DOWNVOTE)
+            strVote = "Downvote";
         else
-        if (v.vote == SCDB_ABSTAIN) {
-            strVote = "abstain";
-        }
+        if (vVote[i].front() == SCDB_ABSTAIN)
+            strVote = "Abstain";
 
         UniValue obj(UniValue::VOBJ);
-        obj.push_back(Pair("nSidechain", v.nSidechain));
+        obj.push_back(Pair("nSidechain", i));
         obj.push_back(Pair("vote", strVote));
-        obj.push_back(Pair("hash", v.hash.ToString()));
         ret.push_back(obj);
     }
 

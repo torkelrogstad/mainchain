@@ -251,7 +251,7 @@ bool ActivateSidechain(SidechainDB& scdbTest, Sidechain proposal, int nHeight)
     proposal.strKeyID = HexStr(vchAddress);
     proposal.scriptPubKey = sidechainScript;
 
-    GenerateSidechainActivationCommitment(block, proposal.GetHash());
+    GenerateSidechainActivationCommitment(block, proposal.GetSerHash());
     if (block.vtx.front()->vout.size() != 2)
         return false;
 

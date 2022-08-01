@@ -21,7 +21,7 @@ SidechainDetailsDialog::SidechainDetailsDialog(const Sidechain& sidechain, QWidg
     ui->labelDescription->setText(QString::fromStdString(sidechain.description));
     ui->labelID1->setText(QString::fromStdString(sidechain.hashID1.ToString()));
     ui->labelID2->setText(QString::fromStdString(sidechain.hashID2.ToString()));
-    ui->labelLDBID->setText(QString::fromStdString(sidechain.GetHash().ToString()));
+    ui->labelLDBID->setText(QString::fromStdString(sidechain.GetSerHash().ToString()));
 }
 
 SidechainDetailsDialog::~SidechainDetailsDialog()

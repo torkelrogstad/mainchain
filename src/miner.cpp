@@ -195,9 +195,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (fDrivechainEnabled)
         vActiveSidechain = scdb.GetActiveSidechains();
 
-    // If a Withdrawal has sufficient workscore and this block isn't the last in the
-    // verification period, create the payout transaction. We will add any
-    // generated payout transactions to the block later.
+    // Generate payout transactions for any approved withdrawals
     //
     // Keep track of which sidechains will have a Withdrawal in this block. We will
     // need this when deciding what transactions to add from the mempool.
@@ -246,9 +244,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Add coinbase to block
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
 
-    // TODO make selection of Withdrawal(s) to accept / commit interactive - GUI
-    // Commit Withdrawal(s) which we have received locally
-    std::map<uint8_t /* nSidechain */, uint256 /* hash withdrawal*/> mapNewWithdrawal;
+    // Commit new withdrawals which we have received locally
+    std::map<uint8_t /* nSidechain */, uint256 /* hash withdrawal */> mapNewWithdrawal;
     for (const Sidechain& s : vActiveSidechain) {
         std::vector<uint256> vHash = scdb.GetUncommittedWithdrawalCache(s.nSidechain);
 
@@ -258,144 +255,35 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         const uint256& hash = vHash.back();
 
         // Make sure that the Withdrawal hasn't previously been spent or failed.
-        // We don't want to re-include Withdrawal(s) that have previously failed or
-        // already were approved.
         if (scdb.HaveFailedWithdrawal(hash, s.nSidechain))
             continue;
         if (scdb.HaveSpentWithdrawal(hash, s.nSidechain))
             continue;
 
-        // For now, if there are fresh (uncommited, unknown to SCDB) Withdrawal(s)
+        // For now, if there are fresh (uncommitted, unknown to SCDB) Withdrawal(s)
         // we will commit the most recent in the block we are generating.
         GenerateWithdrawalHashCommitment(*pblock, hash, s.nSidechain);
 
         // Keep track of new Withdrawal(s) by nSidechain for later
         mapNewWithdrawal[s.nSidechain] = hash;
+
+        LogPrintf("%s: Miner found new withdrawal: %u : %s at height %u.\n", __func__, s.nSidechain, hash.ToString(), nHeight);
     }
 
     // Handle Withdrawal updates & generate SCDB MT hash
     if (fDrivechainEnabled) {
         if (scdb.HasState() || mapNewWithdrawal.size()) {
-            uint256 hashSCDB;
-            std::vector<SidechainWithdrawalState> vNewWithdrawal;
-            std::vector<SidechainCustomVote> vCustomVote;
-            // Add new Withdrawal(s)
-            std::map<uint8_t, uint256>::const_iterator it = mapNewWithdrawal.begin();
-            while (it != mapNewWithdrawal.end()) {
-                SidechainWithdrawalState state;
-                state.nSidechain = it->first;
-                state.hash = it->second;
-                state.nWorkScore = 1;
+            // Get withdrawal vote settings
+            std::vector<std::string> vVote = scdb.GetVotes();
 
-                state.nBlocksLeft = SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 1;
-
-                vNewWithdrawal.push_back(state);
-
-                LogPrintf("%s: Miner added new Withdrawal: %s at height %u.\n", __func__, state.hash.ToString(), nHeight);
-
-                it++;
-            }
-
-            // Note that custom votes have priority, and if custom votes are
-            // set we ignore the default votes.
-            //
-            // Apply user's custom votes
-            //
-            // Check if the user has set any custom Withdrawal votes. They can set
-            // custom upvotes, downvotes or abstain by specifying the Withdrawal
-            // hash as a command line param and via GUI.
-            //
-            // This vector has all of the users vote settings. Some of
-            // them could be old / for Withdrawal(s) that don't exist yet. We will
-            // add votes that can actually be applied to vCustomVote.
-            std::vector<SidechainCustomVote> vUserVote = scdb.GetCustomVoteCache();
-
-            // This will store the new votes we are making - based on either
-            // default or custom votes
-            std::vector<SidechainWithdrawalState> vVote;
-
-            // If there are custom votes apply them, otherwise check if a
-            // default is set
-            if (vUserVote.size()) {
-                // TODO changing containers could reduce repeat looping
-                //
-                // Apply users custom votes, and save the custom votes for later
-                // when we generate update bytes
-                for (const Sidechain& s : vActiveSidechain) {
-                    std::vector<SidechainWithdrawalState> vState = scdb.GetState(s.nSidechain);
-                    for (const SidechainWithdrawalState& wt : vState) {
-                        // Check if this Withdrawal has a custom vote setting
-                        for (const SidechainCustomVote& vote : vUserVote) {
-                            if (wt.hash == vote.hash &&
-                                    wt.nSidechain == vote.nSidechain)
-                            {
-                                // Add custom vote to final vector
-                                vCustomVote.push_back(vote);
-
-                                // Add to vVote
-                                SidechainWithdrawalState wtState = wt;
-
-                                if (vote.vote == SCDB_UPVOTE) {
-                                    wtState.nWorkScore++;
-                                }
-                                else
-                                if (vote.vote == SCDB_DOWNVOTE) {
-                                    if (wtState.nWorkScore > 0)
-                                        wtState.nWorkScore--;
-                                }
-
-                                vVote.push_back(wtState);
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Check if the user has set a default Withdrawal vote
-                std::string strDefaultVote = "";
-                strDefaultVote = gArgs.GetArg("-defaultwithdrawalvote", "");
-
-                char vote = SCDB_ABSTAIN;
-
-                if (strDefaultVote == "upvote") {
-                    vote = SCDB_UPVOTE;
-                }
-                else
-                if (strDefaultVote == "downvote") {
-                    vote = SCDB_DOWNVOTE;
-                }
-
-                // Get new scores with default votes applied
-                vVote = scdb.GetLatestStateWithVote(vote, mapNewWithdrawal);
-            }
-
-            // Add new Withdrawal(s) to the list
-            for (const SidechainWithdrawalState& wt : vNewWithdrawal)
-                vVote.push_back(wt);
-
-            hashSCDB = scdb.GetSCDBHashIfUpdate(vVote, nHeight, mapNewWithdrawal, true /* fRemoveExpired */);
-
+            uint256 hashSCDB = scdb.GetSCDBHashIfUpdate(vVote, mapNewWithdrawal);
             if (!hashSCDB.IsNull()) {
                 // Generate SCDB merkle root hash commitment
                 GenerateSCDBHashMerkleRootCommitment(*pblock, hashSCDB);
 
-                // The miner should be passing only the new Withdrawal(s) when checking
-                // MT update here.
-                //
-                // If UpdateSCDBMatchMT doesn't work with just that - which
-                // means other nodes won't be able to update either then
-                // generate SCDB update bytes.
-                //
-                // Test parsing and pass the result of ParseSCDBUpdateScript +
-                // the new Withdrawal(s) into UpdateSCDBMatchMT to check that it works
-                // with the bytes & new Withdrawal info.
-                //
-                // Nodes connecting the block will add the new Withdrawal(s) to their
-                // db but they wont have the rest of the score changes without
-                // parsing the update bytes in this scenario.
-
                 // Check if we need to generate update bytes
                 SidechainDB scdbCopy = scdb;
-                if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vNewWithdrawal, mapNewWithdrawal)) {
+                if (!scdbCopy.UpdateSCDBMatchMT(hashSCDB, vVote, mapNewWithdrawal)) {
                     // Get SCDB state
                     std::vector<std::vector<SidechainWithdrawalState>> vState;
                     for (const Sidechain& s : vActiveSidechain) {
@@ -403,21 +291,18 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     }
                     LogPrintf("%s: Miner generating update bytes at height %u.\n", __func__, nHeight);
                     CScript script;
-                    GenerateSCDBUpdateScript(*pblock, script, vState, vCustomVote);
+                    GenerateSCDBUpdateScript(*pblock, script, vState, vVote);
 
                     // Make sure that we can read the update bytes
-                    std::vector<SidechainWithdrawalState> vParsed;
-                    if (!ParseSCDBUpdateScript(script, vState, vParsed)) {
+                    std::vector<std::string> vVote;
+                    if (!ParseSCDBUpdateScript(script, vState, vVote)) {
                         LogPrintf("%s: Miner failed to parse its own update bytes at height %u.\n", __func__, nHeight);
                         throw std::runtime_error(strprintf("%s: Miner failed to parse its own update bytes at height %u.\n",
                                     __func__, nHeight));
                     }
-                    // Add new Withdrawal(s) to the list
-                    for (const SidechainWithdrawalState& wt : vNewWithdrawal)
-                        vParsed.push_back(wt);
 
                     // Finally, check if we can update with update bytes
-                    if (!scdbCopy.UpdateSCDBMatchMT(nHeight, hashSCDB, vParsed, mapNewWithdrawal)) {
+                    if (!scdbCopy.UpdateSCDBMatchMT(hashSCDB, vVote, mapNewWithdrawal)) {
                         LogPrintf("%s: Miner failed to update with bytes at height %u.\n", __func__, nHeight);
                         throw std::runtime_error(strprintf("%s: Miner failed update with its own update bytes at height %u.\n",
                                     __func__, nHeight));
@@ -430,7 +315,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         GenerateCriticalHashCommitments(*pblock);
 
         // Scan through our sidechain proposals and commit the first one we find
-        // that hasn't already been commited and is tracked by SCDB.
+        // that hasn't already been committed and is tracked by SCDB.
         //
         // If we commit a proposal, save the hash to easily ACK it later
         uint256 hashProposal;
@@ -453,7 +338,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     continue;
 
                 GenerateSidechainProposalCommitment(*pblock, p);
-                hashProposal = p.GetHash();
+                hashProposal = p.GetSerHash();
                 LogPrintf("%s: Generated sidechain proposal commitment for:\n%s\n", __func__, p.ToString());
                 break;
             }
@@ -469,10 +354,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         vActivationStatus = scdb.GetSidechainActivationStatus();
         std::map<uint8_t, bool> mapCommit;
         for (const SidechainActivationStatus& s : vActivationStatus) {
-            if (fAnySidechain || scdb.GetAckSidechain(s.proposal.GetHash())) {
+            if (fAnySidechain || scdb.GetAckSidechain(s.proposal.GetSerHash())) {
                 // Don't generate more than one commit for the same SC #
                 if (mapCommit.find(s.proposal.nSidechain) == mapCommit.end()) {
-                    GenerateSidechainActivationCommitment(*pblock, s.proposal.GetHash());
+                    GenerateSidechainActivationCommitment(*pblock, s.proposal.GetSerHash());
                     mapCommit[s.proposal.nSidechain] = true;
                 }
             }
@@ -659,7 +544,7 @@ bool BlockAssembler::CreateWithdrawalPayout(uint8_t nSidechain, CMutableTransact
     if (!scdb.GetSidechain(nSidechain, sidechain))
         return false;
 
-    // Select the highest scoring wthdrawal for sidechain
+    // Select the highest scoring withdrawal for sidechain
     uint256 hashBest = uint256();
     uint16_t scoreBest = 0;
     std::vector<SidechainWithdrawalState> vState = scdb.GetState(nSidechain);

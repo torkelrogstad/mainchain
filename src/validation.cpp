@@ -3671,8 +3671,11 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash)
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes)
+bool GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<std::string>& vVote)
 {
+    if (vVote.size() != SIDECHAIN_ACTIVATION_MAX_ACTIVE)
+        return false;
+
     // Create output that bytes will be added to
     CTxOut out;
     out.nValue = 0;
@@ -3688,32 +3691,40 @@ void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<
     // Add version number
     out.scriptPubKey[5] = SCDB_UPDATE_SCRIPT_VERSION;
 
-    // TODO refactor : change container of vUserVotes so we don't loop
+    // Generate bytes for each sidechain depending on vote settings
+    for (size_t x = 0; x < vScores.size(); x++) {
+        const std::string strVote = vVote[x];
+        if (strVote.empty())
+            return false;
 
-    // Loop through each sidechain's current Withdrawal scores
-    for (const std::vector<SidechainWithdrawalState>& s : vScores) {
-        for (size_t i = 0; i < s.size(); i++) {
-            // Check if there is a vote set for this Withdrawal
-            for (const SidechainCustomVote& v : vUserVotes) {
-                // Check if any vote options are set for this sidechain's Withdrawal(s)
-                if (v.nSidechain == s[i].nSidechain && v.hash == s[i].hash) {
-                    if (v.vote == SCDB_UPVOTE || v.vote == SCDB_DOWNVOTE) {
-                        // Add vote to script
-                        out.scriptPubKey << (v.vote == SCDB_UPVOTE ? SC_OP_UPVOTE : SC_OP_DOWNVOTE);
-                        if (i > 0) {
-                            // Add Withdrawal index to script if needed
-                            out.scriptPubKey << CScriptNum(i);
-                        }
-                        break;
-                    }
-                    else
-                    if (v.vote == SCDB_ABSTAIN) {
-                        // The abstain vote is implied by having no vote
-                        break;
-                    }
+        if (strVote.size() == 64) {
+            uint256 hash = uint256S(strVote);
+            if (hash.IsNull())
+                return false;
+
+            // Add vote to script
+            out.scriptPubKey << SC_OP_UPVOTE;
+
+            // Find the index of the withdrawal we are upvoting
+            size_t index = 0;
+
+            for (size_t y = 0; y < vScores[x].size(); y++) {
+                if (vScores[x][y].hash == hash) {
+                    index = y;
+                    break;
                 }
             }
+
+            if (index > 0) {
+                // Add Withdrawal index to script if needed
+                out.scriptPubKey << CScriptNum(index);
+            }
         }
+        else
+        if (strVote.front() == SCDB_DOWNVOTE) {
+                out.scriptPubKey << SC_OP_DOWNVOTE;
+        }
+
         // Add deliminator to script, we're moving on to the next sidechain
         out.scriptPubKey << SC_OP_DELIM;
     }
@@ -3725,6 +3736,8 @@ void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<
     CMutableTransaction mtx(*block.vtx[0]);
     mtx.vout.push_back(out);
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
+
+    return true;
 }
 
 CScript GetNewsTokyoDailyHeader()
@@ -5431,7 +5444,7 @@ bool LoadCustomVoteCache()
         return true;
     }
 
-    std::vector<SidechainCustomVote> vCustomVote;
+    std::vector<std::string> vVote;
     try {
         int64_t nVersion;
         filein >> nVersion;
@@ -5441,10 +5454,14 @@ bool LoadCustomVoteCache()
 
         int count = 0;
         filein >> count;
+
+        if (count != SIDECHAIN_ACTIVATION_MAX_ACTIVE)
+            return false;
+
         for (int i = 0; i < count; i++) {
-            SidechainCustomVote vote;
-            filein >> vote;
-            vCustomVote.push_back(vote);
+            std::string strVote;
+            filein >> strVote;
+            vVote.push_back(strVote);
         }
     }
     catch (const std::exception& e) {
@@ -5453,8 +5470,8 @@ bool LoadCustomVoteCache()
     }
 
     // Add to SCDB
-    if (!vCustomVote.empty()) {
-        scdb.CacheCustomVotes(vCustomVote);
+    if (!vVote.empty()) {
+        scdb.CacheCustomVotes(vVote);
     }
 
     return true;
@@ -5462,9 +5479,9 @@ bool LoadCustomVoteCache()
 
 void DumpCustomVoteCache()
 {
-    std::vector<SidechainCustomVote> vCustomVote = scdb.GetCustomVoteCache();
+    std::vector<std::string> vVote = scdb.GetVotes();
 
-    int count = vCustomVote.size();
+    int count = vVote.size();
 
     // Write the votes
     fs::path path = GetDataDir() / "drivechain" / "customvotes.dat.new";
@@ -5477,8 +5494,8 @@ void DumpCustomVoteCache()
         fileout << SCDB_DUMP_VERSION; // version required to read
         fileout << count; // Number of deposits in file
 
-        for (const SidechainCustomVote& v : vCustomVote) {
-            fileout << v;
+        for (const std::string& vote : vVote) {
+            fileout << vote;
         }
     }
     catch (const std::exception& e) {

@@ -166,7 +166,7 @@ void SidechainProposalDialog::on_pushButtonCreate_clicked()
     scdb.CacheSidechainProposals(std::vector<Sidechain>{proposal});
 
     // Cache sidechain hash to ACK it
-    scdb.CacheSidechainHashToAck(proposal.GetHash());
+    scdb.CacheSidechainHashToAck(proposal.GetSerHash());
 
     QString message = QString("Sidechain proposal created!\n\n");
     message += QString("Sidechain Number:\n%1\n\n").arg(nSidechain);

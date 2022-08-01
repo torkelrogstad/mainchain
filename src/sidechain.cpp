@@ -80,21 +80,16 @@ std::string SidechainCTIP::ToString() const
     return ss.str();
 }
 
-bool SidechainWithdrawalState::IsNull() const
-{
-    return (hash.IsNull());
-}
-
 bool SidechainWithdrawalState::operator==(const SidechainWithdrawalState& a) const
 {
     return (a.nSidechain == nSidechain &&
-            a.hash== hash);
+            a.hash == hash);
 }
 
 std::string SidechainWithdrawalState::ToString() const
 {
     std::stringstream ss;
-    ss << "hash=" << GetHash().ToString() << std::endl;
+    ss << "serhash=" << GetSerHash().ToString() << std::endl;
     ss << "nsidechain=" << (unsigned int)nSidechain << std::endl;
     ss << "nBlocksLeft=" << (unsigned int)nBlocksLeft << std::endl;
     ss << "nWorkScore=" << (unsigned int)nWorkScore << std::endl;
@@ -163,27 +158,32 @@ bool Sidechain::DeserializeFromProposalScript(const CScript& script)
     return true;
 }
 
-uint256 SidechainActivationStatus::GetHash() const
+uint256 SidechainActivationStatus::GetSerHash() const
 {
     return SerializeHash(*this);
 }
 
-uint256 SidechainDeposit::GetHash() const
+uint256 SidechainDeposit::GetSerHash() const
 {
     return SerializeHash(*this);
 }
 
-uint256 Sidechain::GetHash() const
+uint256 Sidechain::GetSerHash() const
 {
     return SerializeHash(*this);
 }
 
-uint256 SidechainWithdrawalState::GetHash() const
+uint256 SidechainWithdrawalState::GetSerHash() const
 {
     return SerializeHash(*this);
 }
 
-uint256 SidechainCTIP::GetHash() const
+uint256 SidechainCTIP::GetSerHash() const
+{
+    return SerializeHash(*this);
+}
+
+uint256 SidechainBlockData::GetSerHash() const
 {
     return SerializeHash(*this);
 }
@@ -206,7 +206,7 @@ CScript Sidechain::GetProposalScript() const
     return script;
 }
 
-uint256 SidechainObj::GetHash(void) const
+uint256 SidechainObj::GetSerHash(void) const
 {
     uint256 ret;
     if (sidechainop == DB_SIDECHAIN_BLOCK_OP)

@@ -456,7 +456,7 @@ void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidecha
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash);
 
-void GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<SidechainCustomVote>& vUserVotes);
+bool GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<std::string>& vVote);
 
 CScript GetNewsTokyoDailyHeader();
 CScript GetNewsUSDailyHeader();
