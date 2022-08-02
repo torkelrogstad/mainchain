@@ -263,7 +263,7 @@ bool CScript::IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vB
     return true;
 }
 
-bool CScript::IsSCDBHashMerkleRootCommit(uint256& hashMerkleRoot) const
+bool CScript::IsSCDBHashCommit(uint256& hashSCDB) const
 {
     // Check script size
     size_t size = this->size();
@@ -278,9 +278,9 @@ bool CScript::IsSCDBHashMerkleRootCommit(uint256& hashMerkleRoot) const
             (*this)[4] != 0x8C)
         return false;
 
-    hashMerkleRoot = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    hashSCDB = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
 
-    if (hashMerkleRoot.IsNull())
+    if (hashSCDB.IsNull())
         return false;
 
     return true;

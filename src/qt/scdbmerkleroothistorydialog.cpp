@@ -406,7 +406,7 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
 
             // Add SC item parent to tree
             subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSC);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSC);
 
             fDataFound = true;
             nSidechain++;
@@ -434,18 +434,18 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
             subItemLeaves->setText(0, strLeaves);
             subItemTree->addChild(subItemLeaves);
 
-            // Create H(SCDB) merkle root object
-            QTreeWidgetItem *subItemMerkle = new QTreeWidgetItem();
-            subItemMerkle->setText(0, "H(SCDB) merkle root hash");
+            // Create H(SCDB)  root object
+            QTreeWidgetItem *subItemSCDBHash = new QTreeWidgetItem();
+            subItemSCDBHash->setText(0, "H(SCDB)");
 
-            QTreeWidgetItem *subItemMerkleHash = new QTreeWidgetItem();
+            QTreeWidgetItem *subItemSCDBHashData = new QTreeWidgetItem();
             uint256 hashSCDB = ComputeMerkleRoot(vLeaf);
-            subItemMerkleHash->setText(0, QString::fromStdString(hashSCDB.ToString()));
-            subItemMerkle->addChild(subItemMerkleHash);
+            subItemSCDBHashData->setText(0, QString::fromStdString(hashSCDB.ToString()));
+            subItemSCDBHash->addChild(subItemSCDBHashData);
 
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemSer);
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemTree);
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashMT.ToString()), nHeight - i, subItemMerkle);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSer);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemTree);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSCDBHash);
         } else {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "No score data for this block");

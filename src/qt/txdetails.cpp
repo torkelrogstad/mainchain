@@ -18,7 +18,7 @@ enum TopLevelIndex {
     INDEX_WITNESS_PROGRAM,
     INDEX_WITNESS_COMMIT,
     INDEX_CRITICAL_HASH,
-    INDEX_SCDB_MT_HASH,
+    INDEX_SCDB_HASH,
     INDEX_WITHDRAWAL_HASH,
     INDEX_SC_PROPOSAL,
     INDEX_SC_ACK,
@@ -97,7 +97,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     // Critical data bytes
     std::vector<unsigned char> vBytes;
     // SCDB hash merkle root
-    uint256 hashMT = uint256();
+    uint256 hashSCDB = uint256();
 
     ui->treeWidgetDecoded->clear();
     // TODO A lot of these output types can only be in the coinbase so we
@@ -115,7 +115,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
 
         hashCritical.SetNull();
 
-        hashMT.SetNull();
+        hashSCDB.SetNull();
 
         const CScript scriptPubKey = tx.vout[i].scriptPubKey;
         if (scriptPubKey.empty())
@@ -159,13 +159,13 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             AddTreeItem(INDEX_CRITICAL_HASH, subItem);
         }
         else
-        if (scriptPubKey.IsSCDBHashMerkleRootCommit(hashMT)) {
+        if (scriptPubKey.IsSCDBHashCommit(hashSCDB)) {
             // Create a SCDB merkle tree hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "SCDB Merkle Tree Hash Commit: " +
-                    QString::fromStdString(hashMT.ToString()));
-            AddTreeItem(INDEX_SCDB_MT_HASH, subItem);
+            subItem->setText(1, "SCDB Hash Commit: " +
+                    QString::fromStdString(hashSCDB.ToString()));
+            AddTreeItem(INDEX_SCDB_HASH, subItem);
         }
         else
         if (scriptPubKey.IsWithdrawalHashCommit(hashWithdrawal, nSidechain)) {
@@ -254,8 +254,8 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
         if (index == INDEX_CRITICAL_HASH)
             topItem->setText(0, "BMM / Critical Hash");
         else
-        if (index == INDEX_SCDB_MT_HASH)
-            topItem->setText(0, "SCDB Merkle Tree Hash");
+        if (index == INDEX_SCDB_HASH)
+            topItem->setText(0, "SCDB Hash");
         else
         if (index == INDEX_WITHDRAWAL_HASH)
             topItem->setText(0, "New Withdrawal Hash");

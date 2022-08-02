@@ -1932,7 +1932,7 @@ UniValue gettotalscdbhash(const JSONRPCRequest& request)
             );
 
     UniValue ret(UniValue::VOBJ);
-    ret.push_back(Pair("hashscdbtotal", scdb.GetTotalSCDBHash().ToString()));
+    ret.push_back(Pair("hashscdbtotal", scdb.GetTestHash().ToString()));
 
     return ret;
 }
@@ -1982,7 +1982,7 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
 
     UniValue ret(UniValue::VARR);
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("M4 hash", data.hashMT.ToString()));
+    obj.push_back(Pair("SCDB hash", data.hashSCDB.ToString()));
     ret.push_back(obj);
     for (auto& x : data.vWithdrawalStatus) {
         for (auto& y : x) {

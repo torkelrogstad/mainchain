@@ -6,6 +6,8 @@
 
 #include <consensus/consensus.h>
 #include <consensus/merkle.h>
+#include <clientversion.h>
+#include <hash.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
 #include <sidechain.h>
@@ -26,7 +28,7 @@ bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockDat
     vActivationStatus = data.vActivationStatus;
     vSidechain = data.vSidechain;
 
-    // TODO verify SCDB hash matches MT hash commit for block
+    // TODO verify SCDB hash matches SCDB hash commit for block
     return true;
 }
 
@@ -377,12 +379,8 @@ uint256 SidechainDB::GetHashBlockLastSeen()
     return hashBlockLastSeen;
 }
 
-uint256 SidechainDB::GetTotalSCDBHash() const
+uint256 SidechainDB::GetTestHash() const
 {
-    // Note: This function is used for testing only right now, and is very noisy
-    // in the log. If this function is to be used for non-testing in the future
-    // the log messages should be commented out to be re-enabled for testing if
-    // desired.
     std::vector<uint256> vLeaf;
 
     // Add mapCTIP
@@ -453,14 +451,13 @@ uint256 SidechainDB::GetSCDBHash() const
     if (vWithdrawalStatus.empty())
         return uint256();
 
-    std::vector<uint256> vLeaf;
-    for (size_t i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
-        std::vector<SidechainWithdrawalState> vState = GetState(i);
-        for (const SidechainWithdrawalState& state : vState) {
-            vLeaf.push_back(state.GetSerHash());
-        }
-    }
-    return ComputeMerkleRoot(vLeaf);
+    CDataStream ss(SER_DISK, CLIENT_VERSION);
+
+    for (size_t x = 0; x < vWithdrawalStatus.size(); x++)
+        for (size_t y = 0; y < vWithdrawalStatus[x].size(); y++)
+            ss << vWithdrawalStatus[x][y];
+
+    return SerializeHash(ss);
 }
 
 uint256 SidechainDB::GetSCDBHashIfUpdate(const std::vector<std::string>& vVote, const std::map<uint8_t, uint256>& mapNewWithdrawal) const
@@ -1245,38 +1242,35 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    // Scan for SCDB updated merkle root hash commit, the hash of SCDB after
+    // Scan for updated SCDB hash commit which is the hash of SCDB after
     // applying the new updates from this block.
     //
-    // Only one merkle root commit is allowed per block.
-    bool fMTFound = false;
-    uint256 hashMerkleRoot = uint256();
+    // Only one SCDB hash commit is allowed per block.
+    bool fSCDBHashFound = false;
+    uint256 hashSCDB = uint256();
     for (const CTxOut& out : vout) {
-        uint256 hashMT;
-        if (out.scriptPubKey.IsSCDBHashMerkleRootCommit(hashMT)) {
-            // If we already found a merkle root commit, a second is invalid
-            if (fMTFound) {
+        if (out.scriptPubKey.IsSCDBHashCommit(hashSCDB)) {
+            // If we already found a SCDB hash commit, a second is invalid
+            if (fSCDBHashFound) {
                 if (fDebug) {
-                    LogPrintf("SCDB %s: Error: Multiple MT commits at height: %u\n",
+                    LogPrintf("SCDB %s: Error: Multiple SCDB hash commits at height: %u\n",
                         __func__,
                         nHeight);
                 }
                 return false;
             }
-
-            fMTFound = true;
-            hashMerkleRoot = hashMT;
+            fSCDBHashFound = true;
         }
     }
 
-    // If there's a MT hash commit in this block, it must be different than
+    // If we find an SCDB hash commit in this block, it must be different than
     // the current SCDB hash (Withdrawal blocks remaining should have at least
     // been updated if nothing else)
-    if (fMTFound && !hashMerkleRoot.IsNull() && GetSCDBHash() == hashMerkleRoot) {
+    if (fSCDBHashFound && !hashSCDB.IsNull() && GetSCDBHash() == hashSCDB) {
         if (fDebug)
-            LogPrintf("SCDB %s: Invalid (equal) merkle root hash: %s at height: %u\n",
+            LogPrintf("SCDB %s: Invalid (equal) SCDB hash: %s at height: %u\n",
                     __func__,
-                    hashMerkleRoot.ToString(),
+                    hashSCDB.ToString(),
                     nHeight);
         return false;
     }
@@ -1286,7 +1280,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
      *
      * Scan for new Withdrawal(s) and start tracking them.
      *
-     * Scan for updated SCDB MT hash, and perform MT hash based SCDB update.
+     * Scan for updated SCDB hash, and perform hash based SCDB update.
      *
      * Scan for sidechain proposals & sidechain activation commitments.
      *
@@ -1414,8 +1408,8 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
     }
 
-    // Update SCDB to match new SCDB MT (hashMerkleRoot) from block
-    if (!fJustCheck && !hashMerkleRoot.IsNull()) {
+    // Update SCDB to match new SCDB hash from block
+    if (!fJustCheck && !hashSCDB.IsNull()) {
 
         // Check if there are update bytes
         std::vector<CScript> vUpdateBytes;
@@ -1455,20 +1449,20 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                         nHeight);
         }
 
-        bool fUpdated = UpdateSCDBMatchMT(hashMerkleRoot, vVote, mapNewWithdrawal);
+        bool fUpdated = UpdateSCDBMatchHash(hashSCDB, vVote, mapNewWithdrawal);
         if (!fUpdated) {
             if (fDebug)
-                LogPrintf("SCDB %s: Failed to match MT: %s at height: %u\n",
+                LogPrintf("SCDB %s: Failed to match SCDB hash: %s at height: %u\n",
                         __func__,
-                        hashMerkleRoot.ToString(),
+                        hashSCDB.ToString(),
                         nHeight);
             return false;
         }
     }
 
-    if (!fJustCheck && hashMerkleRoot.IsNull()) {
+    if (!fJustCheck && hashSCDB.IsNull()) {
         if (fDebug)
-            LogPrintf("SCDB %s: hashMerkleRoot is null - applying default update!\n",
+            LogPrintf("SCDB %s: hashSCDB is null - applying default update!\n",
                     __func__);
 
         ApplyDefaultUpdate();
@@ -1681,16 +1675,16 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<std::string>& vVote, bool fD
     return true;
 }
 
-bool SidechainDB::UpdateSCDBMatchMT(const uint256& hashMerkleRoot, const std::vector<std::string>& vVote, const std::map<uint8_t, uint256>& mapNewWithdrawal)
+bool SidechainDB::UpdateSCDBMatchHash(const uint256& hashSCDB, const std::vector<std::string>& vVote, const std::map<uint8_t, uint256>& mapNewWithdrawal)
 {
     // vVote is an optional vector of withdrawal votes that we have parsed from
     // an update script, the network or otherwise.
 
     // Try using custom votes optionally passed in from update bytes
     if (vVote.size()) {
-        if (GetSCDBHashIfUpdate(vVote, mapNewWithdrawal) == hashMerkleRoot) {
+        if (GetSCDBHashIfUpdate(vVote, mapNewWithdrawal) == hashSCDB) {
             UpdateSCDBIndex(vVote, true /* fDebug */, mapNewWithdrawal);
-            return (GetSCDBHash() == hashMerkleRoot);
+            return (GetSCDBHash() == hashSCDB);
         }
     }
 
@@ -1702,23 +1696,23 @@ bool SidechainDB::UpdateSCDBMatchMT(const uint256& hashMerkleRoot, const std::ve
         if (vWithdrawalStatus[x].size())
             vUpvote[x] = vWithdrawalStatus[x].back().hash.ToString();
     }
-    if (GetSCDBHashIfUpdate(vUpvote, mapNewWithdrawal) == hashMerkleRoot) {
+    if (GetSCDBHashIfUpdate(vUpvote, mapNewWithdrawal) == hashSCDB) {
         UpdateSCDBIndex(vUpvote, true /* fDebug */, mapNewWithdrawal);
-        return (GetSCDBHash() == hashMerkleRoot);
+        return (GetSCDBHash() == hashSCDB);
     }
 
     // Create abstain votes
     std::vector<std::string> vAbstain(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    if (GetSCDBHashIfUpdate(vAbstain, mapNewWithdrawal) == hashMerkleRoot) {
+    if (GetSCDBHashIfUpdate(vAbstain, mapNewWithdrawal) == hashSCDB) {
         UpdateSCDBIndex(vAbstain, true /* fDebug */, mapNewWithdrawal);
-        return (GetSCDBHash() == hashMerkleRoot);
+        return (GetSCDBHash() == hashSCDB);
     }
 
     // Create downvotes
     std::vector<std::string> vDownvote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_DOWNVOTE));
-    if (GetSCDBHashIfUpdate(vDownvote, mapNewWithdrawal) == hashMerkleRoot) {
+    if (GetSCDBHashIfUpdate(vDownvote, mapNewWithdrawal) == hashSCDB) {
         UpdateSCDBIndex(vDownvote, true /* fDebug */, mapNewWithdrawal);
-        return (GetSCDBHash() == hashMerkleRoot);
+        return (GetSCDBHash() == hashSCDB);
     }
 
     return false;

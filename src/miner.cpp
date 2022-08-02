@@ -270,7 +270,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         LogPrintf("%s: Miner found new withdrawal: %u : %s at height %u.\n", __func__, s.nSidechain, hash.ToString(), nHeight);
     }
 
-    // Handle Withdrawal updates & generate SCDB MT hash
+    // Handle Withdrawal updates & generate SCDB hash
     if (fDrivechainEnabled) {
         if (scdb.HasState() || mapNewWithdrawal.size()) {
             // Get withdrawal vote settings
@@ -283,7 +283,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
                 // Check if we need to generate update bytes
                 SidechainDB scdbCopy = scdb;
-                if (!scdbCopy.UpdateSCDBMatchMT(hashSCDB, vVote, mapNewWithdrawal)) {
+                if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, vVote, mapNewWithdrawal)) {
                     // Get SCDB state
                     std::vector<std::vector<SidechainWithdrawalState>> vState;
                     for (const Sidechain& s : vActiveSidechain) {
@@ -302,7 +302,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     }
 
                     // Finally, check if we can update with update bytes
-                    if (!scdbCopy.UpdateSCDBMatchMT(hashSCDB, vVote, mapNewWithdrawal)) {
+                    if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, vVote, mapNewWithdrawal)) {
                         LogPrintf("%s: Miner failed to update with bytes at height %u.\n", __func__, nHeight);
                         throw std::runtime_error(strprintf("%s: Miner failed update with its own update bytes at height %u.\n",
                                     __func__, nHeight));

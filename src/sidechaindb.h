@@ -127,7 +127,7 @@ public:
      * This includes members used for consensus as well as user data like
      * which sidechain(s) they have set votes for and their own sidechain
      * proposals. */
-    uint256 GetTotalSCDBHash() const;
+    uint256 GetTestHash() const;
 
     /** Return serialization hash of SCDB latest verification(s) */
     uint256 GetSCDBHash() const;
@@ -241,7 +241,7 @@ public:
     /** Read the SCDB hash in a new block and try to synchronize our SCDB by
      * testing possible work score updates until the SCDB hash of our SCDB
      * matches the one from the new block. Return false if no match found. */
-    bool UpdateSCDBMatchMT(const uint256& hashMerkleRoot, const std::vector<std::string>& vVote = {}, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {});
+    bool UpdateSCDBMatchHash(const uint256& hashSCDB, const std::vector<std::string>& vVote = {}, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {});
 
 private:
     /**

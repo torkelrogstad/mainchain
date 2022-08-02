@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_mutli_withdraw_one_expires)
 
 BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_upvote)
 {
-    // Test SCDB::UpdateSCDBMatchMT merkle root commit update with single upvote
+    // Test SCDB::UpdateSCDBMatchHash update with single upvote
 
     SidechainDB scdbTest;
 
@@ -152,8 +152,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_upvote)
     // Updates scores of SCDB copy
     BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
 
-    // Make SCDB match copy via MT update
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash()));
+    // Make SCDB match copy via hash update
+    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
 
     // Verify status of withdrawal
     std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_upvote)
 
 BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_abstain)
 {
-    // Test SCDB::UpdateSCDBMatchMT merkle root commit update with abstain vote
+    // Test SCDB::UpdateSCDBMatchHash update with abstain vote
 
     SidechainDB scdbTest;
 
@@ -185,8 +185,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_abstain)
     // Updates scores of SCDB copy
     BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote, false));
 
-    // Make SCDB match copy via MT update
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash()));
+    // Make SCDB match copy via hash update
+    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
 
     // Verify status of withdrawal
     std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
@@ -197,7 +197,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_abstain)
 
 BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_downvote)
 {
-    // Test SCDB::UpdateSCDBMatchMT merkle root commit update with downvote
+    // Test SCDB::UpdateSCDBMatchHash update with downvote
 
     SidechainDB scdbTest;
 
@@ -218,8 +218,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_downvote)
     // Updates scores of SCDB copy
     BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote, false));
 
-    // Make SCDB match copy via MT update
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash()));
+    // Make SCDB match copy via hash update
+    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
 
     // Verify status of withdrawal
     std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_downvote)
 BOOST_AUTO_TEST_CASE(sidechaindb_withdrawal_mt)
 {
     // Test creating a withdrawal and approving it with enough workscore via
-    // MT updates only
+    // hash updates only
 
     SidechainDB scdbTest;
 
@@ -257,8 +257,8 @@ BOOST_AUTO_TEST_CASE(sidechaindb_withdrawal_mt)
     for (int i = 1; i < SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
         BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
 
-        // Make SCDB match copy via MT update
-        BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash()));
+        // Make SCDB match copy via hash update
+        BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
     }
 
     // Withdrawal should pass with valid workscore
@@ -689,15 +689,15 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     // Create a copy of the scdbTest to manipulate
     SidechainDB scdbTestCopy = scdbTest;
 
-    // Update the scdbTest copy to get a new MT hash. No change to withdrawal
+    // Update the scdbTest copy to get a new hash. No change to withdrawal
     // SC 0 withdrawal means it will have a default abstain vote.
     std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
     vVote[1] = SCDB_DOWNVOTE; // Downvote withdrawals of SC # 1
 
     BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
 
-    // MT hash prediction should fail here without update script
-    BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash()));
+    // Hash prediction should fail here without update script
+    BOOST_CHECK(!scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
 
     // Generate an update script
     CBlock block;
@@ -724,7 +724,7 @@ BOOST_AUTO_TEST_CASE(update_helper_basic)
     std::vector<std::string> vParsedVote;
     BOOST_CHECK(ParseSCDBUpdateScript(script, vOld, vParsedVote));
 
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash(), vParsedVote));
+    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash(), vParsedVote));
 }
 
 BOOST_AUTO_TEST_CASE(update_helper_max_active)
@@ -760,7 +760,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote, false, mapNewWithdrawal));
 
     // This update should work without update helper bytes
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash(), vVote, mapNewWithdrawal));
+    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash(), vVote, mapNewWithdrawal));
 
     // Now test updates that won't work without update helper bytes
 
@@ -774,7 +774,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
 
     // This update should not work without update helper bytes
-    BOOST_CHECK(!scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash()));
+    BOOST_CHECK(!scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
 
     // Generate update script
 
@@ -802,7 +802,7 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     BOOST_CHECK(vVote[245] == vParsedVote[245]);
 
     // Update copy of SCDB based on update helper bytes
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchMT(scdbTestCopy.GetSCDBHash(), vParsedVote));
+    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash(), vParsedVote));
 }
 
 BOOST_AUTO_TEST_CASE(custom_vote_cache)

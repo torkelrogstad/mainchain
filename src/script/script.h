@@ -664,7 +664,7 @@ public:
 
     /** Script formats for Drivechains */
     bool IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vBytes) const;
-    bool IsSCDBHashMerkleRootCommit(uint256& hashMerkleRoot) const;
+    bool IsSCDBHashCommit(uint256& hashSCDB) const;
     bool IsWithdrawalHashCommit(uint256& hash, uint8_t& nSidechain) const;
     bool IsSidechainProposalCommit() const;
     bool IsSidechainActivationCommit(uint256& hashSidechain) const;
