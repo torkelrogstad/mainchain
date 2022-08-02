@@ -278,7 +278,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
             uint256 hashSCDB = scdb.GetSCDBHashIfUpdate(vVote, mapNewWithdrawal);
             if (!hashSCDB.IsNull()) {
-                // Generate SCDB merkle root hash commitment
+                // Generate SCDB hash commitment
                 GenerateSCDBHashMerkleRootCommitment(*pblock, hashSCDB);
 
                 // Check if we need to generate update bytes

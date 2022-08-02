@@ -96,7 +96,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     uint256 hashCritical = uint256();
     // Critical data bytes
     std::vector<unsigned char> vBytes;
-    // SCDB hash merkle root
+    // SCDB hash
     uint256 hashSCDB = uint256();
 
     ui->treeWidgetDecoded->clear();
