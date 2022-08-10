@@ -348,8 +348,8 @@ void WalletView::showSidechainActivationDialog()
         sidechainPage->ShowActivationDialog();
 }
 
-void WalletView::showSidechainM4Dialog()
+void WalletView::showSCDBHashDialog()
 {
     if (sidechainPage)
-        sidechainPage->ShowM4Dialog();
+        sidechainPage->ShowSCDBHashDialog();
 }

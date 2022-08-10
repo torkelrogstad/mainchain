@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SCDBMERKLEROOTHISTORYDIALOG_H
-#define SCDBMERKLEROOTHISTORYDIALOG_H
+#ifndef SCDBHASHDIALOG_H
+#define SCDBHASHDIALOG_H
 
 #include <QDialog>
 
@@ -21,22 +21,22 @@ enum TreeItemRoles {
 };
 
 namespace Ui {
-class SCDBMerkleRootHistoryDialog;
+class SCDBHashDialog;
 }
 
-class SCDBMerkleRootHistoryDialog : public QDialog
+class SCDBHashDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit SCDBMerkleRootHistoryDialog(const PlatformStyle *platformStyle, QWidget *parent = nullptr);
-    ~SCDBMerkleRootHistoryDialog();
+    explicit SCDBHashDialog(const PlatformStyle *platformStyle, QWidget *parent = nullptr);
+    ~SCDBHashDialog();
 
     void setClientModel(ClientModel *model);
     void UpdateOnShow();
 
 private:
-    Ui::SCDBMerkleRootHistoryDialog *ui;
+    Ui::SCDBHashDialog *ui;
 
     const PlatformStyle *platformStyle;
     ClientModel *clientModel = nullptr;
@@ -53,4 +53,4 @@ private Q_SLOTS:
     void on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column);
 };
 
-#endif // SCDBMERKLEROOTHISTORYDIALOG_H
+#endif // SCDBHASHDIALOG_H

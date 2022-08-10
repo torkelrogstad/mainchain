@@ -14,7 +14,7 @@
 #include <qt/sidechainactivationdialog.h>
 #include <qt/sidechaindetailsdialog.h>
 #include <qt/sidechaindepositconfirmationdialog.h>
-#include <qt/scdbmerkleroothistorydialog.h>
+#include <qt/scdbhashdialog.h>
 #include <qt/sidechainwithdrawaltablemodel.h>
 #include <qt/txdetails.h>
 #include <qt/walletmodel.h>
@@ -62,8 +62,8 @@ SidechainPage::SidechainPage(const PlatformStyle *_platformStyle, QWidget *paren
     activationDialog = new SidechainActivationDialog(platformStyle);
     activationDialog->setParent(this, Qt::Window);
 
-    m4Dialog = new SCDBMerkleRootHistoryDialog(platformStyle);
-    m4Dialog->setParent(this, Qt::Window);
+    scdbHashDialog = new SCDBHashDialog(platformStyle);
+    scdbHashDialog->setParent(this, Qt::Window);
 
     // Setup recent deposits table
     ui->tableWidgetRecentDeposits->setColumnCount(COLUMN_STATUS + 1);
@@ -122,7 +122,7 @@ void SidechainPage::setClientModel(ClientModel *model)
         connect(model, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)),
                 this, SLOT(numBlocksChanged()));
 
-        m4Dialog->setClientModel(model);
+        scdbHashDialog->setClientModel(model);
     }
 }
 
@@ -516,7 +516,7 @@ void SidechainPage::on_pushButtonAddRemove_clicked()
 
 void SidechainPage::on_pushButtonWithdrawalVote_clicked()
 {
-    ShowM4Dialog();
+    ShowSCDBHashDialog();
 }
 
 void SidechainPage::on_pushButtonWTDoubleClickHelp_clicked()
@@ -579,10 +579,10 @@ void SidechainPage::ShowActivationDialog()
     activationDialog->show();
 }
 
-void SidechainPage::ShowM4Dialog()
+void SidechainPage::ShowSCDBHashDialog()
 {
-    m4Dialog->show();
-    m4Dialog->UpdateOnShow();
+    scdbHashDialog->show();
+    scdbHashDialog->UpdateOnShow();
 }
 
 void SidechainPage::UpdateRecentDeposits()

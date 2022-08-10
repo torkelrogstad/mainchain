@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/scdbmerkleroothistorydialog.h>
-#include <qt/forms/ui_scdbmerkleroothistorydialog.h>
+#include <qt/scdbhashdialog.h>
+#include <qt/forms/ui_scdbhashdialog.h>
 
 #include <qt/clientmodel.h>
 #include <qt/platformstyle.h>
@@ -17,20 +17,20 @@
 #include <txdb.h>
 #include <validation.h>
 
-SCDBMerkleRootHistoryDialog::SCDBMerkleRootHistoryDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
+SCDBHashDialog::SCDBHashDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::SCDBMerkleRootHistoryDialog),
+    ui(new Ui::SCDBHashDialog),
     platformStyle(_platformStyle)
 {
     ui->setupUi(this);
 }
 
-SCDBMerkleRootHistoryDialog::~SCDBMerkleRootHistoryDialog()
+SCDBHashDialog::~SCDBHashDialog()
 {
     delete ui;
 }
 
-void SCDBMerkleRootHistoryDialog::UpdateOnShow()
+void SCDBHashDialog::UpdateOnShow()
 {
     UpdateVoteTree();
     UpdateNextTree();
@@ -38,7 +38,7 @@ void SCDBMerkleRootHistoryDialog::UpdateOnShow()
     UpdateHistoryTree();
 }
 
-void SCDBMerkleRootHistoryDialog::UpdateVoteTree()
+void SCDBHashDialog::UpdateVoteTree()
 {
     // Update vote tree
 
@@ -117,7 +117,7 @@ void SCDBMerkleRootHistoryDialog::UpdateVoteTree()
     ui->treeWidgetVote->setUpdatesEnabled(true);
 }
 
-void SCDBMerkleRootHistoryDialog::UpdateSCDBText()
+void SCDBHashDialog::UpdateSCDBText()
 {
     ui->textBrowserSCDB->clear();
 
@@ -175,7 +175,7 @@ void SCDBMerkleRootHistoryDialog::UpdateSCDBText()
     }
 }
 
-void SCDBMerkleRootHistoryDialog::UpdateNextTree()
+void SCDBHashDialog::UpdateNextTree()
 {
     // Update the next block state tree
 
@@ -312,7 +312,7 @@ void SCDBMerkleRootHistoryDialog::UpdateNextTree()
     ui->treeWidgetNext->setUpdatesEnabled(true);
 }
 
-void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
+void SCDBHashDialog::UpdateHistoryTree()
 {
     // Update history tree
 
@@ -458,7 +458,7 @@ void SCDBMerkleRootHistoryDialog::UpdateHistoryTree()
     ui->treeWidgetHistory->setUpdatesEnabled(true);
 }
 
-void SCDBMerkleRootHistoryDialog::AddHistoryTreeItem(int index, const QString& hashSCDB, const int nHeight, QTreeWidgetItem *item)
+void SCDBHashDialog::AddHistoryTreeItem(int index, const QString& hashSCDB, const int nHeight, QTreeWidgetItem *item)
 {
     if (!item || index < 0)
         return;
@@ -476,13 +476,13 @@ void SCDBMerkleRootHistoryDialog::AddHistoryTreeItem(int index, const QString& h
     topItem->addChild(item);
 }
 
-void SCDBMerkleRootHistoryDialog::numBlocksChanged()
+void SCDBHashDialog::numBlocksChanged()
 {
     if (this->isVisible())
         UpdateOnShow();
 }
 
-void SCDBMerkleRootHistoryDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column)
+void SCDBHashDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column)
 {
     QTreeWidgetItem* parent = item->parent();
     if (!parent)
@@ -545,7 +545,7 @@ void SCDBMerkleRootHistoryDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem 
     UpdateSCDBText();
 }
 
-void SCDBMerkleRootHistoryDialog::setClientModel(ClientModel *model)
+void SCDBHashDialog::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if(model)

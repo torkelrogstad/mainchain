@@ -128,8 +128,8 @@ public Q_SLOTS:
     /** Show the sidechain activation dialog */
     void showSidechainActivationDialog();
 
-    /** Show the sidechain M4 explorer &  withdrawal voting dialog */
-    void showSidechainM4Dialog();
+    /** Show the sidechain hash explorer &  withdrawal voting dialog */
+    void showSCDBHashDialog();
 
 Q_SIGNALS:
     /** Signal that we want to show the main window */

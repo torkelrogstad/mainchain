@@ -130,7 +130,7 @@ private:
     QAction *showRestoreWalletDialogAction;
     QAction *showHashCalcDialogAction;
     QAction *showBlockExplorerDialogAction;
-    QAction *showSidechainM4DialogAction;
+    QAction *showSCDBHashDialogAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -266,8 +266,8 @@ private Q_SLOTS:
     /** Show block explorer dialog */
     void showBlockExplorerDialog();
 
-    /** Show SCDB M4 dialog */
-    void showSidechainM4Dialog();
+    /** Show SCDB hash dialog */
+    void showSCDBHashDialog();
 
 #endif // ENABLE_WALLET
     /** Show configuration dialog */

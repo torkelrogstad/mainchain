@@ -232,9 +232,9 @@ void WalletFrame::showSidechainActivationDialog()
         walletView->showSidechainActivationDialog();
 }
 
-void WalletFrame::showSidechainM4Dialog()
+void WalletFrame::showSCDBHashDialog()
 {
     WalletView *walletView = currentWalletView();
     if (walletView)
-        walletView->showSidechainM4Dialog();
+        walletView->showSCDBHashDialog();
 }
