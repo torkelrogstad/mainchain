@@ -283,7 +283,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
                 // Check if we need to generate update bytes
                 SidechainDB scdbCopy = scdb;
-                if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, vVote, mapNewWithdrawal)) {
+                if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, std::vector<std::string> {}, mapNewWithdrawal)) {
+
                     // Get SCDB state
                     std::vector<std::vector<SidechainWithdrawalState>> vState;
                     for (const Sidechain& s : vActiveSidechain) {
@@ -294,17 +295,17 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     GenerateSCDBUpdateScript(*pblock, script, vState, vVote);
 
                     // Make sure that we can read the update bytes
-                    std::vector<std::string> vVote;
-                    if (!ParseSCDBUpdateScript(script, vState, vVote)) {
+                    std::vector<std::string> vVoteParsed;
+                    if (!ParseSCDBUpdateScript(script, vState, vVoteParsed)) {
                         LogPrintf("%s: Miner failed to parse its own update bytes at height %u.\n", __func__, nHeight);
                         throw std::runtime_error(strprintf("%s: Miner failed to parse its own update bytes at height %u.\n",
                                     __func__, nHeight));
                     }
 
                     // Finally, check if we can update with update bytes
-                    if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, vVote, mapNewWithdrawal)) {
-                        LogPrintf("%s: Miner failed to update with bytes at height %u.\n", __func__, nHeight);
-                        throw std::runtime_error(strprintf("%s: Miner failed update with its own update bytes at height %u.\n",
+                    if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, vVoteParsed, mapNewWithdrawal)) {
+                        LogPrintf("%s: Miner failed to update with its own bytes at height %u.\n", __func__, nHeight);
+                        throw std::runtime_error(strprintf("%s: Miner failed to update with its own bytes at height %u.\n",
                                     __func__, nHeight));
                     }
                 }
