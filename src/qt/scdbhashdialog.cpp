@@ -10,7 +10,6 @@
 
 #include <chain.h>
 #include <chainparams.h>
-#include <consensus/merkle.h>
 #include <sidechain.h>
 #include <sidechaindb.h>
 #include <streams.h>
@@ -50,10 +49,10 @@ void SCDBHashDialog::UpdateVoteTree()
     std::vector<std::string> vVote = scdb.GetVotes();
     for (size_t x = 0; x < vSidechain.size(); x++) {
         std::vector<SidechainWithdrawalState> vWithdrawal;
-        vWithdrawal = scdb.GetState(x);
+        vWithdrawal = scdb.GetState(vSidechain[x].nSidechain);
 
         QTreeWidgetItem *topItem = new QTreeWidgetItem();
-        topItem->setText(0, "SC #" + QString::number(x) + " " + QString::fromStdString(vSidechain[x].title));
+        topItem->setText(0, "SC #" + QString::number(vSidechain[x].nSidechain) + " " + QString::fromStdString(vSidechain[x].title));
         ui->treeWidgetVote->insertTopLevelItem(x, topItem);
 
         if (!vWithdrawal.size()) {
@@ -77,12 +76,11 @@ void SCDBHashDialog::UpdateVoteTree()
         subItemAlarm->setData(0, HashRole, "");
         topItem->addChild(subItemAlarm);
 
-
         // Add upvote checkbox for each sidechain withdrawal
         bool fUpvote = false;
         for (size_t y = 0; y < vWithdrawal.size(); y++) {
             // Check if this withdrawal's upvote box should be checked
-            if (vVote[x] == vWithdrawal[y].hash.ToString())
+            if (vVote[vSidechain[x].nSidechain] == vWithdrawal[y].hash.ToString())
                 fUpvote = true;
 
             QTreeWidgetItem *subItemWT = new QTreeWidgetItem();
@@ -103,7 +101,7 @@ void SCDBHashDialog::UpdateVoteTree()
         }
 
         // Check abstain or alarm for this sidechain if no upvote was found
-        if (!fUpvote && vVote[x].front() == SCDB_DOWNVOTE)
+        if (!fUpvote && vVote[vSidechain[x].nSidechain].front() == SCDB_DOWNVOTE)
             subItemAlarm->setCheckState(0, Qt::Checked);
         else
         if (!fUpvote)
@@ -121,9 +119,8 @@ void SCDBHashDialog::UpdateSCDBText()
 {
     ui->textBrowserSCDB->clear();
 
+    CDataStream ssSer(SER_DISK, CLIENT_VERSION);
     std::vector<std::vector<SidechainWithdrawalState>> vState = scdb.GetState();
-    std::vector<QString> vSerStr; // SidechainWithdrawalState serialization
-    std::vector<uint256> vLeaf; // Keep track of state hashes
     std::vector<std::string> vVote = scdb.GetVotes();
     for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
         if (vScore.empty())
@@ -146,30 +143,47 @@ void SCDBHashDialog::UpdateSCDBText()
             nextState.nBlocksLeft -= 1;
             nextState.nWorkScore = nNewScore;
 
-            CDataStream ssSer(SER_DISK, CLIENT_VERSION);
             ssSer << nextState;
-
-            vSerStr.push_back(QString::fromStdString(HexStr(ssSer.str())));
-            vLeaf.push_back(nextState.GetSerHash());
         }
     }
 
-    if (vSerStr.size()) {
+    QString strSer = QString::fromStdString(HexStr(ssSer.str()));
+    if (strSer.size()) {
+        uint256 hashSCDB = SerializeHash(ssSer);
+
+        ui->textBrowserSCDB->insertPlainText("SCDB update bytes / M4:\n");
+
+        // Check if update bytes are required
+        SidechainDB scdbCopy = scdb;
+        if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB)) {
+            // Generate & display update bytes / M4
+
+            CBlock block;
+            CMutableTransaction mtx;
+            mtx.vin.resize(1);
+            mtx.vin[0].prevout.SetNull();
+            block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+            CScript script;
+
+            std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
+            for (const Sidechain& s : scdb.GetActiveSidechains())
+                vOldScores.push_back(scdb.GetState(s.nSidechain));
+
+            GenerateSCDBUpdateScript(block, script, vOldScores, vVote);
+
+            // Hex string of update bytes
+            std::string strScript = HexStr(script.begin(), script.end());
+
+            ui->textBrowserSCDB->insertPlainText(QString::fromStdString(strScript) + "\n\n");
+        } else {
+            ui->textBrowserSCDB->insertPlainText("Not required.\n\n");
+        }
+
         ui->textBrowserSCDB->insertPlainText("Serialization of SCDB withdrawal status:\n");
+        ui->textBrowserSCDB->insertPlainText(strSer + "\n");
 
-        for (const QString& s : vSerStr)
-            ui->textBrowserSCDB->insertPlainText(s + "\n");
-
-        ui->textBrowserSCDB->insertPlainText("\nSHA256D(Serialization) merkle tree nodes:\n");
-
-        for (const uint256& u : vLeaf)
-            ui->textBrowserSCDB->insertPlainText(QString::fromStdString(u.ToString()) + "\n");
-
-        ui->textBrowserSCDB->insertPlainText("\nMerkle root:\n");
-
-        uint256 hashSCDB = ComputeMerkleRoot(vLeaf);
+        ui->textBrowserSCDB->insertPlainText("\nSHA256D(Serialization):\n");
         ui->textBrowserSCDB->insertPlainText(QString::fromStdString(hashSCDB.ToString()) + "\n");
-
     } else {
         ui->textBrowserSCDB->setText("No score data for next block");
     }
@@ -190,8 +204,7 @@ void SCDBHashDialog::UpdateNextTree()
     // Loop through state here and add sub items for sc# & score change
     bool fDataFound = false;
     int nSidechain = 0;
-    std::vector<uint256> vLeaf; // Keep track of state hashes to compute H(SCDB)
-    QString strSerAll = "";
+    CDataStream ssSer(SER_DISK, CLIENT_VERSION);
     std::vector<std::string> vVote = scdb.GetVotes();
     for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
         if (vScore.empty()) {
@@ -242,69 +255,50 @@ void SCDBHashDialog::UpdateNextTree()
             nextState.nBlocksLeft -= 1;
             nextState.nWorkScore = nNewScore;
 
-            CDataStream ssSer(SER_DISK, CLIENT_VERSION);
             ssSer << nextState;
-
-            QString strSer = QString::fromStdString(HexStr(ssSer.str()));
-
-            QTreeWidgetItem *subItemSCSer = new QTreeWidgetItem();
-            subItemSCSer->setText(0, "Serialization:\n" + strSer);
-            subItemSC->addChild(subItemSCSer);
-
-            vLeaf.push_back(nextState.GetSerHash());
-            strSerAll += "Sidechain #" + QString::number(s.nSidechain) + ": " + strSer + ", ";
         }
 
         // Add SC item parent to tree
         subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
         topItem->addChild(subItemSC);
 
+
         fDataFound = true;
         nSidechain++;
     }
 
-    uint256 hashSCDB = uint256();
+    QString strSer = QString::fromStdString(HexStr(ssSer.str()));
+    uint256 hashSCDB = SerializeHash(ssSer);
     if (fDataFound) {
-        // Create H(SCDB) tree object
-        QTreeWidgetItem *subItemTree = new QTreeWidgetItem();
-        subItemTree->setText(0, "H(SCDB) merkle root leaf nodes (SHA256D(serialization))");
-
-        // Create H(SCDB) raw serialization object
         QTreeWidgetItem *subItemSer = new QTreeWidgetItem();
-        subItemSer->setText(0, "H(SCDB) serialization data");
+        subItemSer->setText(0, "SCDB");
 
         QTreeWidgetItem *subItemSerData = new QTreeWidgetItem();
-        subItemSerData->setText(0, strSerAll);
+        subItemSerData->setText(0, strSer);
         subItemSer->addChild(subItemSerData);
 
-        QString strLeaves = "";
-        for (const uint256& u : vLeaf)
-            strLeaves += QString::fromStdString(u.ToString()) + " ";
+        // Create H(SCDB)object
+        QTreeWidgetItem *subItemSCDBHash = new QTreeWidgetItem();
+        subItemSCDBHash->setText(0, "H(SCDB)");
 
-        // Create H(SCDB) tree leaf nodes object
-        QTreeWidgetItem *subItemLeaves = new QTreeWidgetItem();
-        subItemLeaves->setText(0, strLeaves);
-        subItemTree->addChild(subItemLeaves);
-
-        // Create H(SCDB) merkle root object
-        QTreeWidgetItem *subItemMerkle = new QTreeWidgetItem();
-        subItemMerkle->setText(0, "H(SCDB) merkle root hash");
-
-        QTreeWidgetItem *subItemMerkleHash = new QTreeWidgetItem();
-        hashSCDB = ComputeMerkleRoot(vLeaf);
-        subItemMerkleHash->setText(0, QString::fromStdString(hashSCDB.ToString()));
-        subItemMerkle->addChild(subItemMerkleHash);
+        QTreeWidgetItem *subItemSCDBHashData = new QTreeWidgetItem();
+        subItemSCDBHashData->setText(0, QString::fromStdString(hashSCDB.ToString()));
+        subItemSCDBHash->addChild(subItemSCDBHashData);
 
         topItem->addChild(subItemSer);
-        topItem->addChild(subItemTree);
-        topItem->addChild(subItemMerkle);
+        topItem->addChild(subItemSCDBHash);
+        topItem->addChild(subItemSCDBHashData);
     } else {
         QTreeWidgetItem *subItem = new QTreeWidgetItem();
         subItem->setText(0, "No score data for this block");
         topItem->addChild(subItem);
     }
 
-    topItem->setText(0, "Block #" + QString::number(chainActive.Height() + 1) + " H(SCDB): " + QString::fromStdString(hashSCDB.ToString()));
+    QString str = "Block #" + QString::number(chainActive.Height() + 1);
+    if (fDataFound)
+        str += " H(SCDB): " + QString::fromStdString(hashSCDB.ToString());
+
+    topItem->setText(0, str);
 
     ui->treeWidgetNext->collapseAll();
     ui->treeWidgetNext->resizeColumnToContents(0);
@@ -343,10 +337,9 @@ void SCDBHashDialog::UpdateHistoryTree()
         }
 
         // Loop through state here and add sub items for sc# & score change
+        CDataStream ssSer(SER_DISK, CLIENT_VERSION);
         bool fDataFound = false;
         int nSidechain = 0;
-        std::vector<uint256> vLeaf; // Keep track of state hashes to compute H(SCDB)
-        QString strSerAll = "";
         for (const std::vector<SidechainWithdrawalState>& vScore : data.vWithdrawalStatus) {
             if (vScore.empty()) {
                 nSidechain++;
@@ -391,17 +384,7 @@ void SCDBHashDialog::UpdateHistoryTree()
                 subItemHash->setText(0, "Withdrawal bundle hash:\n" + QString::fromStdString(s.hash.ToString()));
                 subItemSC->addChild(subItemHash);
 
-                CDataStream ssSer(SER_DISK, CLIENT_VERSION);
                 ssSer << s;
-
-                QString strSer = QString::fromStdString(HexStr(ssSer.str()));
-
-                QTreeWidgetItem *subItemSCSer = new QTreeWidgetItem();
-                subItemSCSer->setText(0, "Serialization:\n" + strSer);
-                subItemSC->addChild(subItemSCSer);
-
-                vLeaf.push_back(s.GetSerHash());
-                strSerAll += "Sidechain #" + QString::number(s.nSidechain) + ": " + strSer + ", ";
             }
 
             // Add SC item parent to tree
@@ -412,39 +395,27 @@ void SCDBHashDialog::UpdateHistoryTree()
             nSidechain++;
         }
 
+        QString strSer = QString::fromStdString(HexStr(ssSer.str()));
+        uint256 hashSCDB = SerializeHash(ssSer);
         if (fDataFound) {
-            // Create H(SCDB) tree object
-            QTreeWidgetItem *subItemTree = new QTreeWidgetItem();
-            subItemTree->setText(0, "H(SCDB) merkle root leaf nodes (SHA256D(serialization))");
-
             // Create H(SCDB) raw serialization object
             QTreeWidgetItem *subItemSer = new QTreeWidgetItem();
-            subItemSer->setText(0, "H(SCDB) serialization data");
+            subItemSer->setText(0, "SCDB");
 
             QTreeWidgetItem *subItemSerData = new QTreeWidgetItem();
-            subItemSerData->setText(0, strSerAll);
+            subItemSerData->setText(0, strSer);
             subItemSer->addChild(subItemSerData);
 
-            QString strLeaves = "";
-            for (const uint256& u : vLeaf)
-                strLeaves += QString::fromStdString(u.ToString()) + " ";
-
-            // Create H(SCDB) tree leaf nodes object
-            QTreeWidgetItem *subItemLeaves = new QTreeWidgetItem();
-            subItemLeaves->setText(0, strLeaves);
-            subItemTree->addChild(subItemLeaves);
-
-            // Create H(SCDB)  root object
+            // Create H(SCDB) object
             QTreeWidgetItem *subItemSCDBHash = new QTreeWidgetItem();
             subItemSCDBHash->setText(0, "H(SCDB)");
 
             QTreeWidgetItem *subItemSCDBHashData = new QTreeWidgetItem();
-            uint256 hashSCDB = ComputeMerkleRoot(vLeaf);
             subItemSCDBHashData->setText(0, QString::fromStdString(hashSCDB.ToString()));
             subItemSCDBHash->addChild(subItemSCDBHashData);
 
             AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSer);
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemTree);
+            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSerData);
             AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSCDBHash);
         } else {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
