@@ -446,8 +446,8 @@ void GenerateCriticalHashCommitments(CBlock& block);
 /** Produce a BMM h* coinbase commitment for a block (with lightning)*/
 void GenerateLNCriticalHashCommitment(CBlock& block);
 
-/** Produce the SCDB hashMerkleRoot coinbase commitment for a block */
-void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB);
+/** Produce the SCDB hash coinbase commitment for a block */
+void GenerateSCDBHashCommitment(CBlock& block, const uint256& hashSCDB);
 
 /** Produce withdrawal hash coinbase commitment for a block */
 void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain);

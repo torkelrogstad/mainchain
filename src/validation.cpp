@@ -3577,11 +3577,11 @@ void GenerateLNCriticalHashCommitment(CBlock& block)
     }
 }
 
-void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB)
+void GenerateSCDBHashCommitment(CBlock& block, const uint256& hashSCDB)
 {
     /*
      * "M1, M2, M3, M4"
-     * Sidechain DB data once per block hashMerkleRoot commitment.
+     * Sidechain DB data serialization hash once per block commitment.
      * BIP: 300 & 301
      */
 
@@ -3597,7 +3597,7 @@ void GenerateSCDBHashMerkleRootCommitment(CBlock& block, const uint256& hashSCDB
     out.scriptPubKey[3] = 0x50;
     out.scriptPubKey[4] = 0x8C;
 
-    // Add SCDB hashMerkleRoot
+    // Add SCDB hash
     memcpy(&out.scriptPubKey[5], &hashSCDB, 32);
 
     // Update coinbase in block
