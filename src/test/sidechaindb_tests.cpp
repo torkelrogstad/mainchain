@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_downvote)
     BOOST_CHECK(vState[0].nWorkScore == 0);
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_withdrawal_mt)
+BOOST_AUTO_TEST_CASE(sidechaindb_aprove_withdrawal_mt)
 {
     // Test creating a withdrawal and approving it with enough workscore via
     // hash updates only
@@ -263,6 +263,93 @@ BOOST_AUTO_TEST_CASE(sidechaindb_withdrawal_mt)
 
     // Withdrawal should pass with valid workscore
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hash));
+}
+
+BOOST_AUTO_TEST_CASE(sidechaindb_aprove_withdrawal_mt_multi_sidechain)
+{
+    // Test creating and approving multiple withdrawals via hash updates only
+
+    SidechainDB scdbTest;
+
+    BOOST_CHECK(ActivateTestSidechain(scdbTest));
+    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
+
+    // A second sidechain proposal
+    Sidechain proposal;
+    proposal.nSidechain = 86;
+    proposal.nVersion = 0;
+    proposal.title = "sidechain2";
+    proposal.description = "test";
+    proposal.strKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
+
+    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
+    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
+
+    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
+    proposal.hashID1 = GetRandHash();
+    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
+
+    // Activate a second sidechain
+    ActivateSidechain(scdbTest, proposal, 0);
+
+
+    uint256 hash = GetRandHash();
+
+    std::map<uint8_t, uint256> mapNewWithdrawal;
+    mapNewWithdrawal[0] = hash;
+
+    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
+    vVote[0] = hash.ToString();
+    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal);
+
+    // Check if withdrawal was added
+    std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
+    BOOST_CHECK(vState.size() == 1);
+
+    // Create a copy of the scdbTest to manipulate
+    SidechainDB scdbTestCopy = scdbTest;
+
+    // Ack withdrawal bundle until it has 50% of the required score
+    for (int i = 1; i < SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE / 2; i++) {
+        BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
+
+        // Make SCDB match copy via hash update
+        BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
+    }
+
+    // Withdrawal should not pass
+    BOOST_CHECK(!scdbTest.CheckWorkScore(0, hash));
+
+
+    // Create second withdrawal for second sidechain
+    uint256 hash2 = GetRandHash();
+
+    std::map<uint8_t, uint256> mapNewWithdrawal2;
+    mapNewWithdrawal2[86] = hash2;
+
+    vVote[86] = hash2.ToString();
+    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal2);
+
+    // Check if withdrawal was added
+    vState = scdbTest.GetState(86);
+    BOOST_CHECK(vState.size() == 1);
+
+    // Create a copy of the scdbTest to manipulate
+    scdbTestCopy = scdbTest;
+
+    // Ack second withdrawal bundle until it has the required score
+    for (int i = 1; i < SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
+        BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
+
+        // Make SCDB match copy via hash update
+        BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
+    }
+
+    // Withdrawal 1 should pass
+    BOOST_CHECK(scdbTest.CheckWorkScore(0, hash));
+
+    // Withdrawal 2 should pass
+    BOOST_CHECK(scdbTest.CheckWorkScore(86, hash2));
 }
 
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_create)
