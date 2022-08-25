@@ -270,48 +270,36 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         LogPrintf("%s: Miner found new withdrawal: %u : %s at height %u.\n", __func__, s.nSidechain, hash.ToString(), nHeight);
     }
 
-    // Handle Withdrawal updates & generate SCDB hash
-    if (fDrivechainEnabled) {
-        if (scdb.HasState() || mapNewWithdrawal.size()) {
-            // Get withdrawal vote settings
-            std::vector<std::string> vVote = scdb.GetVotes();
+    // Handle Withdrawal updates
+    if (fDrivechainEnabled && scdb.HasState()) {
+        // Get withdrawal vote settings
+        std::vector<std::string> vVote = scdb.GetVotes();
 
-            uint256 hashSCDB = scdb.GetSCDBHashIfUpdate(vVote, mapNewWithdrawal);
-            if (!hashSCDB.IsNull()) {
-                // Generate SCDB hash commitment
-                GenerateSCDBHashCommitment(*pblock, hashSCDB);
-
-                // Check if we need to generate update bytes
-                SidechainDB scdbCopy = scdb;
-                if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, std::vector<std::string> {}, mapNewWithdrawal)) {
-
-                    // Get SCDB state
-                    std::vector<std::vector<SidechainWithdrawalState>> vState;
-                    for (const Sidechain& s : vActiveSidechain) {
-                        vState.push_back(scdb.GetState(s.nSidechain));
-                    }
-                    LogPrintf("%s: Miner generating update bytes at height %u.\n", __func__, nHeight);
-                    CScript script;
-                    GenerateSCDBUpdateScript(*pblock, script, vState, vVote);
-
-                    // Make sure that we can read the update bytes
-                    std::vector<std::string> vVoteParsed;
-                    if (!ParseSCDBUpdateScript(script, vState, vVoteParsed)) {
-                        LogPrintf("%s: Miner failed to parse its own update bytes at height %u.\n", __func__, nHeight);
-                        throw std::runtime_error(strprintf("%s: Miner failed to parse its own update bytes at height %u.\n",
-                                    __func__, nHeight));
-                    }
-
-                    // Finally, check if we can update with update bytes
-                    if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB, vVoteParsed, mapNewWithdrawal)) {
-                        LogPrintf("%s: Miner failed to update with its own bytes at height %u.\n", __func__, nHeight);
-                        throw std::runtime_error(strprintf("%s: Miner failed to update with its own bytes at height %u.\n",
-                                    __func__, nHeight));
-                    }
-                }
-            }
+        std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
+        for (const Sidechain& s : vActiveSidechain) {
+            std::vector<SidechainWithdrawalState> vWithdrawal = scdb.GetState(s.nSidechain);
+            if (vWithdrawal.size())
+                vOldScores.push_back(vWithdrawal);
         }
 
+        LogPrintf("%s: Miner generating scdb bytes at height %u.\n", __func__, nHeight);
+        CScript script;
+        if (!GenerateSCDBByteCommitment(*pblock, script, vOldScores, vVote)) {
+            LogPrintf("%s: Miner failed to generate scdb bytes at height %u.\n", __func__, nHeight);
+            throw std::runtime_error(strprintf("%s: Miner failed to generate scdb bytes at height %u.\n",
+                                               __func__, nHeight));
+        }
+
+        // Make sure that we can read the update bytes
+        std::vector<std::string> vVoteParsed;
+        if (!ParseSCDBBytes(script, vOldScores, vVoteParsed)) {
+            LogPrintf("%s: Miner failed to parse its own scdb bytes at height %u.\n", __func__, nHeight);
+            throw std::runtime_error(strprintf("%s: Miner failed to parse its own update bytes at height %u.\n",
+                                               __func__, nHeight));
+        }
+    }
+
+    if (fDrivechainEnabled) {
         // Generate critical hash commitments (usually for BMM commitments)
         GenerateCriticalHashCommitments(*pblock);
 

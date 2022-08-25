@@ -1768,14 +1768,19 @@ UniValue listcachedwithdrawaltx(const JSONRPCRequest& request)
     if (!scdb.IsSidechainActive(nSidechain))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
-    std::vector<SidechainWithdrawalState> vState = scdb.GetState(nSidechain);
-    if (vState.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No Withdrawal(s) in SCDB for sidechain");
+    std::vector<std::pair<uint8_t, CMutableTransaction>> vWithdrawal;
+    vWithdrawal = scdb.GetWithdrawalTxCache();
+
+    if (vWithdrawal.empty())
+        throw JSONRPCError(RPC_TYPE_ERROR, "No withdrawal bundle txns cached for sidechain");
 
     UniValue ret(UniValue::VARR);
-    for (const SidechainWithdrawalState& s : vState) {
+    for (auto const& i : vWithdrawal) {
+        if (i.first != nSidechain)
+            continue;
+
         UniValue obj(UniValue::VOBJ);
-        obj.push_back(Pair("hash", s.hash.ToString()));
+        obj.push_back(Pair("hash", i.second.GetHash().ToString()));
 
         ret.push_back(obj);
     }
@@ -1909,20 +1914,6 @@ UniValue listfailedwithdrawals(const JSONRPCRequest& request)
     return ret;
 }
 
-UniValue getscdbhash(const JSONRPCRequest& request)
-{
-    if (request.fHelp || request.params.size())
-        throw std::runtime_error(
-            "getscdbhash\n"
-            "Get SCDB hash.\n"
-            );
-
-    UniValue ret(UniValue::VOBJ);
-    ret.push_back(Pair("hashscdb", scdb.GetSCDBHash().ToString()));
-
-    return ret;
-}
-
 UniValue gettotalscdbhash(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size())
@@ -1982,7 +1973,6 @@ UniValue getscdbdataforblock(const JSONRPCRequest& request)
 
     UniValue ret(UniValue::VARR);
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("SCDB hash", data.hashSCDB.ToString()));
     ret.push_back(obj);
     for (auto& x : data.vWithdrawalStatus) {
         for (auto& y : x) {
@@ -2128,8 +2118,7 @@ static const CRPCCommand commands[] =
     { "hidden",             "echojson",               &echo,                   {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},
     { "hidden",             "getinfo",                &getinfo_deprecated,     {}},
 
-    // TODO improve & shorten name. Sort alphabetically
-    /* Drivechain rpc commands (mainly used by sidechains) */
+    /* Drivechain rpc commands for the user and sidechains */
     { "Drivechain",  "createcriticaldatatx",          &createcriticaldatatx,            {"amount", "height", "criticalhash"}},
     { "Drivechain",  "listsidechainctip",             &listsidechainctip,               {"nsidechain"}},
     { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain"}},
@@ -2154,7 +2143,6 @@ static const CRPCCommand commands[] =
     { "Drivechain",  "listwithdrawalstatus",          &listwithdrawalstatus,            {"nsidechain"}},
     { "Drivechain",  "listspentwithdrawals",          &listspentwithdrawals,            {}},
     { "Drivechain",  "listfailedwithdrawals",         &listfailedwithdrawals,           {}},
-    { "Drivechain",  "getscdbhash",                   &getscdbhash,                     {}},
     { "Drivechain",  "gettotalscdbhash",              &gettotalscdbhash,                {}},
     { "Drivechain",  "getscdbdataforblock",           &getscdbdataforblock,             {"blockhash"}},
     { "Drivechain",  "listfailedbmm",                 &listfailedbmm,                   {}},

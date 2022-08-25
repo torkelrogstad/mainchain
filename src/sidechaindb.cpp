@@ -21,15 +21,12 @@ SidechainDB::SidechainDB()
     Reset();
 }
 
-bool SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockData& data)
+void SidechainDB::ApplyLDBData(const uint256& hashBlock, const SidechainBlockData& data)
 {
     hashBlockLastSeen = hashBlock;
     vWithdrawalStatus = data.vWithdrawalStatus;
     vActivationStatus = data.vActivationStatus;
     vSidechain = data.vSidechain;
-
-    // TODO verify SCDB hash matches SCDB hash commit for block
-    return true;
 }
 
 void SidechainDB::AddRemovedBMM(const uint256& hashRemoved)
@@ -446,31 +443,6 @@ uint256 SidechainDB::GetTestHash() const
     return ComputeMerkleRoot(vLeaf);
 }
 
-uint256 SidechainDB::GetSCDBHash() const
-{
-    if (vWithdrawalStatus.empty())
-        return uint256();
-
-    CDataStream ss(SER_DISK, CLIENT_VERSION);
-
-    for (size_t x = 0; x < vWithdrawalStatus.size(); x++)
-        for (size_t y = 0; y < vWithdrawalStatus[x].size(); y++)
-            ss << vWithdrawalStatus[x][y];
-
-    return SerializeHash(ss);
-}
-
-uint256 SidechainDB::GetSCDBHashIfUpdate(const std::vector<std::string>& vVote, const std::map<uint8_t, uint256>& mapNewWithdrawal) const
-{
-    SidechainDB scdbCopy = (*this);
-    if (!scdbCopy.UpdateSCDBIndex(vVote, false /* fDebug */, mapNewWithdrawal))
-    {
-        LogPrintf("%s: SCDB failed to update\n", __func__);
-        return uint256();
-    }
-    return (scdbCopy.GetSCDBHash());
-}
-
 bool SidechainDB::GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const
 {
     if (!IsSidechainActive(nSidechain))
@@ -592,9 +564,6 @@ bool SidechainDB::HasState() const
         if (!i.empty())
             return true;
     }
-
-    if (vWithdrawalTxCache.size())
-        return true;
 
     return false;
 }
@@ -1242,45 +1211,12 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    // Scan for updated SCDB hash commit which is the hash of SCDB after
-    // applying the new updates from this block.
-    //
-    // Only one SCDB hash commit is allowed per block.
-    bool fSCDBHashFound = false;
-    uint256 hashSCDB = uint256();
-    for (const CTxOut& out : vout) {
-        if (out.scriptPubKey.IsSCDBHashCommit(hashSCDB)) {
-            // If we already found a SCDB hash commit, a second is invalid
-            if (fSCDBHashFound) {
-                if (fDebug) {
-                    LogPrintf("SCDB %s: Error: Multiple SCDB hash commits at height: %u\n",
-                        __func__,
-                        nHeight);
-                }
-                return false;
-            }
-            fSCDBHashFound = true;
-        }
-    }
-
-    // If we find an SCDB hash commit in this block, it must be different than
-    // the current SCDB hash (Withdrawal blocks remaining should have at least
-    // been updated if nothing else)
-    if (fSCDBHashFound && !hashSCDB.IsNull() && GetSCDBHash() == hashSCDB) {
-        if (fDebug)
-            LogPrintf("SCDB %s: Invalid (equal) SCDB hash: %s at height: %u\n",
-                    __func__,
-                    hashSCDB.ToString(),
-                    nHeight);
-        return false;
-    }
-
     /*
      * Look for data relevant to SCDB in this block's coinbase.
      *
      * Scan for new Withdrawal(s) and start tracking them.
      *
-     * Scan for updated SCDB hash, and perform hash based SCDB update.
+     * Scan for SCDB vote bytes, and update withdrawal scores
      *
      * Scan for sidechain proposals & sidechain activation commitments.
      *
@@ -1311,7 +1247,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         return false;
     }
 
-    // Update SCDB
+    // Track sidechain proposal
     if (!fJustCheck && vProposal.size() == 1) {
         SidechainActivationStatus status;
         status.nFail = 0;
@@ -1408,14 +1344,13 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
     }
 
-    // Update SCDB to match new SCDB hash from block
-    if (!fJustCheck && !hashSCDB.IsNull()) {
-
+    // Update SCDB withdrawl vote scores and add new withdrawals
+    if (!fJustCheck && (HasState() || mapNewWithdrawal.size())) {
         // Check if there are update bytes
         std::vector<CScript> vUpdateBytes;
         for (const CTxOut& out : vout) {
             const CScript scriptPubKey = out.scriptPubKey;
-            if (scriptPubKey.IsSCDBUpdate())
+            if (scriptPubKey.IsSCDBBytes())
                 vUpdateBytes.push_back(scriptPubKey);
         }
         // There is a maximum of 1 update bytes script
@@ -1427,16 +1362,19 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
             return false;
         }
 
+        // Read SCDB m4 update bytes, or create default abstain votes
         std::vector<std::string> vVote;
         if (vUpdateBytes.size()) {
             // Get old (current) state
             std::vector<std::vector<SidechainWithdrawalState>> vOldState;
             for (const Sidechain& s : vSidechain) {
-                vOldState.push_back(GetState(s.nSidechain));
+                std::vector<SidechainWithdrawalState> vWithdrawal = GetState(s.nSidechain);
+                if (vWithdrawal.size())
+                    vOldState.push_back(vWithdrawal);
             }
 
-            // Parse SCDB update bytes for new Withdrawal scores
-            if (!ParseSCDBUpdateScript(vUpdateBytes.front(), vOldState, vVote)) {
+            // Parse SCDB update bytes for new withdrawal scores
+            if (!ParseSCDBBytes(vUpdateBytes.front(), vOldState, vVote)) {
                 if (fDebug)
                     LogPrintf("SCDB %s: Error: Failed to parse update bytes at height: %u\n",
                             __func__,
@@ -1447,25 +1385,18 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                 LogPrintf("SCDB %s: Parsed update bytes at height: %u\n",
                         __func__,
                         nHeight);
+        } else {
+            vVote = std::vector<std::string>(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
         }
 
-        bool fUpdated = UpdateSCDBMatchHash(hashSCDB, vVote, mapNewWithdrawal);
+        bool fUpdated = UpdateSCDBIndex(vVote, true /* fDebug */, mapNewWithdrawal);
         if (!fUpdated) {
             if (fDebug)
-                LogPrintf("SCDB %s: Failed to match SCDB hash: %s at height: %u\n",
+                LogPrintf("SCDB %s: Failed to update SCDB at height: %u\n",
                         __func__,
-                        hashSCDB.ToString(),
                         nHeight);
             return false;
         }
-    }
-
-    if (!fJustCheck && hashSCDB.IsNull()) {
-        if (fDebug)
-            LogPrintf("SCDB %s: hashSCDB is null - applying default update!\n",
-                    __func__);
-
-        ApplyDefaultUpdate();
     }
 
     // Remove any Withdrawal(s) that were spent in this block. This can happen when a
@@ -1673,49 +1604,6 @@ bool SidechainDB::UpdateSCDBIndex(const std::vector<std::string>& vVote, bool fD
     }
 
     return true;
-}
-
-bool SidechainDB::UpdateSCDBMatchHash(const uint256& hashSCDB, const std::vector<std::string>& vVote, const std::map<uint8_t, uint256>& mapNewWithdrawal)
-{
-    // vVote is an optional vector of withdrawal votes that we have parsed from
-    // an update script, the network or otherwise.
-
-    // Try using custom votes optionally passed in from update bytes
-    if (vVote.size()) {
-        if (GetSCDBHashIfUpdate(vVote, mapNewWithdrawal) == hashSCDB) {
-            UpdateSCDBIndex(vVote, true /* fDebug */, mapNewWithdrawal);
-            return (GetSCDBHash() == hashSCDB);
-        }
-    }
-
-    // Try testing out most likely updates
-
-    // Create upvotes
-    std::vector<std::string> vUpvote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    for (size_t x = 0; x < vWithdrawalStatus.size(); x++) {
-        if (vWithdrawalStatus[x].size())
-            vUpvote[x] = vWithdrawalStatus[x].back().hash.ToString();
-    }
-    if (GetSCDBHashIfUpdate(vUpvote, mapNewWithdrawal) == hashSCDB) {
-        UpdateSCDBIndex(vUpvote, true /* fDebug */, mapNewWithdrawal);
-        return (GetSCDBHash() == hashSCDB);
-    }
-
-    // Create abstain votes
-    std::vector<std::string> vAbstain(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    if (GetSCDBHashIfUpdate(vAbstain, mapNewWithdrawal) == hashSCDB) {
-        UpdateSCDBIndex(vAbstain, true /* fDebug */, mapNewWithdrawal);
-        return (GetSCDBHash() == hashSCDB);
-    }
-
-    // Create downvotes
-    std::vector<std::string> vDownvote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_DOWNVOTE));
-    if (GetSCDBHashIfUpdate(vDownvote, mapNewWithdrawal) == hashSCDB) {
-        UpdateSCDBIndex(vDownvote, true /* fDebug */, mapNewWithdrawal);
-        return (GetSCDBHash() == hashSCDB);
-    }
-
-    return false;
 }
 
 void SidechainDB::ApplyDefaultUpdate()
@@ -1951,100 +1839,6 @@ bool DecodeWithdrawalFees(const CScript& script, CAmount& amount)
     return true;
 }
 
-bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<std::string>& vVote)
-{
-    if (script.size() < 6 || !script.IsSCDBUpdate()) {
-        LogPrintf("SCDB %s: Error: script not SCDB update bytes!\n", __func__);
-        return false;
-    }
-
-    if (vOldScores.empty()) {
-        LogPrintf("SCDB %s: Error: no old scores!\n", __func__);
-        return false;
-    }
-
-    uint8_t nVersion = script[5];
-    if (nVersion > SCDB_UPDATE_SCRIPT_MAX_VERSION) {
-        LogPrintf("SCDB %s: Error: Invalid version!\n", __func__);
-        return false;
-    }
-
-    vVote.clear();
-    vVote = std::vector<std::string>(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-
-    CScript bytes = CScript(script.begin() + 6, script.end());
-
-    size_t x = 0; // vOldScores outer vector (sidechains)
-    for (CScript::const_iterator it = bytes.begin(); it < bytes.end(); it++) {
-        const unsigned char c = *it;
-        if (c == SC_OP_UPVOTE) {
-            // Figure out which Withdrawal is being upvoted
-            if (vOldScores.size() <= x) {
-                LogPrintf("SCDB %s: Error: Sidechain missing from old scores!\n", __func__);
-                return false;
-            }
-
-            // Read which Withdrawal we are voting on from the bytes
-            size_t y = 0; // vOldScores inner vector (Withdrawal(s) per sidechain)
-            if (bytes.end() - it > 2) {
-                CScript::const_iterator itNext = it + 1;
-                const unsigned char cNext = *itNext;
-                if (cNext != SC_OP_DELIM) {
-                    if (cNext == 0x01)
-                    {
-                        if (!(bytes.end() - itNext >= 1)) {
-                            LogPrintf("SCDB %s: Error: Invalid Withdrawal index A\n", __func__);
-                            return false;
-                        }
-
-                        const CScript::const_iterator itChar1 = itNext + 1;
-                        y = CScriptNum(std::vector<unsigned char>{*itChar1}, false).getint();
-                    }
-                    else
-                    if (cNext == 0x02)
-                    {
-                        if (!(bytes.end() - itNext >= 2)) {
-                            LogPrintf("SCDB %s: Error: Invalid Withdrawal index B\n", __func__);
-                            return false;
-                        }
-
-                        const CScript::const_iterator itChar1 = itNext + 1;
-                        const CScript::const_iterator itChar2 = itNext + 2;
-                        y = CScriptNum(std::vector<unsigned char>{*itChar1, *itChar2}, false).getint();
-                    }
-                    else
-                    {
-                        // TODO support Withdrawal indexes requiring more than 2 bytes?
-                        return false;
-                    }
-                }
-            }
-
-            if (vOldScores[x].size() <= y) {
-                LogPrintf("SCDB %s: Error: Withdrawal to upvote missing from old scores!\n", __func__);
-                return false;
-            }
-
-            vVote[x] = vOldScores[x][y].hash.ToString();
-        }
-        else
-        if (c == SC_OP_DOWNVOTE) {
-            if (vOldScores[x].empty()) {
-                LogPrintf("SCDB %s: Error: Withdrawal to downvote missing from old scores!\n", __func__);
-                return false;
-            }
-            vVote[x] = SCDB_DOWNVOTE;
-        }
-        else
-        if (c == SC_OP_DELIM) {
-            // Moving on to the next sidechain
-            x++;
-        }
-    }
-
-    return true;
-}
-
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted)
 {
     if (vDeposit.empty())
@@ -2143,3 +1937,74 @@ bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<Sid
     return true;
 }
 
+bool ParseSCDBBytes(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<std::string>& vVote)
+{
+    if (script.size() < 8 || !script.IsSCDBBytes()) {
+        LogPrintf("SCDB %s: Error: script not SCDB update bytes!\n", __func__);
+        return false;
+    }
+
+    if (vOldScores.empty()) {
+        LogPrintf("SCDB %s: Error: no old scores!\n", __func__);
+        return false;
+    }
+
+    uint8_t nVersion = script[5];
+    if (nVersion > SCDB_BYTES_MAX_VERSION) {
+        LogPrintf("SCDB %s: Error: Invalid version!\n", __func__);
+        return false;
+    }
+
+    for (const std::vector<SidechainWithdrawalState>& v : vOldScores) {
+        if (v.empty()) {
+            LogPrintf("SCDB %s: Error: invalid (empty) old scores!\n", __func__);
+            return false;
+        }
+    }
+
+    vVote.clear();
+    vVote = std::vector<std::string>(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
+
+    CScript bytes = CScript(script.begin() + 6, script.end());
+
+    // The score index is the current vector of withdrawal bundle scores
+    // we are looping through. This is different than the sidechain number,
+    // because a vector of scores will only be passed in for sidechains
+    // with pending withdrawals and otherwise skipped.
+    size_t nScoreIndex = 0;
+    for (size_t i = 0; i < bytes.size(); i += 2) {
+        if (nScoreIndex >= vOldScores.size()) {
+            LogPrintf("SCDB %s: Error: invalid upvote index - too large!\n", __func__);
+            return false;
+        }
+
+        // Copy sidechain number from first withdrawal at score index
+        size_t nSidechain = vOldScores[nScoreIndex][0].nSidechain;
+
+        if (bytes[i] == 0xFF && bytes[i + 1] == 0xFF) {
+            // Abstain bytes
+            vVote[nSidechain] = SCDB_ABSTAIN;
+        }
+        else
+        if (bytes[i] == 0xFF && bytes[i + 1] == 0xFE) {
+            // Downvote bytes
+            vVote[nSidechain] = SCDB_DOWNVOTE;
+        }
+        else {
+            // Upvote index
+            uint16_t n = bytes[i] | bytes[i + 1] << 8;
+
+            if (n >= vOldScores[nScoreIndex].size()) {
+                LogPrintf("SCDB %s: Error: invalid upvote index - too large!\n", __func__);
+                return false;
+            }
+
+            // Lookup withdrawal bundle hash and add to votes
+            vVote[nSidechain] = vOldScores[nScoreIndex][n].hash.ToString();
+        }
+
+        nScoreIndex++;
+    }
+
+    return true;
+}

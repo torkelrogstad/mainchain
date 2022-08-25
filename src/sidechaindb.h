@@ -36,7 +36,7 @@ class SidechainDB
 public:
     SidechainDB();
 
-    bool ApplyLDBData(const uint256& hashBlockLastSeen, const SidechainBlockData& data);
+    void ApplyLDBData(const uint256& hashBlockLastSeen, const SidechainBlockData& data);
 
     /** Add txid of BMM transaction removed from mempool to cache */
     void AddRemovedBMM(const uint256& hashRemoved);
@@ -123,17 +123,10 @@ public:
     uint256 GetHashBlockLastSeen();
 
     /** For testing purposes - return the hash of everything that SCDB is
-     * tracking instead of just withdrawal state as GetSCDBHash() does.
-     * This includes members used for consensus as well as user data like
-     * which sidechain(s) they have set votes for and their own sidechain
-     * proposals. */
+     * tracking. This includes members used for consensus as well as user
+     * data like which sidechain(s) they have set votes for and their own
+     * sidechain proposals. */
     uint256 GetTestHash() const;
-
-    /** Return serialization hash of SCDB latest verification(s) */
-    uint256 GetSCDBHash() const;
-
-    /** Return what the SCDB hash would be if the votes are applied */
-    uint256 GetSCDBHashIfUpdate(const std::vector<std::string>& vVote, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {}) const;
 
     /** Get the sidechain that relates to nSidechain if it exists */
     bool GetSidechain(const uint8_t nSidechain, Sidechain& sidechain) const;
@@ -203,7 +196,7 @@ public:
      * pending sidechain proposal. */
     bool IsSidechainUnique(const Sidechain& sidechain) const;
 
-    /* Remove withdrawals that are too old to pass with their current score */
+    /** Remove withdrawals that are too old to pass with their current score */
     void RemoveExpiredWithdrawals();
 
     /** Remove sidechain-to-be-activated hash from cache, because the user
@@ -238,11 +231,6 @@ public:
     /** Update / add multiple withdrawals to SCDB */
     bool UpdateSCDBIndex(const std::vector<std::string>& vVote, bool fDebug = false, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {});
 
-    /** Read the SCDB hash in a new block and try to synchronize our SCDB by
-     * testing possible work score updates until the SCDB hash of our SCDB
-     * matches the one from the new block. Return false if no match found. */
-    bool UpdateSCDBMatchHash(const uint256& hashSCDB, const std::vector<std::string>& vVote = {}, const std::map<uint8_t /* nSidechain */, uint256 /* withdrawal hash */>& mapNewWithdrawal = {});
-
 private:
     /**
      * Apply default abstain vote for all sidechain withdrawals. Used when a new
@@ -264,7 +252,7 @@ private:
     /** All sidechain slots, their activation status, and params if active */
     std::vector<Sidechain> vSidechain;
 
-    /*
+    /**
      * The CTIP of nSidechain up to the latest connected block (does not include
      * mempool txns). */
     std::map<uint8_t, SidechainCTIP> mapCTIP;
@@ -319,16 +307,14 @@ private:
      * may have been in the mempool when a withdrawal payout was created,
      * spending the same CTIP as the deposit. */
     std::vector<uint256> vRemovedDeposit;
-
 };
 
 /** Read encoded sum of withdrawal fees output script */
 bool DecodeWithdrawalFees(const CScript& script, CAmount& amount);
 
-/** Read an SCDB update script and return new scores by reference if valid */
-bool ParseSCDBUpdateScript(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<std::string>& vVote);
-
 /** Sort deposits by CTIP UTXO spending order */
 bool SortDeposits(const std::vector<SidechainDeposit>& vDeposit, std::vector<SidechainDeposit>& vDepositSorted);
+
+bool ParseSCDBBytes(const CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vOldScores, std::vector<std::string>& vVote);
 
 #endif // BITCOIN_SIDECHAINDB_H

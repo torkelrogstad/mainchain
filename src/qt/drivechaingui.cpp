@@ -434,8 +434,7 @@ void BitcoinGUI::createActions()
     showBlockExplorerDialogAction->setStatusTip(tr("Show block explorer window"));
 
     showSCDBHashDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_inout"), tr("&Sidechains"), this);
-    showSCDBHashDialogAction->setStatusTip(tr("Show withdrawal vote settings, SCDB hash & M4 explorer"));
-
+    showSCDBHashDialogAction->setStatusTip(tr("Show withdrawal vote settings & M4 explorer window"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));

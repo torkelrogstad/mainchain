@@ -263,29 +263,6 @@ bool CScript::IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vB
     return true;
 }
 
-bool CScript::IsSCDBHashCommit(uint256& hashSCDB) const
-{
-    // Check script size
-    size_t size = this->size();
-    if (size < 37) // sha256 hash + opcodes
-        return false;
-
-    // Check script header
-    if ((*this)[0] != OP_RETURN ||
-            (*this)[1] != 0xD2 ||
-            (*this)[2] != 0x8E ||
-            (*this)[3] != 0x50 ||
-            (*this)[4] != 0x8C)
-        return false;
-
-    hashSCDB = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
-
-    if (hashSCDB.IsNull())
-        return false;
-
-    return true;
-}
-
 bool CScript::IsWithdrawalHashCommit(uint256& hash, uint8_t& nSidechain) const
 {
     // Check script size
@@ -301,7 +278,7 @@ bool CScript::IsWithdrawalHashCommit(uint256& hash, uint8_t& nSidechain) const
             (*this)[4] != 0x43)
         return false;
 
-    hash= uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
+    hash = uint256(std::vector<unsigned char>(this->begin() + 5, this->begin() + 37));
     nSidechain = (*this)[37];
 
     if (hash.IsNull())
@@ -354,7 +331,7 @@ bool CScript::IsSidechainActivationCommit(uint256& hashSidechain) const
     return true;
 }
 
-bool CScript::IsSCDBUpdate() const
+bool CScript::IsSCDBBytes() const
 {
     // Check script size
     size_t size = this->size();

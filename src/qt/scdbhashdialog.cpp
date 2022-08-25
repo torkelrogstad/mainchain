@@ -12,7 +12,6 @@
 #include <chainparams.h>
 #include <sidechain.h>
 #include <sidechaindb.h>
-#include <streams.h>
 #include <txdb.h>
 #include <validation.h>
 
@@ -118,74 +117,36 @@ void SCDBHashDialog::UpdateVoteTree()
 void SCDBHashDialog::UpdateSCDBText()
 {
     ui->textBrowserSCDB->clear();
-
-    CDataStream ssSer(SER_DISK, CLIENT_VERSION);
-    std::vector<std::vector<SidechainWithdrawalState>> vState = scdb.GetState();
     std::vector<std::string> vVote = scdb.GetVotes();
-    for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
-        if (vScore.empty())
-            continue;
 
-        for (const SidechainWithdrawalState& s : vScore) {
-            // Look up our vote setting
-            int nNewScore = 0;
-            if (vVote[s.nSidechain].size() == 64 && vVote[s.nSidechain] == s.hash.ToString())
-                nNewScore = s.nWorkScore + 1;
-            else
-            if (vVote[s.nSidechain].front() == SCDB_DOWNVOTE)
-                nNewScore = s.nWorkScore - 1;
-            else
-            if (vVote[s.nSidechain].front() == SCDB_ABSTAIN)
-                nNewScore = s.nWorkScore;
+    ui->textBrowserSCDB->insertPlainText("SCDB update bytes / M4:\n");
 
-            // Update with next vote state to get new serialization & hash
-            SidechainWithdrawalState nextState = s;
-            nextState.nBlocksLeft -= 1;
-            nextState.nWorkScore = nNewScore;
+    if (scdb.HasState()) {
+        // Generate & display update bytes / M4
 
-            ssSer << nextState;
-        }
-    }
+        CBlock block;
+        CMutableTransaction mtx;
+        mtx.vin.resize(1);
+        mtx.vin[0].prevout.SetNull();
+        block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+        CScript script;
 
-    QString strSer = QString::fromStdString(HexStr(ssSer.str()));
-    if (strSer.size()) {
-        uint256 hashSCDB = SerializeHash(ssSer);
-
-        ui->textBrowserSCDB->insertPlainText("SCDB update bytes / M4:\n");
-
-        // Check if update bytes are required
-        SidechainDB scdbCopy = scdb;
-        if (!scdbCopy.UpdateSCDBMatchHash(hashSCDB)) {
-            // Generate & display update bytes / M4
-
-            CBlock block;
-            CMutableTransaction mtx;
-            mtx.vin.resize(1);
-            mtx.vin[0].prevout.SetNull();
-            block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-            CScript script;
-
-            std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
-            for (const Sidechain& s : scdb.GetActiveSidechains())
-                vOldScores.push_back(scdb.GetState(s.nSidechain));
-
-            GenerateSCDBUpdateScript(block, script, vOldScores, vVote);
-
-            // Hex string of update bytes
-            std::string strScript = HexStr(script.begin(), script.end());
-
-            ui->textBrowserSCDB->insertPlainText(QString::fromStdString(strScript) + "\n\n");
-        } else {
-            ui->textBrowserSCDB->insertPlainText("Not required.\n\n");
+        std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
+        for (const Sidechain& s : scdb.GetActiveSidechains()) {
+            std::vector<SidechainWithdrawalState> vWithdrawal;
+            vWithdrawal = scdb.GetState(s.nSidechain);
+            if (vWithdrawal.size())
+                vOldScores.push_back(vWithdrawal);
         }
 
-        ui->textBrowserSCDB->insertPlainText("Serialization of SCDB withdrawal status:\n");
-        ui->textBrowserSCDB->insertPlainText(strSer + "\n");
+        // Hex string of update bytes
+        std::string str = "Failed to generate SCDB Bytes!\n";
+        if (GenerateSCDBByteCommitment(block, script, vOldScores, vVote))
+            str = HexStr(script.begin() + 6, script.end());
 
-        ui->textBrowserSCDB->insertPlainText("\nSHA256D(Serialization):\n");
-        ui->textBrowserSCDB->insertPlainText(QString::fromStdString(hashSCDB.ToString()) + "\n");
+        ui->textBrowserSCDB->insertPlainText(QString::fromStdString(str) + "\n\n");
     } else {
-        ui->textBrowserSCDB->setText("No score data for next block");
+        ui->textBrowserSCDB->insertPlainText("Not required.\n\n");
     }
 }
 
@@ -202,9 +163,7 @@ void SCDBHashDialog::UpdateNextTree()
     std::vector<std::vector<SidechainWithdrawalState>> vState = scdb.GetState();
 
     // Loop through state here and add sub items for sc# & score change
-    bool fDataFound = false;
     int nSidechain = 0;
-    CDataStream ssSer(SER_DISK, CLIENT_VERSION);
     std::vector<std::string> vVote = scdb.GetVotes();
     for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
         if (vScore.empty()) {
@@ -225,15 +184,19 @@ void SCDBHashDialog::UpdateNextTree()
                 nNewScore = s.nWorkScore + 1;
             }
             else
-            if (vVote[s.nSidechain].front() == SCDB_DOWNVOTE) {
+            if (vVote[s.nSidechain].size() == 1 && vVote[s.nSidechain].front() == SCDB_DOWNVOTE) {
                 strScore = " (Downvote / NACK)";
                 nNewScore = 0;
                 if (s.nWorkScore)
                     nNewScore = s.nWorkScore - 1;
             }
             else
-            if (vVote[s.nSidechain].front() == SCDB_ABSTAIN) {
+            if (vVote[s.nSidechain].size() == 1 && vVote[s.nSidechain].front() == SCDB_ABSTAIN) {
                 strScore = " (Abstain)";
+                nNewScore = s.nWorkScore;
+            }
+            else
+            {
                 nNewScore = s.nWorkScore;
             }
 
@@ -254,50 +217,16 @@ void SCDBHashDialog::UpdateNextTree()
             SidechainWithdrawalState nextState = s;
             nextState.nBlocksLeft -= 1;
             nextState.nWorkScore = nNewScore;
-
-            ssSer << nextState;
         }
 
         // Add SC item parent to tree
         subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
         topItem->addChild(subItemSC);
 
-
-        fDataFound = true;
         nSidechain++;
     }
 
-    QString strSer = QString::fromStdString(HexStr(ssSer.str()));
-    uint256 hashSCDB = SerializeHash(ssSer);
-    if (fDataFound) {
-        QTreeWidgetItem *subItemSer = new QTreeWidgetItem();
-        subItemSer->setText(0, "SCDB");
-
-        QTreeWidgetItem *subItemSerData = new QTreeWidgetItem();
-        subItemSerData->setText(0, strSer);
-        subItemSer->addChild(subItemSerData);
-
-        // Create H(SCDB)object
-        QTreeWidgetItem *subItemSCDBHash = new QTreeWidgetItem();
-        subItemSCDBHash->setText(0, "H(SCDB)");
-
-        QTreeWidgetItem *subItemSCDBHashData = new QTreeWidgetItem();
-        subItemSCDBHashData->setText(0, QString::fromStdString(hashSCDB.ToString()));
-        subItemSCDBHash->addChild(subItemSCDBHashData);
-
-        topItem->addChild(subItemSer);
-        topItem->addChild(subItemSCDBHash);
-        topItem->addChild(subItemSCDBHashData);
-    } else {
-        QTreeWidgetItem *subItem = new QTreeWidgetItem();
-        subItem->setText(0, "No score data for this block");
-        topItem->addChild(subItem);
-    }
-
     QString str = "Block #" + QString::number(chainActive.Height() + 1);
-    if (fDataFound)
-        str += " H(SCDB): " + QString::fromStdString(hashSCDB.ToString());
-
     topItem->setText(0, str);
 
     ui->treeWidgetNext->collapseAll();
@@ -324,7 +253,7 @@ void SCDBHashDialog::UpdateHistoryTree()
         if (pindex->GetBlockHash() == Params().GetConsensus().hashGenesisBlock) {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "Genesis block has no score data");
-            AddHistoryTreeItem(i, "N/A", nHeight - i, subItem);
+            AddHistoryTreeItem(i, nHeight - i, subItem);
             continue;
         }
 
@@ -332,13 +261,11 @@ void SCDBHashDialog::UpdateHistoryTree()
         if (!psidechaintree->GetBlockData(pindex->GetBlockHash(), data)) {
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "No score data for this block");
-            AddHistoryTreeItem(i, "N/A", nHeight - i, subItem);
+            AddHistoryTreeItem(i, nHeight - i, subItem);
             continue;
         }
 
         // Loop through state here and add sub items for sc# & score change
-        CDataStream ssSer(SER_DISK, CLIENT_VERSION);
-        bool fDataFound = false;
         int nSidechain = 0;
         for (const std::vector<SidechainWithdrawalState>& vScore : data.vWithdrawalStatus) {
             if (vScore.empty()) {
@@ -383,44 +310,13 @@ void SCDBHashDialog::UpdateHistoryTree()
                 QTreeWidgetItem *subItemHash = new QTreeWidgetItem();
                 subItemHash->setText(0, "Withdrawal bundle hash:\n" + QString::fromStdString(s.hash.ToString()));
                 subItemSC->addChild(subItemHash);
-
-                ssSer << s;
             }
 
             // Add SC item parent to tree
             subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSC);
+            AddHistoryTreeItem(i, nHeight - i, subItemSC);
 
-            fDataFound = true;
             nSidechain++;
-        }
-
-        QString strSer = QString::fromStdString(HexStr(ssSer.str()));
-        uint256 hashSCDB = SerializeHash(ssSer);
-        if (fDataFound) {
-            // Create H(SCDB) raw serialization object
-            QTreeWidgetItem *subItemSer = new QTreeWidgetItem();
-            subItemSer->setText(0, "SCDB");
-
-            QTreeWidgetItem *subItemSerData = new QTreeWidgetItem();
-            subItemSerData->setText(0, strSer);
-            subItemSer->addChild(subItemSerData);
-
-            // Create H(SCDB) object
-            QTreeWidgetItem *subItemSCDBHash = new QTreeWidgetItem();
-            subItemSCDBHash->setText(0, "H(SCDB)");
-
-            QTreeWidgetItem *subItemSCDBHashData = new QTreeWidgetItem();
-            subItemSCDBHashData->setText(0, QString::fromStdString(hashSCDB.ToString()));
-            subItemSCDBHash->addChild(subItemSCDBHashData);
-
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSer);
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSerData);
-            AddHistoryTreeItem(i, QString::fromStdString(data.hashSCDB.ToString()), nHeight - i, subItemSCDBHash);
-        } else {
-            QTreeWidgetItem *subItem = new QTreeWidgetItem();
-            subItem->setText(0, "No score data for this block");
-            AddHistoryTreeItem(i, "N/A", nHeight - i, subItem);
         }
     }
 
@@ -429,7 +325,7 @@ void SCDBHashDialog::UpdateHistoryTree()
     ui->treeWidgetHistory->setUpdatesEnabled(true);
 }
 
-void SCDBHashDialog::AddHistoryTreeItem(int index, const QString& hashSCDB, const int nHeight, QTreeWidgetItem *item)
+void SCDBHashDialog::AddHistoryTreeItem(int index, const int nHeight, QTreeWidgetItem *item)
 {
     if (!item || index < 0)
         return;
@@ -437,7 +333,7 @@ void SCDBHashDialog::AddHistoryTreeItem(int index, const QString& hashSCDB, cons
     QTreeWidgetItem *topItem = ui->treeWidgetHistory->topLevelItem(index);
     if (!topItem) {
         topItem = new QTreeWidgetItem(ui->treeWidgetHistory);
-        topItem->setText(0, "Block #" + QString::number(nHeight) + " H(SCDB): " + hashSCDB);
+        topItem->setText(0, "Block #" + QString::number(nHeight));
         ui->treeWidgetHistory->insertTopLevelItem(index, topItem);
     }
 

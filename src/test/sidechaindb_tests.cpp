@@ -126,232 +126,6 @@ BOOST_AUTO_TEST_CASE(sidechaindb_mutli_withdraw_one_expires)
     BOOST_CHECK(scdbTest.CheckWorkScore(0, hash));
 }
 
-BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_upvote)
-{
-    // Test SCDB::UpdateSCDBMatchHash update with single upvote
-
-    SidechainDB scdbTest;
-
-    BOOST_CHECK(ActivateTestSidechain(scdbTest));
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
-
-    uint256 hash = GetRandHash();
-
-    std::map<uint8_t, uint256> mapNewWithdrawal;
-    mapNewWithdrawal[0] = hash;
-
-    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal);
-
-    // Create a copy of the scdbTest to manipulate
-    SidechainDB scdbTestCopy = scdbTest;
-
-    // Set votes to ack withdrawal bundle
-    vVote[0] = hash.ToString();
-
-    // Updates scores of SCDB copy
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
-
-    // Make SCDB match copy via hash update
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-
-    // Verify status of withdrawal
-    std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
-    BOOST_REQUIRE(vState.size() == 1);
-    BOOST_CHECK(vState[0].nWorkScore == 2);
-    BOOST_CHECK(vState[0].nBlocksLeft == SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 2);
-}
-
-BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_abstain)
-{
-    // Test SCDB::UpdateSCDBMatchHash update with abstain vote
-
-    SidechainDB scdbTest;
-
-    BOOST_CHECK(ActivateTestSidechain(scdbTest));
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
-
-    uint256 hash = GetRandHash();
-
-    std::map<uint8_t, uint256> mapNewWithdrawal;
-    mapNewWithdrawal[0] = hash;
-
-    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal);
-
-    // Create a copy of the scdbTest to manipulate
-    SidechainDB scdbTestCopy = scdbTest;
-
-    // Updates scores of SCDB copy
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote, false));
-
-    // Make SCDB match copy via hash update
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-
-    // Verify status of withdrawal
-    std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
-    BOOST_REQUIRE(vState.size() == 1);
-    BOOST_CHECK(vState[0].nWorkScore == 1);
-    BOOST_CHECK(vState[0].nBlocksLeft == SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD - 2);
-}
-
-BOOST_AUTO_TEST_CASE(sidechaindb_matchmt_single_downvote)
-{
-    // Test SCDB::UpdateSCDBMatchHash update with downvote
-
-    SidechainDB scdbTest;
-
-    BOOST_CHECK(ActivateTestSidechain(scdbTest));
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
-
-    uint256 hash = GetRandHash();
-
-    std::map<uint8_t, uint256> mapNewWithdrawal;
-    mapNewWithdrawal[0] = hash;
-
-    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_DOWNVOTE));
-    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal);
-
-    // Create a copy of the scdbTest to manipulate
-    SidechainDB scdbTestCopy = scdbTest;
-
-    // Updates scores of SCDB copy
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote, false));
-
-    // Make SCDB match copy via hash update
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-
-    // Verify status of withdrawal
-    std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
-    BOOST_REQUIRE(vState.size() == 1);
-    BOOST_CHECK(vState[0].nWorkScore == 0);
-}
-
-BOOST_AUTO_TEST_CASE(sidechaindb_aprove_withdrawal_mt)
-{
-    // Test creating a withdrawal and approving it with enough workscore via
-    // hash updates only
-
-    SidechainDB scdbTest;
-
-    BOOST_CHECK(ActivateTestSidechain(scdbTest));
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
-
-    uint256 hash = GetRandHash();
-
-    std::map<uint8_t, uint256> mapNewWithdrawal;
-    mapNewWithdrawal[0] = hash;
-
-    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    vVote[0] = hash.ToString();
-    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal);
-
-    // Check if withdrawal was added
-    std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
-    BOOST_CHECK(vState.size() == 1);
-
-    // Create a copy of the scdbTest to manipulate
-    SidechainDB scdbTestCopy = scdbTest;
-
-    // Ack withdrawal bundle
-    for (int i = 1; i < SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
-        BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
-
-        // Make SCDB match copy via hash update
-        BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-    }
-
-    // Withdrawal should pass with valid workscore
-    BOOST_CHECK(scdbTest.CheckWorkScore(0, hash));
-}
-
-BOOST_AUTO_TEST_CASE(sidechaindb_aprove_withdrawal_mt_multi_sidechain)
-{
-    // Test creating and approving multiple withdrawals via hash updates only
-
-    SidechainDB scdbTest;
-
-    BOOST_CHECK(ActivateTestSidechain(scdbTest));
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
-
-    // A second sidechain proposal
-    Sidechain proposal;
-    proposal.nSidechain = 86;
-    proposal.nVersion = 0;
-    proposal.title = "sidechain2";
-    proposal.description = "test";
-    proposal.strKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-
-    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
-    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
-
-    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
-    proposal.hashID1 = GetRandHash();
-    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
-
-    // Activate a second sidechain
-    ActivateSidechain(scdbTest, proposal, 0);
-
-
-    uint256 hash = GetRandHash();
-
-    std::map<uint8_t, uint256> mapNewWithdrawal;
-    mapNewWithdrawal[0] = hash;
-
-    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    vVote[0] = hash.ToString();
-    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal);
-
-    // Check if withdrawal was added
-    std::vector<SidechainWithdrawalState> vState = scdbTest.GetState(0);
-    BOOST_CHECK(vState.size() == 1);
-
-    // Create a copy of the scdbTest to manipulate
-    SidechainDB scdbTestCopy = scdbTest;
-
-    // Ack withdrawal bundle until it has 50% of the required score
-    for (int i = 1; i < SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE / 2; i++) {
-        BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
-
-        // Make SCDB match copy via hash update
-        BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-    }
-
-    // Withdrawal should not pass
-    BOOST_CHECK(!scdbTest.CheckWorkScore(0, hash));
-
-
-    // Create second withdrawal for second sidechain
-    uint256 hash2 = GetRandHash();
-
-    std::map<uint8_t, uint256> mapNewWithdrawal2;
-    mapNewWithdrawal2[86] = hash2;
-
-    vVote[86] = hash2.ToString();
-    scdbTest.UpdateSCDBIndex(vVote, false, mapNewWithdrawal2);
-
-    // Check if withdrawal was added
-    vState = scdbTest.GetState(86);
-    BOOST_CHECK(vState.size() == 1);
-
-    // Create a copy of the scdbTest to manipulate
-    scdbTestCopy = scdbTest;
-
-    // Ack second withdrawal bundle until it has the required score
-    for (int i = 1; i < SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE; i++) {
-        BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
-
-        // Make SCDB match copy via hash update
-        BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-    }
-
-    // Withdrawal 1 should pass
-    BOOST_CHECK(scdbTest.CheckWorkScore(0, hash));
-
-    // Withdrawal 2 should pass
-    BOOST_CHECK(scdbTest.CheckWorkScore(86, hash2));
-}
-
 BOOST_AUTO_TEST_CASE(sidechaindb_wallet_ctip_create)
 {
     // Create a deposit (and CTIP) for a single sidechain
@@ -724,151 +498,16 @@ BOOST_AUTO_TEST_CASE(IsSidechainUpdateBytes)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
     CScript script;
-    GenerateSCDBUpdateScript(block, script, std::vector<std::vector<SidechainWithdrawalState>>{}, std::vector<std::string>(256, std::string(1, SCDB_ABSTAIN)));
+    GenerateSCDBByteCommitment(block, script, std::vector<std::vector<SidechainWithdrawalState>>{}, std::vector<std::string>(256, std::string(1, SCDB_ABSTAIN)));
 
-    BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBUpdate());
+    BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBBytes());
 }
 
-BOOST_AUTO_TEST_CASE(update_helper_basic)
+BOOST_AUTO_TEST_CASE(scdb_bytes_withdrawal_index)
 {
-    // A test of the minimal functionality of generating and parsing an SCDB
-    // update script. Two sidechains with one withdrawal each.
-    // Abstain withdrawal of sidechain 0 and downvote for sidechain 1.
-    SidechainDB scdbTest;
+    // Test SCDB m4 bytes with many withdrawal indexes.
 
-    // Activate first sidechain (default test sidechain)
-    BOOST_CHECK(ActivateTestSidechain(scdbTest));
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 1);
-
-    // A second sidechain proposal
-    Sidechain proposal;
-    proposal.nSidechain = 1;
-    proposal.nVersion = 0;
-    proposal.title = "sidechain2";
-    proposal.description = "test";
-    proposal.strKeyID = "c37afd89181060fa69deb3b26a0b95c02986ec78";
-
-    std::vector<unsigned char> vchPubKey = ParseHex("76a91480dca759b4ff2c9e9b65ec790703ad09fba844cd88ac");
-    proposal.scriptPubKey = CScript(vchPubKey.begin(), vchPubKey.end());
-
-    proposal.strPrivKey = "5Jf2vbdzdCccKApCrjmwL5EFc4f1cUm5Ah4L4LGimEuFyqYpa9r"; // TODO
-    proposal.hashID1 = GetRandHash();
-    proposal.hashID2 = uint160S("31d98584f3c570961359c308619f5cf2e9178482");
-
-    // Activate second sidechain
-    BOOST_CHECK(ActivateSidechain(scdbTest, proposal, 0));
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == 2);
-
-    uint256 hash1 = GetRandHash();
-    uint256 hash2 = GetRandHash();
-
-    // Add withdrawal bundles
-    scdbTest.AddWithdrawal(0, hash1, 0);
-    scdbTest.AddWithdrawal(1, hash2, 0);
-
-    // Check if withdrawals were added
-    std::vector<SidechainWithdrawalState> vState1 = scdbTest.GetState(0);
-    BOOST_CHECK(vState1.size() == 1);
-
-    std::vector<SidechainWithdrawalState> vState2 = scdbTest.GetState(1);
-    BOOST_CHECK(vState2.size() == 1);
-
-    // Create a copy of the scdbTest to manipulate
-    SidechainDB scdbTestCopy = scdbTest;
-
-    // Update the scdbTest copy to get a new hash. No change to withdrawal
-    // SC 0 withdrawal means it will have a default abstain vote.
-    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    vVote[1] = SCDB_DOWNVOTE; // Downvote withdrawals of SC # 1
-
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
-
-    // Hash prediction should fail here without update script
-    BOOST_CHECK(!scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-
-    // Generate an update script
-    CBlock block;
-    CMutableTransaction mtx;
-    mtx.vin.resize(1);
-    mtx.vin[0].prevout.SetNull();
-    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-
-    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
-    for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
-        vOldScores.push_back(scdbTest.GetState(s.nSidechain));
-    }
-    CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, vVote);
-
-    BOOST_CHECK(script.IsSCDBUpdate());
-
-    // Use ParseUpdateScript from validation to read it
-    std::vector<std::vector<SidechainWithdrawalState>> vOld;
-    for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
-        vOld.push_back(scdbTest.GetState(s.nSidechain));
-    }
-
-    std::vector<std::string> vParsedVote;
-    BOOST_CHECK(ParseSCDBUpdateScript(script, vOld, vParsedVote));
-
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash(), vParsedVote));
-}
-
-BOOST_AUTO_TEST_CASE(update_helper_max_active)
-{
-    // Test parsing update bytes with maximum active sidechains
-
-    SidechainDB scdbTest;
-
-    Sidechain proposal;
-    proposal.nVersion = 0;
-    proposal.title = "sidechain";
-
-    // Activate the maximum number of sidechains allowed
-    for (int i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++) {
-        proposal.nSidechain = i;
-        proposal.title = "sidechain" + std::to_string(i);
-
-        ActivateSidechain(scdbTest, proposal, 0);
-    }
-
-    // Check that the maximum number have been activated
-    BOOST_CHECK(scdbTest.GetActiveSidechainCount() == SIDECHAIN_ACTIVATION_MAX_ACTIVE);
-
-    // Add a withdrawal to each sidechain
-
-    std::map<uint8_t, uint256> mapNewWithdrawal;
-    for (size_t i = 0; i < SIDECHAIN_ACTIVATION_MAX_ACTIVE; i++)
-        mapNewWithdrawal[i] = GetRandHash();
-
-    SidechainDB scdbTestCopy = scdbTest;
-
-    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote, false, mapNewWithdrawal));
-
-    // This update should work without update helper bytes
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash(), vVote, mapNewWithdrawal));
-
-    // Now test updates that won't work without update helper bytes
-
-    scdbTestCopy = scdbTest;
-
-    vVote[0] = SCDB_DOWNVOTE;
-    vVote[5] = mapNewWithdrawal[5].ToString();
-    vVote[10] = SCDB_DOWNVOTE;
-    vVote[205] = SCDB_DOWNVOTE;
-    vVote[245] = SCDB_DOWNVOTE;
-    BOOST_CHECK(scdbTestCopy.UpdateSCDBIndex(vVote));
-
-    // This update should not work without update helper bytes
-    BOOST_CHECK(!scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash()));
-
-    // Generate update script
-
-    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
-    for (const Sidechain& s : scdbTest.GetActiveSidechains()) {
-        vOldScores.push_back(scdbTest.GetState(s.nSidechain));
-    }
+    // Setup score state for 2 sidechains with 1 withdrawal bundle each
 
     CBlock block;
     CMutableTransaction mtx;
@@ -876,20 +515,44 @@ BOOST_AUTO_TEST_CASE(update_helper_max_active)
     mtx.vin[0].prevout.SetNull();
     block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
     CScript script;
-    GenerateSCDBUpdateScript(block, script, vOldScores, vVote);
 
-    BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBUpdate());
+    std::vector<std::vector<SidechainWithdrawalState>> vScores;
+    vScores.resize(2);
 
-    // Read update script
+    SidechainWithdrawalState wt;
+    wt.nSidechain = 0;
+    wt.hash = GetRandHash();
+    wt.nBlocksLeft = 999;
+    wt.nWorkScore = 1;
+    vScores[0].push_back(wt);
+
+    wt.nSidechain = 1;
+    wt.hash = GetRandHash();
+    vScores[1].push_back(wt);
+
+    std::vector<std::string> vVote(SIDECHAIN_ACTIVATION_MAX_ACTIVE, std::string(1, SCDB_ABSTAIN));
+    vVote[1] = wt.hash.ToString();
+
+    BOOST_CHECK(GenerateSCDBByteCommitment(block, script, vScores, vVote));
+    BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBBytes());
+
     std::vector<std::string> vParsedVote;
-    BOOST_CHECK(ParseSCDBUpdateScript(script, vOldScores, vParsedVote));
-
-    // Compare parsed votes to vote settings
+    BOOST_CHECK(ParseSCDBBytes(script, vScores, vParsedVote));
     BOOST_CHECK(vVote == vParsedVote);
-    BOOST_CHECK(vVote[245] == vParsedVote[245]);
 
-    // Update copy of SCDB based on update helper bytes
-    BOOST_CHECK(scdbTest.UpdateSCDBMatchHash(scdbTestCopy.GetSCDBHash(), vParsedVote));
+    // Now add more withdrawals and test SCDB byte parsing
+    for (size_t i = 0; i < 257; i++) {
+        wt.hash = GetRandHash();
+        vScores[1].push_back(wt);
+
+        vVote[1] = wt.hash.ToString();
+
+        BOOST_CHECK(GenerateSCDBByteCommitment(block, script, vScores, vVote));
+        BOOST_CHECK(block.vtx[0]->vout[0].scriptPubKey.IsSCDBBytes());
+
+        BOOST_CHECK(ParseSCDBBytes(script, vScores, vParsedVote));
+        BOOST_CHECK(vVote == vParsedVote);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(custom_vote_cache)

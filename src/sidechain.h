@@ -49,8 +49,8 @@ static const int SIDECHAIN_VERSION_MAX = 0;
 static const char DB_SIDECHAIN_BLOCK_OP = 'S';
 
 //! The SidechainDB update script version
-static const uint8_t SCDB_UPDATE_SCRIPT_VERSION = 0;
-static const uint8_t SCDB_UPDATE_SCRIPT_MAX_VERSION = 0;
+static const uint8_t SCDB_BYTES_VERSION = 0;
+static const uint8_t SCDB_BYTES_MAX_VERSION = 0;
 
 // Custom characters for withdrawal bundle votes
 static const char SCDB_UPVOTE = 'u';
@@ -174,7 +174,6 @@ struct SidechainDeposit {
     }
 };
 
-
 struct SidechainWithdrawalState {
     uint8_t nSidechain;
     uint16_t nBlocksLeft;
@@ -262,7 +261,6 @@ struct SidechainBlockData: public SidechainObj {
     std::vector<SidechainSpentWithdrawal> vSpent;
     std::vector<SidechainActivationStatus> vActivationStatus;
     std::vector<Sidechain> vSidechain;
-    uint256 hashSCDB;
 
     SidechainBlockData(void) : SidechainObj() { sidechainop = DB_SIDECHAIN_BLOCK_OP; }
     virtual ~SidechainBlockData(void) { }
@@ -276,7 +274,6 @@ struct SidechainBlockData: public SidechainObj {
         READWRITE(vSpent);
         READWRITE(vActivationStatus);
         READWRITE(vSidechain);
-        READWRITE(hashSCDB);
     }
 
     std::string ToString(void) const;

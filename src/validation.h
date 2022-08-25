@@ -446,17 +446,14 @@ void GenerateCriticalHashCommitments(CBlock& block);
 /** Produce a BMM h* coinbase commitment for a block (with lightning)*/
 void GenerateLNCriticalHashCommitment(CBlock& block);
 
-/** Produce the SCDB hash coinbase commitment for a block */
-void GenerateSCDBHashCommitment(CBlock& block, const uint256& hashSCDB);
-
-/** Produce withdrawal hash coinbase commitment for a block */
+/** Produce sidechain withdrawal hash coinbase commitment for a block */
 void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain);
 
 void GenerateSidechainProposalCommitment(CBlock& block, const Sidechain& sidechain);
 
 void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash);
 
-bool GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<std::string>& vVote);
+bool GenerateSCDBByteCommitment(CBlock& block, CScript& scriptOut, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<std::string>& vVote);
 
 CScript GetNewsTokyoDailyHeader();
 CScript GetNewsUSDailyHeader();

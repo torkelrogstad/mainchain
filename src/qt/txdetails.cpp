@@ -18,7 +18,6 @@ enum TopLevelIndex {
     INDEX_WITNESS_PROGRAM,
     INDEX_WITNESS_COMMIT,
     INDEX_CRITICAL_HASH,
-    INDEX_SCDB_HASH,
     INDEX_WITHDRAWAL_HASH,
     INDEX_SC_PROPOSAL,
     INDEX_SC_ACK,
@@ -96,8 +95,6 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
     uint256 hashCritical = uint256();
     // Critical data bytes
     std::vector<unsigned char> vBytes;
-    // SCDB hash
-    uint256 hashSCDB = uint256();
 
     ui->treeWidgetDecoded->clear();
     // TODO A lot of these output types can only be in the coinbase so we
@@ -114,8 +111,6 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
         hashSidechain.SetNull();
 
         hashCritical.SetNull();
-
-        hashSCDB.SetNull();
 
         const CScript scriptPubKey = tx.vout[i].scriptPubKey;
         if (scriptPubKey.empty())
@@ -159,15 +154,6 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             AddTreeItem(INDEX_CRITICAL_HASH, subItem);
         }
         else
-        if (scriptPubKey.IsSCDBHashCommit(hashSCDB)) {
-            // Create a SCDB merkle tree hash commit item
-            QTreeWidgetItem *subItem = new QTreeWidgetItem();
-            subItem->setText(0, "txout #" + QString::number(i));
-            subItem->setText(1, "SCDB Hash Commit: " +
-                    QString::fromStdString(hashSCDB.ToString()));
-            AddTreeItem(INDEX_SCDB_HASH, subItem);
-        }
-        else
         if (scriptPubKey.IsWithdrawalHashCommit(hashWithdrawal, nSidechain)) {
             // Create a Withdrawal hash commit item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
@@ -196,7 +182,7 @@ void  TxDetails::SetTransaction(const CMutableTransaction& mtx)
             AddTreeItem(INDEX_SC_ACK, subItem);
         }
         else
-        if (scriptPubKey.IsSCDBUpdate()) {
+        if (scriptPubKey.IsSCDBBytes()) {
             // Create a SCDB update script item
             QTreeWidgetItem *subItem = new QTreeWidgetItem();
             subItem->setText(0, "txout #" + QString::number(i));
@@ -253,9 +239,6 @@ void TxDetails::AddTreeItem(int index, QTreeWidgetItem *item)
         else
         if (index == INDEX_CRITICAL_HASH)
             topItem->setText(0, "BMM / Critical Hash");
-        else
-        if (index == INDEX_SCDB_HASH)
-            topItem->setText(0, "SCDB Hash");
         else
         if (index == INDEX_WITHDRAWAL_HASH)
             topItem->setText(0, "New Withdrawal Hash");

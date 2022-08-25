@@ -2359,7 +2359,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     // only a list of sidechain hashes per block. Then if we need to re-activate
     // an old sidechain we can look it up by hash.
     SidechainBlockData data;
-    data.hashSCDB = scdb.GetSCDBHash();
     data.vWithdrawalStatus = scdb.GetState();
     data.vActivationStatus = scdb.GetSidechainActivationStatus();
     data.vSidechain = scdb.GetSidechains();
@@ -3577,35 +3576,6 @@ void GenerateLNCriticalHashCommitment(CBlock& block)
     }
 }
 
-void GenerateSCDBHashCommitment(CBlock& block, const uint256& hashSCDB)
-{
-    /*
-     * "M1, M2, M3, M4"
-     * Sidechain DB data serialization hash once per block commitment.
-     * BIP: 300 & 301
-     */
-
-    // Create output that commitment will be added to
-    CTxOut out;
-    out.nValue = 0;
-
-    // Add script header
-    out.scriptPubKey.resize(37);
-    out.scriptPubKey[0] = OP_RETURN;
-    out.scriptPubKey[1] = 0xD2;
-    out.scriptPubKey[2] = 0x8E;
-    out.scriptPubKey[3] = 0x50;
-    out.scriptPubKey[4] = 0x8C;
-
-    // Add SCDB hash
-    memcpy(&out.scriptPubKey[5], &hashSCDB, 32);
-
-    // Update coinbase in block
-    CMutableTransaction mtx(*block.vtx[0]);
-    mtx.vout.push_back(out);
-    block.vtx[0] = MakeTransactionRef(std::move(mtx));
-}
-
 void GenerateWithdrawalHashCommitment(CBlock& block, const uint256& hash, const uint8_t nSidechain)
 {
     /*
@@ -3671,7 +3641,7 @@ void GenerateSidechainActivationCommitment(CBlock& block, const uint256& hash)
     block.vtx[0] = MakeTransactionRef(std::move(mtx));
 }
 
-bool GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<std::string>& vVote)
+bool GenerateSCDBByteCommitment(CBlock& block, CScript& scriptOut, const std::vector<std::vector<SidechainWithdrawalState>>& vScores, const std::vector<std::string>& vVote)
 {
     if (vVote.size() != SIDECHAIN_ACTIVATION_MAX_ACTIVE)
         return false;
@@ -3689,48 +3659,47 @@ bool GenerateSCDBUpdateScript(CBlock& block, CScript& script, const std::vector<
     out.scriptPubKey[4] = 0x76;
 
     // Add version number
-    out.scriptPubKey[5] = SCDB_UPDATE_SCRIPT_VERSION;
+    out.scriptPubKey[5] = SCDB_BYTES_VERSION;
 
-    // Generate bytes for each sidechain depending on vote settings
-    for (size_t x = 0; x < vScores.size(); x++) {
-        const std::string strVote = vVote[x];
-        if (strVote.empty())
+    // Set bytes based on withdrawal vote settings
+    for (const std::vector<SidechainWithdrawalState>& vWithdrawal : vScores) {
+        if (vWithdrawal.empty())
             return false;
 
-        if (strVote.size() == 64) {
-            uint256 hash = uint256S(strVote);
+        uint8_t nSidechain = vWithdrawal.front().nSidechain;
+
+        // Add bytes to script based on our vote settings.
+        // 0-65533 = index of withdrawal bundle to upvote for this sidechain.
+        // 65534 = downvote withdrawals for this sidechain.
+        // 65535 = abstain withdrawals for this sidechain.
+        if (vVote[nSidechain].size() == 64) {
+            uint256 hash = uint256S(vVote[nSidechain]);
+
             if (hash.IsNull())
                 return false;
 
-            // Add vote to script
-            out.scriptPubKey << SC_OP_UPVOTE;
-
-            // Find the index of the withdrawal we are upvoting
-            size_t index = 0;
-
-            for (size_t y = 0; y < vScores[x].size(); y++) {
-                if (vScores[x][y].hash == hash) {
-                    index = y;
+            // Lookup index of withdrawal bundle in SCDB
+            uint16_t n = 0;
+            for (; n < vWithdrawal.size(); n++)
+                if (vWithdrawal[n].hash == hash)
                     break;
-                }
-            }
 
-            if (index > 0) {
-                // Add Withdrawal index to script if needed
-                out.scriptPubKey << CScriptNum(index);
-            }
+            out.scriptPubKey.push_back(n & 0xff);
+            out.scriptPubKey.push_back(n >> 8);
         }
         else
-        if (strVote.front() == SCDB_DOWNVOTE) {
-                out.scriptPubKey << SC_OP_DOWNVOTE;
+        if (vVote[nSidechain].front() == SCDB_ABSTAIN) {
+            out.scriptPubKey.push_back(0xFF);
+            out.scriptPubKey.push_back(0xFF);
         }
-
-        // Add deliminator to script, we're moving on to the next sidechain
-        out.scriptPubKey << SC_OP_DELIM;
+        else
+        if (vVote[nSidechain].front() == SCDB_DOWNVOTE) {
+            out.scriptPubKey.push_back(0xFF);
+            out.scriptPubKey.push_back(0xFE);
+        }
     }
 
-    // Return the script by reference
-    script = out.scriptPubKey;
+    scriptOut = out.scriptPubKey;
 
     // Update coinbase in block
     CMutableTransaction mtx(*block.vtx[0]);
@@ -6002,10 +5971,8 @@ bool ResyncSCDB(const CBlockIndex* pindex)
         LogPrintf("%s: Failed to resync SCDB, cannot find block data in LDB!\n", __func__);
         return false;
     }
-    if (!scdb.ApplyLDBData(pindex->GetBlockHash(), data)) {
-        LogPrintf("%s: Failed to resync SCDB, failed to apply LDB data!\n", __func__);
-        return false;
-    }
+
+    scdb.ApplyLDBData(pindex->GetBlockHash(), data);
 
     LogPrintf("%s: SCDB resync to block %s complete.\n",
             __func__, pindex->GetBlockHash().ToString());

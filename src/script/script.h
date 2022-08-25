@@ -46,14 +46,6 @@ std::vector<unsigned char> ToByteVector(const T& in)
     return std::vector<unsigned char>(in.begin(), in.end());
 }
 
-/** SCDB update byte codes */
-enum scdboptype
-{
-    SC_OP_DELIM = 0xe1,
-    SC_OP_UPVOTE = 0xe2,
-    SC_OP_DOWNVOTE = 0xe3,
-};
-
 /** Script opcodes */
 enum opcodetype
 {
@@ -460,14 +452,6 @@ public:
         return *this;
     }
 
-    CScript& operator<<(scdboptype scopcode)
-    {
-        if (scopcode < 0xe1 || scopcode > 0xe3)
-            throw std::runtime_error("CScript::operator<<(): invalid scopcode");
-        insert(end(), (unsigned char)scopcode);
-        return *this;
-    }
-
     CScript& operator<<(const CScriptNum& b)
     {
         *this << b.getvch();
@@ -664,11 +648,10 @@ public:
 
     /** Script formats for Drivechains */
     bool IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vBytes) const;
-    bool IsSCDBHashCommit(uint256& hashSCDB) const;
     bool IsWithdrawalHashCommit(uint256& hash, uint8_t& nSidechain) const;
     bool IsSidechainProposalCommit() const;
     bool IsSidechainActivationCommit(uint256& hashSidechain) const;
-    bool IsSCDBUpdate() const;
+    bool IsSCDBBytes() const;
 
     /** News OP_RETURN script types */
     bool IsNewsUSDay() const;
