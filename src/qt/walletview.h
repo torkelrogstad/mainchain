@@ -129,7 +129,7 @@ public Q_SLOTS:
     void showSidechainActivationDialog();
 
     /** Show the sidechain hash explorer &  withdrawal voting dialog */
-    void showSCDBHashDialog();
+    void showSCDBDialog();
 
 Q_SIGNALS:
     /** Signal that we want to show the main window */

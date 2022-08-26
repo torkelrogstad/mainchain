@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SCDBHashDialog</class>
- <widget class="QDialog" name="SCDBHashDialog">
+ <class>SCDBDialog</class>
+ <widget class="QDialog" name="SCDBDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -126,7 +126,7 @@
        <item>
         <widget class="QLabel" name="label_2">
          <property name="text">
-          <string>Sidechain withdrawal score &amp; H(SCDB) commitment history:</string>
+          <string>Sidechain withdrawal score history:</string>
          </property>
         </widget>
        </item>

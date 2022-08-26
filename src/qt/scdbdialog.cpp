@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <qt/scdbhashdialog.h>
-#include <qt/forms/ui_scdbhashdialog.h>
+#include <qt/scdbdialog.h>
+#include <qt/forms/ui_scdbdialog.h>
 
 #include <qt/clientmodel.h>
 #include <qt/platformstyle.h>
@@ -15,20 +15,20 @@
 #include <txdb.h>
 #include <validation.h>
 
-SCDBHashDialog::SCDBHashDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
+SCDBDialog::SCDBDialog(const PlatformStyle *_platformStyle, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::SCDBHashDialog),
+    ui(new Ui::SCDBDialog),
     platformStyle(_platformStyle)
 {
     ui->setupUi(this);
 }
 
-SCDBHashDialog::~SCDBHashDialog()
+SCDBDialog::~SCDBDialog()
 {
     delete ui;
 }
 
-void SCDBHashDialog::UpdateOnShow()
+void SCDBDialog::UpdateOnShow()
 {
     UpdateVoteTree();
     UpdateNextTree();
@@ -36,7 +36,7 @@ void SCDBHashDialog::UpdateOnShow()
     UpdateHistoryTree();
 }
 
-void SCDBHashDialog::UpdateVoteTree()
+void SCDBDialog::UpdateVoteTree()
 {
     // Update vote tree
 
@@ -114,7 +114,7 @@ void SCDBHashDialog::UpdateVoteTree()
     ui->treeWidgetVote->setUpdatesEnabled(true);
 }
 
-void SCDBHashDialog::UpdateSCDBText()
+void SCDBDialog::UpdateSCDBText()
 {
     ui->textBrowserSCDB->clear();
     std::vector<std::string> vVote = scdb.GetVotes();
@@ -150,7 +150,7 @@ void SCDBHashDialog::UpdateSCDBText()
     }
 }
 
-void SCDBHashDialog::UpdateNextTree()
+void SCDBDialog::UpdateNextTree()
 {
     // Update the next block state tree
 
@@ -235,7 +235,7 @@ void SCDBHashDialog::UpdateNextTree()
     ui->treeWidgetNext->setUpdatesEnabled(true);
 }
 
-void SCDBHashDialog::UpdateHistoryTree()
+void SCDBDialog::UpdateHistoryTree()
 {
     // Update history tree
 
@@ -325,7 +325,7 @@ void SCDBHashDialog::UpdateHistoryTree()
     ui->treeWidgetHistory->setUpdatesEnabled(true);
 }
 
-void SCDBHashDialog::AddHistoryTreeItem(int index, const int nHeight, QTreeWidgetItem *item)
+void SCDBDialog::AddHistoryTreeItem(int index, const int nHeight, QTreeWidgetItem *item)
 {
     if (!item || index < 0)
         return;
@@ -343,13 +343,13 @@ void SCDBHashDialog::AddHistoryTreeItem(int index, const int nHeight, QTreeWidge
     topItem->addChild(item);
 }
 
-void SCDBHashDialog::numBlocksChanged()
+void SCDBDialog::numBlocksChanged()
 {
     if (this->isVisible())
         UpdateOnShow();
 }
 
-void SCDBHashDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column)
+void SCDBDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column)
 {
     QTreeWidgetItem* parent = item->parent();
     if (!parent)
@@ -412,7 +412,7 @@ void SCDBHashDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int co
     UpdateSCDBText();
 }
 
-void SCDBHashDialog::setClientModel(ClientModel *model)
+void SCDBDialog::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if(model)

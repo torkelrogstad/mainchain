@@ -19,7 +19,7 @@ class PlatformStyle;
 class SidechainDepositConfirmationDialog;
 class SidechainWithdrawalTableModel;
 class SidechainActivationDialog;
-class SCDBHashDialog;
+class SCDBDialog;
 class WalletModel;
 class ClientModel;
 
@@ -77,7 +77,7 @@ public Q_SLOTS:
     void gotoWTPage();
     void numBlocksChanged();
     void ShowActivationDialog();
-    void ShowSCDBHashDialog();
+    void ShowSCDBDialog();
     void UpdateRecentDeposits();
 
 private Q_SLOTS:
@@ -92,7 +92,7 @@ private:
     SidechainDepositConfirmationDialog *depositConfirmationDialog = nullptr;
     SidechainWithdrawalTableModel *withdrawalModel = nullptr;
     SidechainActivationDialog *activationDialog = nullptr;
-    SCDBHashDialog *scdbHashDialog = nullptr;
+    SCDBDialog *scdbDialog = nullptr;
 
     const PlatformStyle *platformStyle = nullptr;
 

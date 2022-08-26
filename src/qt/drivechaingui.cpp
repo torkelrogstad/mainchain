@@ -123,7 +123,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     showRestoreWalletDialogAction(0),
     showHashCalcDialogAction(0),
     showBlockExplorerDialogAction(0),
-    showSCDBHashDialogAction(0),
+    showSCDBDialogAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -192,7 +192,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
                 walletFrame, SLOT(showSidechainActivationDialog()));
 
         connect(miningDialog, SIGNAL(WithdrawalDialogRequested()),
-                walletFrame, SLOT(showSCDBHashDialog()));
+                walletFrame, SLOT(showSCDBDialog()));
 
         connect(walletFrame, SIGNAL(requestedSyncWarningInfo()), this, SLOT(showModalOverlay()));
 
@@ -433,8 +433,8 @@ void BitcoinGUI::createActions()
     showBlockExplorerDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/search"), tr("&Block Explorer"), this);
     showBlockExplorerDialogAction->setStatusTip(tr("Show block explorer window"));
 
-    showSCDBHashDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_inout"), tr("&Sidechains"), this);
-    showSCDBHashDialogAction->setStatusTip(tr("Show withdrawal vote settings & M4 explorer window"));
+    showSCDBDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_inout"), tr("&Sidechains"), this);
+    showSCDBDialogAction->setStatusTip(tr("Show withdrawal vote settings & M4 explorer window"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -463,7 +463,7 @@ void BitcoinGUI::createActions()
         connect(showRestoreWalletDialogAction, SIGNAL(triggered()), this, SLOT(showRestoreWalletDialog()));
         connect(showHashCalcDialogAction, SIGNAL(triggered()), this, SLOT(showHashCalcDialog()));
         connect(showBlockExplorerDialogAction, SIGNAL(triggered()), this, SLOT(showBlockExplorerDialog()));
-        connect(showSCDBHashDialogAction, SIGNAL(triggered()), this, SLOT(showSCDBHashDialog()));
+        connect(showSCDBDialogAction, SIGNAL(triggered()), this, SLOT(showSCDBDialog()));
     }
 #endif // ENABLE_WALLET
 
@@ -504,7 +504,7 @@ void BitcoinGUI::createMenuBar()
         tools->addAction(showMiningDialogAction);
         tools->addAction(showHashCalcDialogAction);
         tools->addAction(signVerifyMessageAction);
-        tools->addAction(showSCDBHashDialogAction);
+        tools->addAction(showSCDBDialogAction);
     }
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
@@ -751,7 +751,7 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addAction(showHashCalcDialogAction);
     trayIconMenu->addAction(showBlockExplorerDialogAction);
     trayIconMenu->addAction(signVerifyMessageAction);
-    trayIconMenu->addAction(showSCDBHashDialogAction);
+    trayIconMenu->addAction(showSCDBDialogAction);
 
 #ifndef Q_OS_MAC // This is built-in on Mac
     trayIconMenu->addSeparator();
@@ -848,9 +848,9 @@ void BitcoinGUI::showBlockExplorerDialog()
     blockExplorerDialog->scrollRight();
 }
 
-void BitcoinGUI::showSCDBHashDialog()
+void BitcoinGUI::showSCDBDialog()
 {
-    if (walletFrame) walletFrame->showSCDBHashDialog();
+    if (walletFrame) walletFrame->showSCDBDialog();
 }
 
 void BitcoinGUI::openClicked()

@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SCDBHASHDIALOG_H
-#define SCDBHASHDIALOG_H
+#ifndef SCDBDIALOG_H
+#define SCDBDIALOG_H
 
 #include <QDialog>
 
@@ -21,22 +21,22 @@ enum TreeItemRoles {
 };
 
 namespace Ui {
-class SCDBHashDialog;
+class SCDBDialog;
 }
 
-class SCDBHashDialog : public QDialog
+class SCDBDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit SCDBHashDialog(const PlatformStyle *platformStyle, QWidget *parent = nullptr);
-    ~SCDBHashDialog();
+    explicit SCDBDialog(const PlatformStyle *platformStyle, QWidget *parent = nullptr);
+    ~SCDBDialog();
 
     void setClientModel(ClientModel *model);
     void UpdateOnShow();
 
 private:
-    Ui::SCDBHashDialog *ui;
+    Ui::SCDBDialog *ui;
 
     const PlatformStyle *platformStyle;
     ClientModel *clientModel = nullptr;
@@ -53,4 +53,4 @@ private Q_SLOTS:
     void on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column);
 };
 
-#endif // SCDBHASHDIALOG_H
+#endif // SCDBDIALOG_H

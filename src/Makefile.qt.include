@@ -123,7 +123,7 @@ QT_FORMS_UI = \
   qt/forms/receivecoinsdialog.ui \
   qt/forms/receiverequestdialog.ui \
   qt/forms/debugwindow.ui \
-  qt/forms/scdbhashdialog.ui \
+  qt/forms/scdbdialog.ui \
   qt/forms/sendcoinsdialog.ui \
   qt/forms/sendcoinsentry.ui \
   qt/forms/sidechainactivationdialog.ui \
@@ -191,7 +191,7 @@ QT_MOC_CPP = \
   qt/moc_receiverequestdialog.cpp \
   qt/moc_recentrequeststablemodel.cpp \
   qt/moc_rpcconsole.cpp \
-  qt/moc_scdbhashdialog.cpp \
+  qt/moc_scdbdialog.cpp \
   qt/moc_sendcoinsdialog.cpp \
   qt/moc_sendcoinsentry.cpp \
   qt/moc_sidechainactivationtablemodel.cpp \
@@ -297,7 +297,7 @@ DRIVECHAIN_QT_H = \
   qt/receiverequestdialog.h \
   qt/recentrequeststablemodel.h \
   qt/rpcconsole.h \
-  qt/scdbhashdialog.h \
+  qt/scdbdialog.h \
   qt/sendcoinsdialog.h \
   qt/sendcoinsentry.h \
   qt/sidechainactivationtablemodel.h \
@@ -468,7 +468,7 @@ DRIVECHAIN_QT_BASE_CPP = \
   qt/qvalidatedlineedit.cpp \
   qt/qvaluecombobox.cpp \
   qt/rpcconsole.cpp \
-  qt/scdbhashdialog.cpp \
+  qt/scdbdialog.cpp \
   qt/splashscreen.cpp \
   qt/trafficgraphwidget.cpp \
   qt/utilitydialog.cpp
