@@ -2115,6 +2115,26 @@ UniValue getopreturndata(const JSONRPCRequest& request)
     return ret;
 }
 
+UniValue getactivesidechaincount(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size())
+        throw std::runtime_error(
+            "getactivesidechaincount\n"
+            "Count number of active sidechains.\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"count\"   : (number) number of active sidechains\n"
+            "}\n"
+            "\n"
+            "\nExample:\n"
+            + HelpExampleCli("getactivesidechaincount", "")
+            );
+
+    int count = scdb.GetActiveSidechainCount();
+
+    return count;
+}
+
 UniValue echo(const JSONRPCRequest& request)
 {
     if (request.fHelp)
@@ -2185,6 +2205,7 @@ static const CRPCCommand commands[] =
     { "Drivechain",  "gettotalscdbhash",              &gettotalscdbhash,                {}},
     { "Drivechain",  "getscdbdataforblock",           &getscdbdataforblock,             {"blockhash"}},
     { "Drivechain",  "listfailedbmm",                 &listfailedbmm,                   {}},
+    { "Drivechain",  "getactivesidechaincount",       &getactivesidechaincount,         {}},
 
     /* Coin News RPC */
     { "CoinNews",    "getopreturndata",               &getopreturndata,                 {"blockhash"}},
