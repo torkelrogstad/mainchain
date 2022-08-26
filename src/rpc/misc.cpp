@@ -903,6 +903,44 @@ UniValue countsidechaindeposits(const JSONRPCRequest& request)
     return count;
 }
 
+UniValue addwithdrawal(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 2)
+        throw std::runtime_error(
+            "addwithdrawal\n"
+            "For testing purposes only! Add withdrawal to SCDB\n"
+            "\nArguments:\n"
+            "1. \"nsidechain\"      (int, required) Sidechain number\n"
+            "2. \"hash\"            (string, required) Bundle hash\n"
+            "\nExamples:\n"
+            + HelpExampleCli("addwithdrawal", "")
+            + HelpExampleRpc("addwithdrawal", "")
+    );
+
+    // Is nSidechain valid?
+    int nSidechain = request.params[0].get_int();
+    if (!scdb.IsSidechainActive(nSidechain)) {
+        std::string strError = "Invalid sidechain number!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    uint256 hash = uint256S(request.params[1].get_str());
+    if (hash.IsNull()) {
+        std::string strError = "Invalid bundle hash!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    if (!scdb.AddWithdrawal(nSidechain, hash, true /* fDebug */)) {
+        std::string strError = "Failed to add withdrawal!";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_MISC_ERROR, strError);
+    }
+
+    return NullUniValue;
+}
+
 UniValue receivewithdrawalbundle(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 2)
@@ -2119,6 +2157,7 @@ static const CRPCCommand commands[] =
     { "hidden",             "getinfo",                &getinfo_deprecated,     {}},
 
     /* Drivechain rpc commands for the user and sidechains */
+    { "Drivechain",  "addwithdrawal",                 &addwithdrawal,                   {"nsidechain", "hash"}},
     { "Drivechain",  "createcriticaldatatx",          &createcriticaldatatx,            {"amount", "height", "criticalhash"}},
     { "Drivechain",  "listsidechainctip",             &listsidechainctip,               {"nsidechain"}},
     { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain"}},
