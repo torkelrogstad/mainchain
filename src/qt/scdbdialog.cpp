@@ -76,11 +76,15 @@ void SCDBDialog::UpdateVoteTree()
         topItem->addChild(subItemAlarm);
 
         // Add upvote checkbox for each sidechain withdrawal
-        bool fUpvote = false;
+        bool fUpvoteFound = false;
         for (size_t y = 0; y < vWithdrawal.size(); y++) {
+            bool fUpvote = false;
+
             // Check if this withdrawal's upvote box should be checked
-            if (vVote[vSidechain[x].nSidechain] == vWithdrawal[y].hash.ToString())
+            if (vVote[vSidechain[x].nSidechain] == vWithdrawal[y].hash.ToString()) {
                 fUpvote = true;
+                fUpvoteFound = true;
+            }
 
             QTreeWidgetItem *subItemWT = new QTreeWidgetItem();
             subItemWT->setText(0, QString::fromStdString(vWithdrawal[y].hash.ToString()));
@@ -100,10 +104,10 @@ void SCDBDialog::UpdateVoteTree()
         }
 
         // Check abstain or alarm for this sidechain if no upvote was found
-        if (!fUpvote && vVote[vSidechain[x].nSidechain].front() == SCDB_DOWNVOTE)
+        if (!fUpvoteFound && vVote[vSidechain[x].nSidechain].front() == SCDB_DOWNVOTE)
             subItemAlarm->setCheckState(0, Qt::Checked);
         else
-        if (!fUpvote)
+        if (!fUpvoteFound)
             subItemAbstain->setCheckState(0, Qt::Checked);
 
         index++;
@@ -119,11 +123,10 @@ void SCDBDialog::UpdateSCDBText()
     ui->textBrowserSCDB->clear();
     std::vector<std::string> vVote = scdb.GetVotes();
 
-    ui->textBrowserSCDB->insertPlainText("SCDB update bytes / M4:\n");
+    ui->textBrowserSCDB->insertPlainText("SCDB update bytes / M4 for vote settings:\n");
 
     if (scdb.HasState()) {
         // Generate & display update bytes / M4
-
         CBlock block;
         CMutableTransaction mtx;
         mtx.vin.resize(1);
