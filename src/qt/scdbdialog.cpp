@@ -31,7 +31,6 @@ SCDBDialog::~SCDBDialog()
 void SCDBDialog::UpdateOnShow()
 {
     UpdateVoteTree();
-    UpdateNextTree();
     UpdateSCDBText();
     UpdateHistoryTree();
 }
@@ -125,117 +124,72 @@ void SCDBDialog::UpdateSCDBText()
 
     ui->textBrowserSCDB->insertPlainText("SCDB update bytes / M4 for vote settings:\n");
 
-    if (scdb.HasState()) {
-        // Generate & display update bytes / M4
-        CBlock block;
-        CMutableTransaction mtx;
-        mtx.vin.resize(1);
-        mtx.vin[0].prevout.SetNull();
-        block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
-        CScript script;
-
-        std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
-        for (const Sidechain& s : scdb.GetActiveSidechains()) {
-            std::vector<SidechainWithdrawalState> vWithdrawal;
-            vWithdrawal = scdb.GetState(s.nSidechain);
-            if (vWithdrawal.size())
-                vOldScores.push_back(vWithdrawal);
-        }
-
-        // Hex string of update bytes
-        std::string str = "Failed to generate SCDB Bytes!\n";
-        if (GenerateSCDBByteCommitment(block, script, vOldScores, vVote))
-            str = HexStr(script.begin() + 6, script.end());
-
-        ui->textBrowserSCDB->insertPlainText(QString::fromStdString(str) + "\n\n");
-    } else {
+    if (!scdb.HasState()) {
         ui->textBrowserSCDB->insertPlainText("Not required.\n\n");
-    }
-}
-
-void SCDBDialog::UpdateNextTree()
-{
-    // Update the next block state tree
-
-    ui->treeWidgetNext->setUpdatesEnabled(false);
-    ui->treeWidgetNext->clear();
-
-    QTreeWidgetItem* topItem = new QTreeWidgetItem(ui->treeWidgetNext);
-    ui->treeWidgetNext->insertTopLevelItem(0, topItem);
-
-    std::vector<std::vector<SidechainWithdrawalState>> vState = scdb.GetState();
-
-    // Loop through state here and add sub items for sc# & score change
-    int nSidechain = 0;
-    std::vector<std::string> vVote = scdb.GetVotes();
-    for (const std::vector<SidechainWithdrawalState>& vScore : vState) {
-        if (vScore.empty()) {
-            nSidechain++;
-            continue;
-        }
-
-        // Create sidechain item
-        QTreeWidgetItem *subItemSC = new QTreeWidgetItem();
-
-        // Create sidechain children items
-        for (const SidechainWithdrawalState& s : vScore) {
-            // Look up our vote setting
-            QString strScore = "";
-            int nNewScore = 0;
-            if (vVote[s.nSidechain].size() == 64 && vVote[s.nSidechain] == s.hash.ToString()) {
-                strScore = " (Upvote / ACK)";
-                nNewScore = s.nWorkScore + 1;
-            }
-            else
-            if (vVote[s.nSidechain].size() == 1 && vVote[s.nSidechain].front() == SCDB_DOWNVOTE) {
-                strScore = " (Downvote / NACK)";
-                nNewScore = 0;
-                if (s.nWorkScore)
-                    nNewScore = s.nWorkScore - 1;
-            }
-            else
-            if (vVote[s.nSidechain].size() == 1 && vVote[s.nSidechain].front() == SCDB_ABSTAIN) {
-                strScore = " (Abstain)";
-                nNewScore = s.nWorkScore;
-            }
-            else
-            {
-                nNewScore = s.nWorkScore;
-            }
-
-            QTreeWidgetItem *subItemScore = new QTreeWidgetItem();
-
-            subItemScore->setText(0, "Work score: " + QString::number(s.nWorkScore) + " -> " + QString::number(nNewScore) + strScore);
-            subItemSC->addChild(subItemScore);
-
-            QTreeWidgetItem *subItemBlocks = new QTreeWidgetItem();
-            subItemBlocks->setText(0, "Blocks remaining: " + QString::number(s.nBlocksLeft) + " -> " + QString::number(s.nBlocksLeft - 1));
-            subItemSC->addChild(subItemBlocks);
-
-            QTreeWidgetItem *subItemHash = new QTreeWidgetItem();
-            subItemHash->setText(0, "Withdrawal bundle hash:\n" + QString::fromStdString(s.hash.ToString()));
-            subItemSC->addChild(subItemHash);
-
-            // Update with next vote state to get new serialization & hash
-            SidechainWithdrawalState nextState = s;
-            nextState.nBlocksLeft -= 1;
-            nextState.nWorkScore = nNewScore;
-        }
-
-        // Add SC item parent to tree
-        subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
-        topItem->addChild(subItemSC);
-
-        nSidechain++;
+        return;
     }
 
-    QString str = "Block #" + QString::number(chainActive.Height() + 1);
-    topItem->setText(0, str);
+    // Generate & display update bytes / M4
 
-    ui->treeWidgetNext->collapseAll();
-    ui->treeWidgetNext->resizeColumnToContents(0);
-    ui->treeWidgetNext->expandToDepth(1);
-    ui->treeWidgetNext->setUpdatesEnabled(true);
+    CBlock block;
+    CMutableTransaction mtx;
+    mtx.vin.resize(1);
+    mtx.vin[0].prevout.SetNull();
+    block.vtx.push_back(MakeTransactionRef(std::move(mtx)));
+
+    std::vector<std::vector<SidechainWithdrawalState>> vOldScores;
+    for (const Sidechain& s : scdb.GetActiveSidechains()) {
+        std::vector<SidechainWithdrawalState> vWithdrawal;
+        vWithdrawal = scdb.GetState(s.nSidechain);
+        if (vWithdrawal.size())
+            vOldScores.push_back(vWithdrawal);
+    }
+
+    CScript script;
+    if (!GenerateSCDBByteCommitment(block, script, vOldScores, vVote)) {
+        ui->textBrowserSCDB->insertPlainText("Failed to generate SCDB Bytes!\n\n");
+        return;
+    }
+
+    // Display hex string of update bytes
+    std::string str = HexStr(script.begin() + 6, script.end());
+    ui->textBrowserSCDB->insertPlainText(QString::fromStdString(str) + "\n\n");
+
+    // Display interpretation of update bytes
+    CScript bytes = CScript(script.begin() + 6, script.end());
+    size_t nScoreIndex = 0;
+    for (size_t i = 0; i < bytes.size(); i += 2) {
+        if (nScoreIndex >= vOldScores.size())
+            return;
+
+        // Copy sidechain number from first withdrawal at score index
+        size_t nSidechain = vOldScores[nScoreIndex][0].nSidechain;
+
+        std::string strBytes = HexStr(bytes.begin() + i, bytes.begin() + i + 2);
+        std::string strVote = "Sidechain #" + std::to_string(nSidechain) + "\n";
+
+        if (bytes[i] == 0xFF && bytes[i + 1] == 0xFF) {
+            strVote += "Abstain from all withdrawals\n";
+        }
+        else
+        if (bytes[i] == 0xFF && bytes[i + 1] == 0xFE) {
+            strVote += "Downvote all withdrawals\n";
+        }
+        else {
+            // Upvote index
+            uint16_t n = bytes[i] | bytes[i + 1] << 8;
+
+            if (n >= vOldScores[nScoreIndex].size())
+                return;
+
+            strVote += "Upvote withdrawal #" + std::to_string(n) + ": " + vOldScores[nScoreIndex][n].hash.ToString() + "\n";
+        }
+
+        ui->textBrowserSCDB->insertPlainText(QString::fromStdString(strBytes + "\n"));
+        ui->textBrowserSCDB->insertPlainText(QString::fromStdString(strVote + "\n"));
+
+        nScoreIndex++;
+    }
 }
 
 void SCDBDialog::UpdateHistoryTree()
@@ -316,7 +270,7 @@ void SCDBDialog::UpdateHistoryTree()
             }
 
             // Add SC item parent to tree
-            subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " vote state");
+            subItemSC->setText(0, "Sidechain #" + QString::number(nSidechain) + " scores");
             AddHistoryTreeItem(i, nHeight - i, subItemSC);
 
             nSidechain++;
@@ -411,7 +365,6 @@ void SCDBDialog::on_treeWidgetVote_itemChanged(QTreeWidgetItem *item, int column
 
     ui->treeWidgetVote->setUpdatesEnabled(true);
 
-    UpdateNextTree();
     UpdateSCDBText();
 }
 

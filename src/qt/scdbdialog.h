@@ -45,7 +45,6 @@ private:
 
     void UpdateVoteTree();
     void UpdateSCDBText();
-    void UpdateNextTree();
     void UpdateHistoryTree();
 
 private Q_SLOTS:
