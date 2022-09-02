@@ -1411,8 +1411,9 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
             "mined by this node.\n"\
             "Note that this will not broadcast the proposal to other nodes. " \
             "You must mine a block which includes your proposal to complete " \
-            "the process. Pending proposals created by this node will " \
-            "automatically be included in the soonest block mined possible.\n"
+            "the process.\n"\
+            "Pending proposals created by this node will automatically be " \
+            "included in the soonest block mined possible.\n"
             "\nArguments:\n"
             "1. \"nsidechain\"   (numeric, required) sidechain slot number\n"
             "2. \"title\"        (string, required) sidechain title\n"
@@ -1421,8 +1422,9 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
             "5. \"hashid1\"      (string, optional) 256 bits used to identify sidechain\n"
             "6. \"hashid2\"      (string, optional) 160 bits used to identify sidechain\n"
             "\nExamples:\n"
-            + HelpExampleCli("createsidechainproposal", "")
-            + HelpExampleRpc("createsidechainproposal", "")
+            + HelpExampleCli("createsidechainproposal", "1 \"Namecoin\" \"Namecoin as a Bitcoin sidechain\" 0 78b140259d5626e17c4bf339c23cb4fa8d16d138f71d9803ec394bb01c051f0b 90869d013db27608c7428251c6755e5a1d9e9313")
+            + "\n"
+            + HelpExampleRpc("createsidechainproposal", "1 \"Namecoin\" \"Namecoin as a Bitcoin sidechain\" 0 78b140259d5626e17c4bf339c23cb4fa8d16d138f71d9803ec394bb01c051f0b 90869d013db27608c7428251c6755e5a1d9e9313")
             );
 
     int nSidechain = request.params[0].get_int();
