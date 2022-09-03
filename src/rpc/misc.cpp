@@ -1605,19 +1605,19 @@ UniValue listwithdrawalvotes(const JSONRPCRequest& request)
 
     UniValue ret(UniValue::VARR);
 
-    for (size_t i = 0; i < vVote.size(); i++) {
+    for (uint8_t nSidechain = 0; nSidechain < vVote.size(); nSidechain++) {
         std::string strVote = "";
-        if (vVote[i].size() == 64)
-            strVote = "Upvote " + vVote[i];
+        if (vVote[nSidechain].size() == 64)
+            strVote = "Upvote " + vVote[nSidechain];
         else
-        if (vVote[i].front() == SCDB_DOWNVOTE)
+        if (vVote[nSidechain].front() == SCDB_DOWNVOTE)
             strVote = "Downvote";
         else
-        if (vVote[i].front() == SCDB_ABSTAIN)
+        if (vVote[nSidechain].front() == SCDB_ABSTAIN)
             strVote = "Abstain";
 
         UniValue obj(UniValue::VOBJ);
-        obj.push_back(Pair("nSidechain", i));
+        obj.push_back(Pair("nSidechain", nSidechain));
         obj.push_back(Pair("vote", strVote));
         ret.push_back(obj);
     }
