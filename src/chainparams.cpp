@@ -89,7 +89,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1479168000;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1510704000;
 
-        consensus.DrivechainHeight = 739872;
+        consensus.DrivechainHeight = 753984;
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000028822fef1c230963535a90d");
@@ -148,6 +148,7 @@ public:
                 {700000, uint256S("0x0000000000000000000590fc0f3eba193a278534220b2b37e9849e1a770ca959")},
                 {711000, uint256S("0x000000000000000000007e7cee73fd5375267134ac63bed2d61f7af8d89e7d4e")},
                 {739300, uint256S("0x00000000000000000002a77fba33a57dff4ac1b61c204769f809f9109a5584e1")},
+                {752343, uint256S("0x00000000000000000005228302fcce79cf2cc2c4486938eafc5e73d78bddc167")},
             }
         };
 
