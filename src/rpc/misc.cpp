@@ -1601,23 +1601,22 @@ UniValue listwithdrawalvotes(const JSONRPCRequest& request)
             + HelpExampleRpc("listwithdrawalvotes", "")
             );
 
-    std::vector<std::string> vVote = scdb.GetVotes();
-
     UniValue ret(UniValue::VARR);
 
-    for (uint8_t nSidechain = 0; nSidechain < vVote.size(); nSidechain++) {
+    std::vector<std::string> vVote = scdb.GetVotes();
+    for (size_t i = 0; i < vVote.size(); i++) {
         std::string strVote = "";
-        if (vVote[nSidechain].size() == 64)
-            strVote = "Upvote " + vVote[nSidechain];
+        if (vVote[i].size() == 64)
+            strVote = vVote[i];
         else
-        if (vVote[nSidechain].front() == SCDB_DOWNVOTE)
+        if (vVote[i].front() == SCDB_DOWNVOTE)
             strVote = "Downvote";
         else
-        if (vVote[nSidechain].front() == SCDB_ABSTAIN)
+        if (vVote[i].front() == SCDB_ABSTAIN)
             strVote = "Abstain";
 
         UniValue obj(UniValue::VOBJ);
-        obj.push_back(Pair("nSidechain", nSidechain));
+        obj.push_back(Pair("nSidechain", i));
         obj.push_back(Pair("vote", strVote));
         ret.push_back(obj);
     }
