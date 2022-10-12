@@ -3684,8 +3684,14 @@ bool GenerateSCDBByteCommitment(CBlock& block, CScript& scriptOut, const std::ve
                 if (vWithdrawal[n].hash == hash)
                     break;
 
-            out.scriptPubKey.push_back(n & 0xff);
-            out.scriptPubKey.push_back(n >> 8);
+            // If bundle exists add index bytes. Otherwise add abstain bytes.
+            if (n == vWithdrawal.size()) {
+                out.scriptPubKey.push_back(0xFF);
+                out.scriptPubKey.push_back(0xFF);
+            } else {
+                out.scriptPubKey.push_back(n & 0xff);
+                out.scriptPubKey.push_back(n >> 8);
+            }
         }
         else
         if (vVote[nSidechain].front() == SCDB_ABSTAIN) {
