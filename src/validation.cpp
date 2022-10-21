@@ -51,6 +51,9 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/thread.hpp>
+#include <boost/bind/placeholders.hpp>
+
+using namespace boost::placeholders;
 
 #if defined(NDEBUG)
 # error "Drivechain cannot be compiled without assertions."
