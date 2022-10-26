@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -133,14 +133,12 @@ const char* GetOpName(opcodetype opcode)
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
     case OP_CHECKSEQUENCEVERIFY    : return "OP_CHECKSEQUENCEVERIFY";
     case OP_NOP4                   : return "OP_NOP4";
-    case OP_NOP5                   : return "OP_NOP5";
+    case OP_DRIVECHAIN             : return "OP_DRIVECHAIN";
     case OP_NOP6                   : return "OP_NOP6";
     case OP_NOP7                   : return "OP_NOP7";
     case OP_NOP8                   : return "OP_NOP8";
     case OP_NOP9                   : return "OP_NOP9";
     case OP_NOP10                  : return "OP_NOP10";
-
-    case OP_SIDECHAIN              : return "OP_SIDECHAIN";
 
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
@@ -235,6 +233,20 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
         return true;
     }
     return false;
+}
+
+
+bool CScript::IsDrivechain(uint8_t& nSidechain) const
+{
+    if (this->size() != 2)
+        return false;
+
+    if ((*this)[0] != OP_DRIVECHAIN)
+        return false;
+
+    nSidechain = (*this)[1];
+
+    return true;
 }
 
 bool CScript::IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vBytes) const

@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -39,6 +39,7 @@ class ModalOverlay;
 class HashCalcDialog;
 class BlockExplorer;
 class CreateWalletDialog;
+class DenialDialog;
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -131,6 +132,8 @@ private:
     QAction *showHashCalcDialogAction;
     QAction *showBlockExplorerDialogAction;
     QAction *showSCDBDialogAction;
+    QAction *showDenialDialogAction;
+
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -154,6 +157,8 @@ private:
     HashCalcDialog *hashCalcDialog;
     /** Block explorer dialog */
     BlockExplorer *blockExplorerDialog;
+    /** Denial dialog */
+    DenialDialog *denialDialog;
 #endif
 
     /** Keep track of previous number of blocks, to detect progress */
@@ -268,6 +273,12 @@ private Q_SLOTS:
 
     /** Show SCDB M4 dialog */
     void showSCDBDialog();
+
+    /** Show denial dialog */
+    void showDenialDialog();
+
+    /** Go to the send coins page & click on use available balance */
+    void gotoSendAllCoins();
 
 #endif // ENABLE_WALLET
     /** Show configuration dialog */

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 The Bitcoin Core developers
+// Copyright (c) 2017-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -61,9 +61,6 @@ struct Sidechain {
     bool fActive;
     uint8_t nSidechain;
     int32_t nVersion = SIDECHAIN_VERSION_CURRENT;
-    std::string strKeyID;
-    std::string strPrivKey;
-    CScript scriptPubKey;
     std::string title;
     std::string description;
     uint256 hashID1;
@@ -74,9 +71,6 @@ struct Sidechain {
         fActive = false;
         nSidechain = 0;
         nVersion = SIDECHAIN_VERSION_CURRENT;
-        strKeyID = "";
-        strPrivKey = "";
-        scriptPubKey.clear();
         title = "";
         description = "";
         hashID1.SetNull();
@@ -99,9 +93,6 @@ struct Sidechain {
         READWRITE(fActive);
         READWRITE(nSidechain);
         READWRITE(nVersion);
-        READWRITE(strKeyID);
-        READWRITE(strPrivKey);
-        READWRITE(scriptPubKey);
         READWRITE(title);
         READWRITE(description);
         READWRITE(hashID1);
@@ -249,7 +240,6 @@ struct SidechainObj {
     virtual ~SidechainObj(void) { }
 
     uint256 GetSerHash(void) const;
-    CScript GetScript(void) const;
     virtual std::string ToString(void) const;
 };
 

@@ -73,6 +73,13 @@
         <file alias="broadcastnews">res/icons/broadcastnews.png</file>
         <file alias="createwallet">res/icons/createwallet.png</file>
         <file alias="restorewallet">res/icons/restorewallet.png</file>
+        <file alias="dots0">res/icons/dots0.png</file>
+        <file alias="dots1">res/icons/dots1.png</file>
+        <file alias="dots2">res/icons/dots2.png</file>
+        <file alias="dots3">res/icons/dots3.png</file>
+        <file alias="dots4">res/icons/dots4.png</file>
+        <file alias="dots5">res/icons/dots5.png</file>
+        <file alias="crosseye">res/icons/crosseye.png</file>
         <file alias="paperwallet">res/doc/wallet.pdf</file>
     </qresource>
     <qresource prefix="/movies">

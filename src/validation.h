@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -181,6 +181,7 @@ extern int nScriptCheckThreads;
 extern bool fTxIndex;
 extern bool fIsBareMultisigStd;
 extern bool fRequireStandard;
+extern bool fCMPCTWit;
 extern bool fCheckBlockIndex;
 extern bool fCheckpointsEnabled;
 extern size_t nCoinCacheUsage;
@@ -278,6 +279,8 @@ bool LoadGenesisBlock(const CChainParams& chainparams);
 bool LoadBlockIndex(const CChainParams& chainparams);
 /** Update the chain tip based on database information. */
 bool LoadChainTip(const CChainParams& chainparams);
+/** Compact witness block information */
+void CompactWitBlockIndex();
 /** Unload database information */
 void UnloadBlockIndex();
 /** Run an instance of the script checking thread */
@@ -313,13 +316,16 @@ void PruneAndFlush();
 /** Prune block files up to a given height */
 void PruneBlockFilesManual(int nManualPruneHeight);
 
-/** Calculate input and output values specific
- *  to sidechain deposit transactions with mempool view */
-void GetSidechainValues(const CCoinsView& coins, const CTransaction& tx, CAmount& amtSidechainUTXO, CAmount& amtUserInput,
-                        CAmount& amtReturning, CAmount& amtWithdrawn);
-
-/** Compare the blinded hash with the transaction provided */
-bool CheckBlindHash(const uint256& hash, const CTransaction& tx);
+/** Calculate amount sent into and out of Drivechain BIP 300 hashrate escrow
+ * amountSidechainIn = Value of the hashrate escrow coin being spent
+ * amountIn = Value of coins input from outside of the escrow (user input)
+ * amountSidechainOut = Value being sent (back) to the hashrate escrow
+ * amountWithdrawn = Amount subtracted from hashrate escrow by this transaction
+ */
+bool GetDrivechainAmounts(const CCoinsView& coins, const CTransaction& tx,
+                        CAmount& amountSidechainIn, CAmount& amountIn,
+                        CAmount& amountSidechainOut, CAmount& amountWithdrawn,
+                        std::string& strFail);
 
 /** (try to) add transaction to memory pool
  * plTxnReplaced will be appended to with all transactions replaced from mempool **/

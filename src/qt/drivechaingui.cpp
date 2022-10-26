@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,6 +7,7 @@
 #include <qt/blockexplorer.h>
 #include <qt/clientmodel.h>
 #include <qt/createwalletdialog.h>
+#include <qt/denialdialog.h>
 #include <qt/drivechainunits.h>
 #include <qt/hashcalcdialog.h>
 #include <qt/guiconstants.h>
@@ -124,6 +125,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     showHashCalcDialogAction(0),
     showBlockExplorerDialogAction(0),
     showSCDBDialogAction(0),
+    showDenialDialogAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -187,6 +189,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
         blockExplorerDialog = new BlockExplorer(platformStyle);
         blockExplorerDialog->setParent(this, Qt::Window);
 
+        denialDialog = new DenialDialog(platformStyle);
+        denialDialog->setParent(this, Qt::Window);
 
         connect(miningDialog, SIGNAL(ActivationDialogRequested()),
                 walletFrame, SLOT(showSidechainActivationDialog()));
@@ -196,6 +200,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 
         connect(walletFrame, SIGNAL(requestedSyncWarningInfo()), this, SLOT(showModalOverlay()));
 
+        connect(denialDialog, SIGNAL(requestedSendAllCoins()), this, SLOT(gotoSendAllCoins()));
     } else
 #endif // ENABLE_WALLET
     {
@@ -420,6 +425,7 @@ void BitcoinGUI::createActions()
 
     showPaperWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/print"), tr("&Paper Wallet"), this);
     showPaperWalletDialogAction->setStatusTip(tr("Show paper wallet window"));
+    showPaperWalletDialogAction->setEnabled(false);
 
     showCreateWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/createwallet"), tr("&Create Wallet"), this);
     showCreateWalletDialogAction->setStatusTip(tr("Show create wallet window"));
@@ -435,6 +441,9 @@ void BitcoinGUI::createActions()
 
     showSCDBDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_inout"), tr("&Sidechains"), this);
     showSCDBDialogAction->setStatusTip(tr("Show withdrawal vote settings & M4 explorer window"));
+
+    showDenialDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/crosseye"), tr("&Deniability"), this);
+    showDenialDialogAction->setStatusTip(tr("Show deniability window"));
 
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
@@ -464,6 +473,7 @@ void BitcoinGUI::createActions()
         connect(showHashCalcDialogAction, SIGNAL(triggered()), this, SLOT(showHashCalcDialog()));
         connect(showBlockExplorerDialogAction, SIGNAL(triggered()), this, SLOT(showBlockExplorerDialog()));
         connect(showSCDBDialogAction, SIGNAL(triggered()), this, SLOT(showSCDBDialog()));
+        connect(showDenialDialogAction, SIGNAL(triggered()), this, SLOT(showDenialDialog()));
     }
 #endif // ENABLE_WALLET
 
@@ -505,6 +515,7 @@ void BitcoinGUI::createMenuBar()
         tools->addAction(showHashCalcDialogAction);
         tools->addAction(signVerifyMessageAction);
         tools->addAction(showSCDBDialogAction);
+        tools->addAction(showDenialDialogAction);
     }
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
@@ -580,6 +591,7 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel)
         }
 
         blockExplorerDialog->setClientModel(_clientModel);
+        denialDialog->setClientModel(_clientModel);
 
 #endif // ENABLE_WALLET
         OptionsModel* optionsModel = _clientModel->getOptionsModel();
@@ -752,6 +764,7 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addAction(showBlockExplorerDialogAction);
     trayIconMenu->addAction(signVerifyMessageAction);
     trayIconMenu->addAction(showSCDBDialogAction);
+    trayIconMenu->addAction(showDenialDialogAction);
 
 #ifndef Q_OS_MAC // This is built-in on Mac
     trayIconMenu->addSeparator();
@@ -848,6 +861,12 @@ void BitcoinGUI::showBlockExplorerDialog()
     blockExplorerDialog->scrollRight();
 }
 
+void BitcoinGUI::showDenialDialog()
+{
+    denialDialog->show();
+    denialDialog->UpdateOnShow();
+}
+
 void BitcoinGUI::showSCDBDialog()
 {
     if (walletFrame) walletFrame->showSCDBDialog();
@@ -884,6 +903,16 @@ void BitcoinGUI::gotoSendCoinsPage(QString addr)
 {
     sendCoinsAction->setChecked(true);
     if (walletFrame) walletFrame->gotoSendCoinsPage(addr);
+}
+
+void BitcoinGUI::gotoSendAllCoins()
+{
+    showNormalIfMinimized();
+    sendCoinsAction->setChecked(true);
+    if (walletFrame) {
+        walletFrame->gotoSendCoinsPage("");
+        walletFrame->requestUseAvailable();
+    }
 }
 
 void BitcoinGUI::gotoSidechainPage()

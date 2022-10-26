@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -176,14 +176,13 @@ enum opcodetype
     OP_CHECKSEQUENCEVERIFY = 0xb2,
     OP_NOP3 = OP_CHECKSEQUENCEVERIFY,
     OP_NOP4 = 0xb3,
-    OP_NOP5 = 0xb4,
+    OP_DRIVECHAIN = 0xb4,
+    OP_NOP5 = OP_DRIVECHAIN,
     OP_NOP6 = 0xb5,
     OP_NOP7 = 0xb6,
     OP_NOP8 = 0xb7,
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
-
-    OP_SIDECHAIN = 0xc1,
 
     // template matching params
     OP_SMALLINTEGER = 0xfa,
@@ -647,6 +646,7 @@ public:
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
 
     /** Script formats for Drivechains */
+    bool IsDrivechain(uint8_t& nSidechain) const;
     bool IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vBytes) const;
     bool IsWithdrawalHashCommit(uint256& hash, uint8_t& nSidechain) const;
     bool IsSidechainProposalCommit() const;

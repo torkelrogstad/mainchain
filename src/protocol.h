@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2022 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -219,6 +219,12 @@ extern const char *FEEFILTER;
  * @since protocol version 70014 as described by BIP 152
  */
 extern const char *SENDCMPCT;
+/**
+ * Contains a CBlockHeaderAndShortTxIDs object - providing a header and
+ * list of SERIALIZE_TRANSACTION_NO_WITNESS "short txids"
+ * @since protocol version 70014 as described by BIP 152
+ */
+extern const char *CMPCTWITBLOCK;
 /**
  * Contains a CBlockHeaderAndShortTxIDs object - providing a header and
  * list of "short txids".

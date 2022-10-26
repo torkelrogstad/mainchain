@@ -35,8 +35,6 @@ PaperWalletDialog::PaperWalletDialog(const PlatformStyle *_platformStyle, QWidge
     platformStyle(_platformStyle)
 {
     ui->setupUi(this);
-
-
 }
 
 PaperWalletDialog::~PaperWalletDialog()
