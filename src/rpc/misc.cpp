@@ -1574,7 +1574,7 @@ UniValue listwithdrawalvotes(const JSONRPCRequest& request)
     UniValue ret(UniValue::VARR);
 
     std::vector<std::string> vVote = scdb.GetVotes();
-    for (size_t i = 0; i < vVote.size(); i++) {
+    for (uint8_t i = 0; i < vVote.size(); i++) {
         std::string strVote = "";
         if (vVote[i].size() == 64)
             strVote = vVote[i];
