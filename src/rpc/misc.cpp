@@ -1432,31 +1432,6 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     if (strTitle.empty())
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Sidechain must have a title!");
 
-    const uint8_t nSC = nSidechain;
-    const unsigned char vchSC[1] = { nSC };
-
-    std::vector<unsigned char> vch256;
-    vch256.resize(CSHA256::OUTPUT_SIZE);
-    CSHA256().Write(&vchSC[0], 1).Finalize(&vch256[0]);
-
-    CKey key;
-    key.Set(vch256.begin(), vch256.end(), false);
-    if (!key.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Private key outside allowed range");
-
-    CBitcoinSecret vchSecret(key);
-    if (!vchSecret.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key encoding");
-
-    CPubKey pubkey = key.GetPubKey();
-    if (!key.VerifyPubKey(pubkey))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Failed to verify pubkey");
-
-    CKeyID vchAddress = pubkey.GetID();
-
-    // Generate deposit script
-    CScript sidechainScript = CScript() << OP_DUP << OP_HASH160 << ToByteVector(vchAddress) << OP_EQUALVERIFY << OP_CHECKSIG;
-
     Sidechain proposal;
     proposal.nSidechain = nSidechain;
     proposal.title = strTitle;

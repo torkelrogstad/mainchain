@@ -3218,10 +3218,14 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
         return false;
     }
 
-    std::vector<unsigned char> vch(ParseHex(HexStr(sidechainScriptPubKey)));
-    CScript sidechainScript = CScript(vch.begin(), vch.end());
-    if (sidechainScript.empty()) {
+    uint8_t nSidechainScript;
+    if (!sidechainScriptPubKey.IsDrivechain(nSidechainScript)) {
         strFail = "Invalid sidechain deposit script!";
+        return false;
+    }
+
+    if (nSidechainScript != nSidechain) {
+        strFail = "Sidechain deposit script is for a different sidechain!";
         return false;
     }
 
@@ -3271,7 +3275,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     mtx.vout.push_back(CTxOut(CAmount(0), dataScript));
 
     // Add deposit output
-    mtx.vout.push_back(CTxOut(nAmount, sidechainScript));
+    mtx.vout.push_back(CTxOut(nAmount, sidechainScriptPubKey));
 
     // Handle existing sidechain utxo. We will look at our local mempool, and
     // create a deposit based on the latest CTIP for the sidechain.
