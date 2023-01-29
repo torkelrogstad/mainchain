@@ -31,6 +31,7 @@ class SidechainPage;
 class SidechainWithdrawalTableModel;
 class MemPoolTableModel;
 class MiningDialog;
+class MultisigDialog;
 class PaperWalletDialog;
 class WalletFrame;
 class WalletModel;
@@ -133,7 +134,7 @@ private:
     QAction *showBlockExplorerDialogAction;
     QAction *showSCDBDialogAction;
     QAction *showDenialDialogAction;
-
+    QAction *showMultisigDialogAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -159,6 +160,8 @@ private:
     BlockExplorer *blockExplorerDialog;
     /** Denial dialog */
     DenialDialog *denialDialog;
+    /** Multisig dialog */
+    MultisigDialog *multisigDialog;
 #endif
 
     /** Keep track of previous number of blocks, to detect progress */
@@ -255,6 +258,9 @@ private Q_SLOTS:
 
     /** Show mining dialog */
     void showMiningDialog();
+
+    /** Show multisig dialog */
+    void showMultisigDialog();
 
     /** Show paper wallet dialog */
     void showPaperWalletDialog();

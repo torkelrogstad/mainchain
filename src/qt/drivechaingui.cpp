@@ -14,6 +14,7 @@
 #include <qt/guiutil.h>
 #include <qt/mempooltablemodel.h>
 #include <qt/miningdialog.h>
+#include <qt/multisigdialog.h>
 #include <qt/modaloverlay.h>
 #include <qt/networkstyle.h>
 #include <qt/notificator.h>
@@ -130,6 +131,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     showBlockExplorerDialogAction(0),
     showSCDBDialogAction(0),
     showDenialDialogAction(0),
+    showMultisigDialogAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -195,6 +197,9 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 
         denialDialog = new DenialDialog(platformStyle);
         denialDialog->setParent(this, Qt::Window);
+
+        multisigDialog = new MultisigDialog(platformStyle);
+        multisigDialog->setParent(this, Qt::Window);
 
         connect(miningDialog, SIGNAL(ActivationDialogRequested()),
                 walletFrame, SLOT(showSidechainActivationDialog()));
@@ -449,6 +454,9 @@ void BitcoinGUI::createActions()
     showDenialDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/crosseye"), tr("&Deniability"), this);
     showDenialDialogAction->setStatusTip(tr("Show deniability window"));
 
+    showMultisigDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/key"), tr("&Multisig"), this);
+    showMultisigDialogAction->setStatusTip(tr("Show Multisig window"));
+
     connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(aboutClicked()));
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
@@ -478,6 +486,7 @@ void BitcoinGUI::createActions()
         connect(showBlockExplorerDialogAction, SIGNAL(triggered()), this, SLOT(showBlockExplorerDialog()));
         connect(showSCDBDialogAction, SIGNAL(triggered()), this, SLOT(showSCDBDialog()));
         connect(showDenialDialogAction, SIGNAL(triggered()), this, SLOT(showDenialDialog()));
+        connect(showMultisigDialogAction, SIGNAL(triggered()), this, SLOT(showMultisigDialog()));
     }
 #endif // ENABLE_WALLET
 
@@ -520,6 +529,7 @@ void BitcoinGUI::createMenuBar()
         tools->addAction(signVerifyMessageAction);
         tools->addAction(showSCDBDialogAction);
         tools->addAction(showDenialDialogAction);
+        tools->addAction(showMultisigDialogAction);
     }
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
@@ -769,6 +779,7 @@ void BitcoinGUI::createTrayIconMenu()
     trayIconMenu->addAction(signVerifyMessageAction);
     trayIconMenu->addAction(showSCDBDialogAction);
     trayIconMenu->addAction(showDenialDialogAction);
+    trayIconMenu->addAction(showMultisigDialogAction);
 
 #ifndef Q_OS_MAC // This is built-in on Mac
     trayIconMenu->addSeparator();
@@ -834,6 +845,11 @@ void BitcoinGUI::showSidechainTableDialog()
 void BitcoinGUI::showMiningDialog()
 {
     miningDialog->show();
+}
+
+void BitcoinGUI::showMultisigDialog()
+{
+    multisigDialog->show();
 }
 
 void BitcoinGUI::showPaperWalletDialog()
