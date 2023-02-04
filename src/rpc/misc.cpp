@@ -781,11 +781,6 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
 
 #ifdef ENABLE_WALLET
     std::vector<SidechainDeposit> vDeposit = scdb.GetDeposits(nSidechain);
-    if (!vDeposit.size()) {
-        std::string strError = "No deposits in cache for this sidechain!";
-        LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_MISC_ERROR, strError);
-    }
 
     for (auto rit = vDeposit.crbegin(); rit != vDeposit.crend(); rit++) {
         const SidechainDeposit d = *rit;
@@ -1409,21 +1404,21 @@ UniValue createsidechainproposal(const JSONRPCRequest& request)
     std::string strTitle = request.params[1].get_str();
 
     std::string strDescription = "";
-    if (request.params.size() >= 3)
+    if (!request.params[2].isNull())
         strDescription = request.params[2].get_str();
 
     int nVersion = -1;
-    if (request.params.size() >= 4)
+    if (!request.params[3].isNull())
         nVersion = request.params[3].get_int();
 
     std::string strHashID1 = "";
     std::string strHashID2 = "";
-    if (request.params.size() >= 5) {
+    if (!request.params[4].isNull()) {
         strHashID1 = request.params[4].get_str();
         if (strHashID1.size() != 64)
             throw JSONRPCError(RPC_MISC_ERROR, "HashID1 size invalid!");
     }
-    if (request.params.size() == 6) {
+    if (!request.params[5].isNull()) {
         strHashID2 = request.params[5].get_str();
         if (strHashID2.size() != 40)
             throw JSONRPCError(RPC_MISC_ERROR, "HashID2 size invalid!");
@@ -1712,8 +1707,6 @@ UniValue listwithdrawalstatus(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid Sidechain number");
 
     std::vector<SidechainWithdrawalState> vState = scdb.GetState(nSidechain);
-    if (vState.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No Withdrawal(s) in SCDB for sidechain");
 
     UniValue ret(UniValue::VARR);
     for (const SidechainWithdrawalState& s : vState) {
@@ -1848,8 +1841,6 @@ UniValue listspentwithdrawals(const JSONRPCRequest& request)
             );
 
     std::vector<SidechainSpentWithdrawal> vSpent = scdb.GetSpentWithdrawalCache();
-    if (vSpent.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No spent Withdrawal(s) in cache!");
 
     UniValue ret(UniValue::VARR);
     for (const SidechainSpentWithdrawal& s : vSpent) {
@@ -1882,8 +1873,6 @@ UniValue listfailedwithdrawals(const JSONRPCRequest& request)
             );
 
     std::vector<SidechainFailedWithdrawal> vFailed = scdb.GetFailedWithdrawalCache();
-    if (vFailed.empty())
-        throw JSONRPCError(RPC_TYPE_ERROR, "No failed Withdrawal(s) in cache!");
 
     UniValue ret(UniValue::VARR);
     for (const SidechainFailedWithdrawal& f : vFailed) {
