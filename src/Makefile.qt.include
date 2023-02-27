@@ -427,6 +427,13 @@ RES_ICONS = \
   qt/res/icons/dots4.png \
   qt/res/icons/dots5.png \
   qt/res/icons/crosseye.png \
+  qt/res/icons/safe.png \
+  qt/res/icons/scale.png \
+  qt/res/icons/check.png \
+  qt/res/icons/pool.png \
+  qt/res/icons/network.png \
+  qt/res/icons/timer.png \
+  qt/res/icons/tree.png \
   qt/res/qdarkstyle/rc/up_arrow_disabled.png \
   qt/res/qdarkstyle/rc/Hmovetoolbar.png \
   qt/res/qdarkstyle/rc/stylesheet-branch-end.png \
