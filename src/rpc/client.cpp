@@ -145,6 +145,9 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listsidechaindeposits", 0, "nsidechain" },
     { "listsidechaindeposits", 2, "n" },
     { "listsidechaindeposits", 3, "count" },
+
+    { "listsidechaindepositsbyblock", 0, "nsidechain" },
+
     { "countsidechaindeposits", 0, "nsidechain" },
     { "receivewithdrawalbundle", 0, "nsidechain" },
     { "createsidechaindeposit", 0, "nsidechain" },
