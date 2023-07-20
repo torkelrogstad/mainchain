@@ -4045,6 +4045,64 @@ UniValue rescanblockchain(const JSONRPCRequest& request)
     return response;
 }
 
+UniValue generateproofoffunds(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() != 3) {
+        throw std::runtime_error(
+            "generateproofoffunds (\"file\") (\"message\") (\"fee\")\n"
+            "\n\n"
+            "\nArguments:\n"
+            "1. \"\"    (string, required) \n"
+            "2. \"\"    (string, required) \n"
+            "3. \"\"    (string, required) \n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("", "")
+            + HelpExampleRpc("", "")
+            );
+    }
+
+    UniValue response(UniValue::VOBJ);
+    response.pushKV("", "");
+    return response;
+}
+
+UniValue verifyproofoffunds(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() != 2) {
+        throw std::runtime_error(
+            "verifyproofoffunds (\"filein\") (\"fileout\")\n"
+            "\n\n"
+            "\nArguments:\n"
+            "1. \"\"    (string, required) \n"
+            "2. \"\"    (string, required) \n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("", "")
+            + HelpExampleRpc("", "")
+            );
+    }
+
+    UniValue response(UniValue::VOBJ);
+    response.pushKV("", "");
+    return response;
+}
+
+
 extern UniValue abortrescan(const JSONRPCRequest& request); // in rpcdump.cpp
 extern UniValue dumpprivkey(const JSONRPCRequest& request); // in rpcdump.cpp
 extern UniValue importprivkey(const JSONRPCRequest& request);
@@ -4113,6 +4171,8 @@ static const CRPCCommand commands[] =
     { "wallet",             "walletpassphrase",           &walletpassphrase,           {"passphrase","timeout"} },
     { "wallet",             "removeprunedfunds",          &removeprunedfunds,          {"txid"} },
     { "wallet",             "rescanblockchain",           &rescanblockchain,           {"start_height", "stop_height"} },
+    { "wallet",             "generateproofoffunds",       &generateproofoffunds,       {"file", "message", "fee"} },
+    { "wallet",             "verifyproofoffunds",         &verifyproofoffunds,         {"filein", "fileout"} },
 
     { "generating",         "generate",                   &generate,                   {"nblocks","maxtries"} },
 
