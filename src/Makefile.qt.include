@@ -127,6 +127,7 @@ QT_FORMS_UI = \
   qt/forms/opreturndialog.ui \
   qt/forms/overviewpage.ui \
   qt/forms/paperwalletdialog.ui \
+  qt/forms/proofoffundsdialog.ui \
   qt/forms/receivecoinsdialog.ui \
   qt/forms/receiverequestdialog.ui \
   qt/forms/debugwindow.ui \
@@ -196,6 +197,7 @@ QT_MOC_CPP = \
   qt/moc_optionsmodel.cpp \
   qt/moc_overviewpage.cpp \
   qt/moc_paperwalletdialog.cpp \
+  qt/moc_proofoffundsdialog.cpp \
   qt/moc_peertablemodel.cpp \
   qt/moc_paymentserver.cpp \
   qt/moc_paymentrequestdialog.cpp \
@@ -308,6 +310,7 @@ DRIVECHAIN_QT_H = \
   qt/optionsmodel.h \
   qt/overviewpage.h \
   qt/paperwalletdialog.h \
+  qt/proofoffundsdialog.h \
   qt/paymentrequestplus.h \
   qt/paymentrequestdialog.h \
   qt/paymentserver.h \
@@ -547,6 +550,7 @@ DRIVECHAIN_QT_WALLET_CPP = \
   qt/opreturntablemodel.cpp \
   qt/overviewpage.cpp \
   qt/paperwalletdialog.cpp \
+  qt/proofoffundsdialog.cpp \
   qt/paymentrequestplus.cpp \
   qt/paymentrequestdialog.cpp \
   qt/paymentserver.cpp \

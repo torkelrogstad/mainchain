@@ -25,6 +25,7 @@ class Notificator;
 class OptionsModel;
 class PlatformStyle;
 class RPCConsole;
+class ProofOfFundsDialog;
 class SendCoinsRecipient;
 class SidechainTableDialog;
 class SidechainPage;
@@ -180,6 +181,8 @@ private:
     DenialDialog *denialDialog;
     /** Multisig Lounge dialog */
     MultisigLoungeDialog *multisigLoungeDialog;
+    /** Proof of Funds dialog */
+    ProofOfFundsDialog *proofOfFundsDialog;
 #endif
 
     /** Keep track of previous number of blocks, to detect progress */

@@ -23,6 +23,7 @@
 #include <qt/optionsmodel.h>
 #include <qt/paperwalletdialog.h>
 #include <qt/platformstyle.h>
+#include <qt/proofoffundsdialog.h>
 #include <qt/rpcconsole.h>
 #include <qt/utilitydialog.h>
 #include <qt/sidechainpage.h>
@@ -218,6 +219,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 
         multisigLoungeDialog = new MultisigLoungeDialog(platformStyle);
         multisigLoungeDialog->setParent(this, Qt::Window);
+
+        proofOfFundsDialog = new ProofOfFundsDialog(this);
 
         connect(miningDialog, SIGNAL(ActivationDialogRequested()),
                 walletFrame, SLOT(showSidechainActivationDialog()));
@@ -482,7 +485,7 @@ void BitcoinGUI::createActions()
 
     showProofOfFundsDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/verify"), tr("&Proof of Funds"), this);
     showProofOfFundsDialogAction->setStatusTip(tr("Show proof of funds window"));
-    showProofOfFundsDialogAction->setEnabled(false);
+    showProofOfFundsDialogAction->setEnabled(true);
 
     showMerkleTreeDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tree"), tr("&Merkle Tree"), this);
     showMerkleTreeDialogAction->setStatusTip(tr("Show merkle tree window"));
@@ -1061,7 +1064,7 @@ void BitcoinGUI::showBip47AddrDialog()
 
 void BitcoinGUI::showProofOfFundsDialog()
 {
-
+    proofOfFundsDialog->show();
 }
 
 void BitcoinGUI::showMerkleTreeDialog()
