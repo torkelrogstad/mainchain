@@ -844,6 +844,180 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     return arr;
 }
 
+UniValue listsidechaindepositsbyblock(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 1)
+        throw std::runtime_error(
+            "listsidechaindepositsbyblock\n"
+            "List the most recent cached deposits for sidechain.\n"
+            "Optionally limited to count. Note that this only has access to "
+            "deposits which are currently cached.\n"
+            "\nArguments:\n"
+            "1. \"nsidechain\"      (numeric, required) The sidechain number\n"
+            "2. \"end_blockhash\"   (string, optional) Only return deposits in and before this block\n"
+            "3. \"start_blockhash\" (string, optional) Only return deposits in and after this block\n"
+            "\nExamples:\n"
+            + HelpExampleCli("listsidechaindepositsbyblock", "\"sidechainkey\", \"count\"")
+            + HelpExampleCli("listsidechaindepositsbyblock", "\"sidechainkey\", \"count\"")
+            );
+
+#ifdef ENABLE_WALLET
+    // Check for active wallet
+    std::string strError;
+    if (vpwallets.empty()) {
+        strError = "Error: no wallets are available";
+        LogPrintf("%s: %s\n", __func__, strError);
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+#endif
+
+    // Check sidechain number
+    int nSidechain = request.params[0].get_int();
+    if (nSidechain < 0 || nSidechain > 255)
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number!");
+
+    uint256 endBlockHash;
+    int endHeight;
+    if (!request.params[1].isNull()) {
+        std::string strBlockHash = request.params[1].get_str();
+        endBlockHash = uint256S(strBlockHash);
+        if (endBlockHash.IsNull()) {
+            std::string strError = "Invalid blockhash!";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_MISC_ERROR, strError);
+        }
+        BlockMap::iterator it = mapBlockIndex.find(endBlockHash);
+        if (it == mapBlockIndex.end()) {
+            std::string strError = "Block hash not found";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+        CBlockIndex* pblockindex = it->second;
+        if (pblockindex == NULL) {
+            std::string strError = "Block index null";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+        if (!chainActive.Contains(pblockindex)) {
+            std::string strError = "Block not in active chain";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+        endHeight = pblockindex->nHeight;
+    }
+
+    uint256 startBlockHash;
+    int startHeight;
+    if (!request.params[2].isNull()) {
+        std::string strBlockHash = request.params[2].get_str();
+        startBlockHash = uint256S(strBlockHash);
+        if (startBlockHash.IsNull()) {
+            std::string strError = "Invalid blockhash!";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_MISC_ERROR, strError);
+        }
+        BlockMap::iterator it = mapBlockIndex.find(startBlockHash);
+        if (it == mapBlockIndex.end()) {
+            std::string strError = "Block hash not found";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+        CBlockIndex* pblockindex = it->second;
+        if (pblockindex == NULL) {
+            std::string strError = "Block index null";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+        if (!chainActive.Contains(pblockindex)) {
+            std::string strError = "Block not in active chain";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+        startHeight = pblockindex->nHeight;
+    }
+
+    UniValue arr(UniValue::VARR);
+
+#ifdef ENABLE_WALLET
+    std::vector<SidechainDeposit> vDeposit = scdb.GetDeposits(nSidechain);
+
+    auto it = vDeposit.begin();
+    if (!startBlockHash.IsNull()) {
+        for (; it != vDeposit.end(); ++it) {
+            const SidechainDeposit d = *it;
+            BlockMap::iterator it = mapBlockIndex.find(d.hashBlock);
+            if (it == mapBlockIndex.end()) {
+                std::string strError = "Block hash not found";
+                LogPrintf("%s: %s\n", __func__, strError);
+                throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+            }
+            CBlockIndex* pblockindex = it->second;
+            if (pblockindex == NULL) {
+                std::string strError = "Block index null";
+                LogPrintf("%s: %s\n", __func__, strError);
+                throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+            }
+            if (!chainActive.Contains(pblockindex)) {
+                std::string strError = "Block not in active chain";
+                LogPrintf("%s: %s\n", __func__, strError);
+                throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+            }
+            if (pblockindex->nHeight >= startHeight) {
+                break;
+            }
+        }
+    }
+
+    for (; it != vDeposit.end(); ++it) {
+        const SidechainDeposit d = *it;
+        // Add deposit txid to set
+        uint256 txid = d.tx.GetHash();
+
+        std::set<uint256> setTxids;
+        setTxids.insert(txid);
+
+        LOCK(cs_main);
+
+        BlockMap::iterator it = mapBlockIndex.find(d.hashBlock);
+        if (it == mapBlockIndex.end()) {
+            std::string strError = "Block hash not found";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+
+        CBlockIndex* pblockindex = it->second;
+        if (pblockindex == NULL) {
+            std::string strError = "Block index null";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+
+        if (!chainActive.Contains(pblockindex)) {
+            std::string strError = "Block not in active chain";
+            LogPrintf("%s: %s\n", __func__, strError);
+            throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
+        }
+        if (!endBlockHash.IsNull() && pblockindex->nHeight > endHeight) {
+            break;
+        }
+#endif
+
+#ifdef ENABLE_WALLET
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("nsidechain", d.nSidechain));
+        obj.push_back(Pair("strdest", d.strDest));
+        obj.push_back(Pair("txhex", EncodeHexTx(d.tx)));
+        obj.push_back(Pair("nburnindex", (int)d.nBurnIndex));
+        obj.push_back(Pair("ntx", (int)d.nTx));
+        obj.push_back(Pair("hashblock", d.hashBlock.ToString()));
+
+        arr.push_back(obj);
+#endif
+    }
+
+    return arr;
+}
+
 UniValue countsidechaindeposits(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() != 1)
@@ -2116,6 +2290,7 @@ static const CRPCCommand commands[] =
     { "Drivechain",  "createcriticaldatatx",          &createcriticaldatatx,            {"amount", "height", "criticalhash"}},
     { "Drivechain",  "listsidechainctip",             &listsidechainctip,               {"nsidechain"}},
     { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain"}},
+    { "Drivechain",  "listsidechaindepositsbyblock",  &listsidechaindepositsbyblock,    {"nsidechain"}},
     { "Drivechain",  "countsidechaindeposits",        &countsidechaindeposits,          {"nsidechain"}},
     { "Drivechain",  "receivewithdrawalbundle",       &receivewithdrawalbundle,         {"nsidechain","rawtx"}},
     { "Drivechain",  "verifybmm",                     &verifybmm,                       {"blockhash", "bmmhash", "nsidechain"}},
