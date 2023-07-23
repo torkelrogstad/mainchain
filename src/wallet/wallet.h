@@ -1040,7 +1040,7 @@ public:
      */
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosInOut, std::string& strFailReason, const CCoinControl& coin_control, bool sign = true, uint32_t nVersionOverride = CTransaction::CURRENT_VERSION, uint32_t nLockTimeOverride = 0, CCriticalData criticalData = {});
     /** Create a transaction with special format for sidechains */
-    bool CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, const CScript& sidechainScriptPubKey, const uint8_t nSidechain, const CAmount& nAmount, const CAmount& nFee, const std::string& strDest);
+    bool CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, const uint8_t nSidechain, const CAmount& nAmount, const CAmount& nFee, const std::string& strDest);
 
     bool CreateOPReturnTransaction(CTransactionRef& tx, std::string& strFail, const CAmount& nFee, const CScript& script);
 

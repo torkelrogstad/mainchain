@@ -231,6 +231,9 @@ static const unsigned int DEFAULT_CHECKLEVEL = 2;
 // Setting the target to > than 550MB will make it likely we can respect the target.
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 
+// Script for Drivechain hashrate escrow
+static const CScript SCRIPT_DRIVECHAIN = CScript() << OP_DRIVECHAIN << OP_TRUE;
+
 /**
  * Process an incoming block. This only returns after the best known valid
  * block is made active. Note that it does not, however, guarantee that the
@@ -326,6 +329,7 @@ void PruneBlockFilesManual(int nManualPruneHeight);
 bool GetDrivechainAmounts(const CCoinsView& coins, const CTransaction& tx,
                         CAmount& amountSidechainIn, CAmount& amountIn,
                         CAmount& amountSidechainOut, CAmount& amountWithdrawn,
+                        bool& fCTIPSpent, uint8_t& nSidechain,
                         std::string& strFail);
 
 /** (try to) add transaction to memory pool

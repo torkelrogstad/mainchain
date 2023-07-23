@@ -560,10 +560,12 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, CValidationSt
 bool GetDrivechainAmounts(const CCoinsView& coins, const CTransaction &tx,
         CAmount& amountSidechainIn, CAmount& amountIn,
         CAmount& amountSidechainOut, CAmount& amountWithdrawn,
+        bool& fCTIPSpent, uint8_t& nSidechain,
         std::string& strFail)
 {
-    // Collect coins from inputs
-    std::vector<Coin> vCoin;
+    // Check inputs, count value, make sure there is only one CTIP input
+    fCTIPSpent = false;
+    nSidechain = 0;
     for (const CTxIn& in : tx.vin) {
         Coin coin;
 
@@ -572,47 +574,28 @@ bool GetDrivechainAmounts(const CCoinsView& coins, const CTransaction &tx,
             return false;
         }
 
-        vCoin.push_back(coin);
-    }
-
-    // Count value of inputs and make sure there is only 1 CTIP input
-    bool fSidechainInputFound = false;
-    uint8_t nSidechainIn;
-    for (const Coin& c : vCoin) {
-        const CTxOut& out = c.out;
-        const CScript& scriptPubKey = out.scriptPubKey;
-        if (scriptPubKey.IsDrivechain(nSidechainIn)) {
-            if (fSidechainInputFound) {
+        if (scdb.IsCTIP(in.prevout, nSidechain)) {
+            if (fCTIPSpent) {
                 strFail = "Multiple sidechain inputs!";
                 return false;
             } else {
-                fSidechainInputFound = true;
+                fCTIPSpent = true;
             }
-            amountSidechainIn += out.nValue;
+            amountSidechainIn += coin.out.nValue;
         } else {
-            amountIn += out.nValue;
+            amountIn += coin.out.nValue;
         }
     }
 
     // Count value of outputs
-    bool fSidechainOutputFound = false;
-    uint8_t nSidechainOut;
+    bool fCTIPOut = false;
     for (const CTxOut& out : tx.vout) {
-        const CScript scriptPubKey = out.scriptPubKey;
-        uint8_t nSidechainOutScript;
-        if (scriptPubKey.IsDrivechain(nSidechainOutScript)) {
-            if (fSidechainInputFound && nSidechainOutScript != nSidechainIn) {
-                strFail = "Output to different sidechain than input!";
+        if (out.scriptPubKey.IsDrivechain()) {
+            if (fCTIPOut) {
+                strFail = "Multiple sidechain outputs!";
                 return false;
             }
-            else
-            if (fSidechainOutputFound && nSidechainOutScript != nSidechainOut) {
-                strFail = "Output to multiple sidechains!";
-                return false;
-            }
-            fSidechainOutputFound = true;
-            nSidechainOut = nSidechainOutScript;
-
+            fCTIPOut = true;
             amountSidechainOut += out.nValue;
         } else {
             amountWithdrawn += out.nValue;
@@ -690,7 +673,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
     std::map<uint8_t, SidechainCTIP> mapCTIPCopy;
     mapCTIPCopy = mempool.mapLastSidechainDeposit;
     bool fBurnFound = false;
-    uint8_t nSidechain;
+    uint8_t nSidechain = 0;
     if (drivechainsEnabled)
     {
         // Get values to and from sidechain
@@ -699,9 +682,10 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         CAmount amountIn = CAmount(0);
         CAmount amountSidechainOut = CAmount(0);
         CAmount amountWithdrawn = CAmount(0);
+        bool fCTIPSpent = false;
         std::string strFail = "";
         if (!GetDrivechainAmounts(poolCoins, tx, amountSidechainIn, amountIn,
-                    amountSidechainOut, amountWithdrawn, strFail)) {
+                    amountSidechainOut, amountWithdrawn, fCTIPSpent, nSidechain, strFail)) {
             return state.DoS(0, false, REJECT_INVALID, "get-drivechain-amounts: " + strFail);
         }
 
@@ -712,7 +696,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
             // When a Withdrawal has sufficient workscore it can be added to a block
             // by miners. Workscore is verified when the block is connected.
             return state.DoS(100, false, REJECT_INVALID, "sidechain-withdraw-loose");
-        } else if (amountSidechainOut > amountSidechainIn) {
+        } else if (fCTIPSpent && amountSidechainOut > amountSidechainIn) {
             // M5 Deposit
 
             // Find deposit burn output & OP_RETURN output with destination.
@@ -725,7 +709,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                 if (!scriptPubKey.size())
                     continue;
 
-                if (scriptPubKey.IsDrivechain(nSidechain)) {
+                if (scriptPubKey.IsDrivechain()) {
                     if (fBurnFound) {
                         // If we already found the burn output, finding another
                         // makes the transaction invalid
@@ -2143,7 +2127,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
     std::vector<PrecomputedTransactionData> txdata;
     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated
-    std::vector<std::tuple<CTransaction, int, uint256>> vDepositTx;
     std::vector<std::tuple<uint8_t, CTransaction, int>> vWithdrawalToSpend;
     std::vector<OPReturnData> vOPReturnData;
     for (unsigned int i = 0; i < block.vtx.size(); i++)
@@ -2174,8 +2157,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             vOPReturnData.push_back(data);
         }
 
-        bool fSidechainInputs = false;
-        uint8_t nSidechain = 0;
         if (!tx.IsCoinBase())
         {
             CAmount txfee = 0;
@@ -2191,18 +2172,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             if (!view.HaveInputs(tx))
                 return state.DoS(100, error("ConnectBlock(): inputs missing/spent"),
                                  REJECT_INVALID, "bad-txns-inputs-missingorspent");
-
-
-            // Set fSidechainInputs & nSidechain
-            if (drivechainsEnabled) {
-                for (const CTxIn& in : tx.vin) {
-                    Coin coin = view.AccessCoin(in.prevout);
-                    if (coin.out.scriptPubKey.IsDrivechain(nSidechain)) {
-                        fSidechainInputs = true;
-                        break;
-                    }
-                }
-            }
 
             // Check that transaction is BIP68 final
             // BIP68 lock checks (as opposed to nLockTime checks) must
@@ -2255,9 +2224,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
          * coins held in the CTIP output of the sidechain.
          */
 
-        if (drivechainsEnabled && fSidechainInputs) {
-            // We must get the Withdrawal hash as work is applied to
-            // Withdrawal before inputs and the change output are known.
+        if (drivechainsEnabled && !tx.IsCoinBase()) {
             uint256 hashBlind;
             if (!tx.GetBlindHash(hashBlind))
                 return error("ConnectBlock(): Withdrawal (full id): %s has invalid format", tx.GetHash().ToString());
@@ -2267,8 +2234,10 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
             CAmount amountIn = CAmount(0);
             CAmount amountSidechainOut = CAmount(0);
             CAmount amountWithdrawn = CAmount(0);
+            bool fCTIPSpent = false;
+            uint8_t nSidechain = 0;
             std::string strFail = "";
-            if (!GetDrivechainAmounts(view, tx, amountSidechainIn, amountIn, amountSidechainOut, amountWithdrawn, strFail))
+            if (!GetDrivechainAmounts(view, tx, amountSidechainIn, amountIn, amountSidechainOut, amountWithdrawn, fCTIPSpent, nSidechain, strFail))
                 return error("ConnectBlock(): Calculating Drivechain amounts failed: %s txid: %s", strFail, tx.GetHash().ToString());
 
             if (amountSidechainIn > amountSidechainOut) {
@@ -2279,21 +2248,6 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
                     return error("ConnectBlock(): Spend Withdrawal failed (blind Withdrawal hash : txid): %s : %s", hashBlind.ToString(), tx.GetHash().ToString());
                 }
             }
-        }
-
-        if (drivechainsEnabled && !tx.IsCoinBase() && !fJustCheck) {
-            // Check for possible sidechain deposits
-            bool fSidechainOutput = false;
-            uint8_t nSidechain;
-            for (const CTxOut out : tx.vout) {
-                const CScript& scriptPubKey = out.scriptPubKey;
-                if (scriptPubKey.IsDrivechain(nSidechain)) {
-                    fSidechainOutput = true;
-                    break;
-                }
-            }
-            if (fSidechainOutput)
-                vDepositTx.push_back(std::make_tuple(tx, i, block.GetHash()));
         }
 
         CTxUndo undoDummy;
@@ -2317,24 +2271,11 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
-    if (drivechainsEnabled && !fJustCheck && vDepositTx.size()) {
-        // Convert deposit transactions into SidechainDeposit objects
-        std::vector<SidechainDeposit> vDeposit;
-        for (size_t i = 0; i <  vDepositTx.size(); i++) {
-            const CTransaction tx = std::get<0>(vDepositTx[i]);
-            int nTx = std::get<1>(vDepositTx[i]);
-            uint256 hashBlock = std::get<2>(vDepositTx[i]);
-            SidechainDeposit deposit;
-            if (!scdb.TxnToDeposit(tx, nTx, hashBlock, deposit)) {
-                LogPrintf("%s: Deposits invalid from block: %s\n", __func__, block.GetHash().ToString());
-                return error("%s: Deposits invalid from block: %s", __func__, block.GetHash().ToString());
-            }
-            // Skip Withdrawal change return deposit, handled by SCDB::SpendWithdrawal
-            if (deposit.strDest == SIDECHAIN_WITHDRAWAL_RETURN_DEST)
-                continue;
-            vDeposit.push_back(deposit);
+    if (drivechainsEnabled && !fJustCheck) {
+        if (!scdb.AddDeposits(block.GetHash(), block.vtx)) {
+            LogPrintf("%s: Invalid sidechain deposits in block: %s\n", __func__, block.GetHash().ToString());
+            return error("%s: Invalid sidechain deposits in block: %s", __func__, block.GetHash().ToString());
         }
-        scdb.AddDeposits(vDeposit);
     }
 
     if (drivechainsEnabled && vWithdrawalToSpend.size()) {
@@ -2353,7 +2294,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
     if (drivechainsEnabled) {
         // Update / synchronize SCDB
-        if (!scdb.Update(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx[0]->vout, fJustCheck, true /* fDebug */)) {
+        if (!scdb.Update(pindex->nHeight, block.GetHash(), block.GetPrevHash(), block.vtx[0]->GetHash(), block.vtx[0]->vout, fJustCheck, true /* fDebug */)) {
             LogPrintf("%s: SCDB failed to update with block: %s\n", __func__, block.GetHash().ToString());
             return error("%s: SCDB update failed for block: %s", __func__, block.GetHash().ToString());
         }

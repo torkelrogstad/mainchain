@@ -341,15 +341,7 @@ void SidechainPage::on_pushButtonDeposit_clicked()
     // Attempt to create the deposit
     CTransactionRef tx;
     std::string strFail = "";
-    CScript sidechainScriptPubKey;
-    if (!scdb.GetSidechainScript(nSidechain, sidechainScriptPubKey)) {
-        // Invalid sidechain message box
-        messageBox.setWindowTitle("Invalid Sidechain!");
-        messageBox.setText("The sidechain you're trying to deposit to does not appear to be active!");
-        messageBox.exec();
-        return;
-    }
-    if (!vpwallets[0]->CreateSidechainDeposit(tx, strFail, sidechainScriptPubKey, nSidechain, nValue, nFee, strDest)) {
+    if (!vpwallets[0]->CreateSidechainDeposit(tx, strFail, nSidechain, nValue, nFee, strDest)) {
         // Create transaction error message box
         messageBox.setWindowTitle("Creating deposit transaction failed!");
         QString createError = "Error creating transaction!\n\n";

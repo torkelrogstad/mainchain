@@ -1,3 +1,13 @@
+Updated OP DRIVECHAIN hashrate escrow script and CTIP validation testing branch
+
+TODO:
+
+* Build requires --disable-tests configuration - many need to be re written
+* CTIP information can become invalid on restart when init does VerifyDB
+* CTIP information can become invalid when a block is disconnected
+* The wallet needs to check CTIP maturity before allowing sidechain deposits
+
+
 Drivechain (BIPs 300+301)
 -------------------------
 

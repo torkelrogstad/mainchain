@@ -334,6 +334,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         // If this is set activate any sidechain which has been proposed.
         bool fAnySidechain = gArgs.GetBoolArg("-activatesidechains", false);
 
+        // Track if we are going to activate a sidechain
+        bool fActivated = false;
+
         // Commit sidechain activation for proposals in activation status cache
         // which we have configured to ACK
         std::vector<SidechainActivationStatus> vActivationStatus;
@@ -345,8 +348,24 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                 if (mapCommit.find(s.proposal.nSidechain) == mapCommit.end()) {
                     GenerateSidechainActivationCommitment(*pblock, s.proposal.GetSerHash());
                     mapCommit[s.proposal.nSidechain] = true;
+
+                    int nPeriodRequired = 0;
+                    if (scdb.IsSidechainActive(s.proposal.nSidechain))
+                        nPeriodRequired = SIDECHAIN_REPLACEMENT_PERIOD;
+                    else
+                        nPeriodRequired = SIDECHAIN_ACTIVATION_PERIOD;
+
+                    if (s.nAge == nPeriodRequired - 1)
+                        fActivated = true;
                 }
             }
+        }
+
+        // If a sidechain will be activated by this block create initial CTIP
+        if (fActivated) {
+            CMutableTransaction mtx(*pblock->vtx[0]);
+            mtx.vout.push_back(CTxOut(0, SCRIPT_DRIVECHAIN));
+            pblock->vtx[0] = MakeTransactionRef(std::move(mtx));
         }
     }
 
@@ -373,7 +392,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             if (tx && !tx->criticalData.IsNull()) {
                 // Try to find the critical data fee output and take it
                 for (uint32_t i = 0; i < tx->vout.size(); i++) {
-                    if (tx->vout[i].scriptPubKey == CScript() << OP_TRUE) {
+                    if (tx->vout[i].scriptPubKey.IsDrivechain()) {
                         feeTx.vin.push_back(CTxIn(tx->GetHash(), i));
                         feeTx.vout[0].nValue += tx->vout[i].nValue;
                     }
@@ -572,26 +591,18 @@ bool BlockAssembler::CreateWithdrawalPayout(uint8_t nSidechain, CMutableTransact
 
     // Calculate the amount to be withdrawn by Withdrawal
     CAmount amountWithdrawn = CAmount(0);
+
     for (const CTxOut& out : mtx.vout) {
-        uint8_t nSidechain;
-        if (!out.scriptPubKey.IsDrivechain(nSidechain))
+        if (!out.scriptPubKey.IsDrivechain())
             amountWithdrawn += out.nValue;
     }
 
     // Add mainchain fees from withdrawal
     amountWithdrawn += nFees;
 
-    // Get sidechain change return script. We will pay the sidechain the change
-    // left over from this Withdrawal. This Withdrawal transaction will look like a normal
-    // sidechain deposit but with more outputs and the destination string will
-    // be SIDECHAIN_WITHDRAWAL_RETURN_DEST.
-    CScript sidechainScript;
-    if (!scdb.GetSidechainScript(nSidechain, sidechainScript))
-        return false;
-
     // Note: Withdrawal change return must be the final output
     // Add placeholder change return as the final output.
-    mtx.vout.push_back(CTxOut(0, sidechainScript));
+    mtx.vout.push_back(CTxOut(0, SCRIPT_DRIVECHAIN));
 
     // Get sidechain's CTIP
     SidechainCTIP ctip;

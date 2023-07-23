@@ -646,7 +646,7 @@ public:
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
 
     /** Script formats for Drivechains */
-    bool IsDrivechain(uint8_t& nSidechain) const;
+    bool IsDrivechain() const;
     bool IsCriticalHashCommit(uint256& hash, std::vector<unsigned char>& vBytes) const;
     bool IsWithdrawalHashCommit(uint256& hash, uint8_t& nSidechain) const;
     bool IsSidechainProposalCommit() const;

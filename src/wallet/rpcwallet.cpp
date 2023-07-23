@@ -3649,20 +3649,11 @@ UniValue createsidechaindeposit(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
 
-    // Get sidechain script
-    CScript sidechainScriptPubKey;
-    if (!scdb.GetSidechainScript(nSidechain, sidechainScriptPubKey))
-    {
-        std::string strError = "Failed to lookup sidechain script";
-        LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_MISC_ERROR, strError);
-    }
-
     EnsureWalletIsUnlocked(pwallet);
 
     CTransactionRef tx;
     std::string strFail = "";
-    if (!pwallet->CreateSidechainDeposit(tx, strFail, sidechainScriptPubKey, nSidechain, nAmount, nFee, strDest))
+    if (!pwallet->CreateSidechainDeposit(tx, strFail, nSidechain, nAmount, nFee, strDest))
     {
         LogPrintf("%s: %s\n", __func__, strFail);
         throw JSONRPCError(RPC_MISC_ERROR, strFail);

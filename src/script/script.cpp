@@ -236,15 +236,13 @@ bool CScript::IsWitnessProgram(int& version, std::vector<unsigned char>& program
 }
 
 
-bool CScript::IsDrivechain(uint8_t& nSidechain) const
+bool CScript::IsDrivechain() const
 {
     if (this->size() != 2)
         return false;
 
-    if ((*this)[0] != OP_DRIVECHAIN)
+    if ((*this)[0] != OP_DRIVECHAIN || (*this)[1] != OP_TRUE)
         return false;
-
-    nSidechain = (*this)[1];
 
     return true;
 }

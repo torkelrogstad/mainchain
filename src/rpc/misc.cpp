@@ -1153,13 +1153,6 @@ UniValue receivewithdrawalbundle(const JSONRPCRequest& request)
     // Reject the withdrawal if it spends more than the sidechain's CTIP as it won't
     // be accepted anyway
     CAmount amount = withdrawal.GetValueOut();
-    std::vector<COutput> vSidechainCoin;
-    CScript scriptPubKey;
-    if (!scdb.GetSidechainScript(nSidechain, scriptPubKey)) {
-        strError = "Cannot get script for sidechain!";
-        LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_MISC_ERROR, strError);
-    }
 
     SidechainCTIP ctip;
     if (!scdb.GetCTIP(nSidechain, ctip)) {
@@ -1383,13 +1376,6 @@ UniValue verifydeposit(const JSONRPCRequest& request)
     const CTransaction &tx = *(block.vtx[nTx]);
     if (tx.GetHash() != txid) {
         std::string strError = "Transaction at block index specified does not match txid";
-        LogPrintf("%s: %s\n", __func__, strError);
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
-    }
-
-    SidechainDeposit deposit;
-    if (!scdb.TxnToDeposit(tx, nTx, hashBlock, deposit)) {
-        std::string strError = "Invalid deposit transaction format";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_INTERNAL_ERROR, strError);
     }

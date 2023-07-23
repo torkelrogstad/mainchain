@@ -3196,7 +3196,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     return true;
 }
 
-bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, const CScript& sidechainScriptPubKey, const uint8_t nSidechain, const CAmount& nAmount, const CAmount& nFee, const std::string& strDest)
+bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail,  const uint8_t nSidechain, const CAmount& nAmount, const CAmount& nFee, const std::string& strDest)
 {
     strFail = "Unknown error!";
 
@@ -3215,17 +3215,6 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
 
     if (dataScript.size() > MAX_DEPOSIT_DESTINATION_BYTES) {
         strFail = "Invalid sidechain deposit script - destination too large!";
-        return false;
-    }
-
-    uint8_t nSidechainScript;
-    if (!sidechainScriptPubKey.IsDrivechain(nSidechainScript)) {
-        strFail = "Invalid sidechain deposit script!";
-        return false;
-    }
-
-    if (nSidechainScript != nSidechain) {
-        strFail = "Sidechain deposit script is for a different sidechain!";
         return false;
     }
 
@@ -3275,7 +3264,7 @@ bool CWallet::CreateSidechainDeposit(CTransactionRef& tx, std::string& strFail, 
     mtx.vout.push_back(CTxOut(CAmount(0), dataScript));
 
     // Add deposit output
-    mtx.vout.push_back(CTxOut(nAmount, sidechainScriptPubKey));
+    mtx.vout.push_back(CTxOut(nAmount, SCRIPT_DRIVECHAIN));
 
     // Handle existing sidechain utxo. We will look at our local mempool, and
     // create a deposit based on the latest CTIP for the sidechain.

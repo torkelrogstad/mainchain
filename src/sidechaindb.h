@@ -45,7 +45,10 @@ public:
     void AddRemovedDeposit(const uint256& hashRemoved);
 
     /** Add deposit(s) to cache */
-    void AddDeposits(const std::vector<SidechainDeposit>& vDeposit);
+    bool AddDeposits(const std::vector<SidechainDeposit>& vDeposit);
+
+    /** Find deposits in block transactions and add to cache */
+    bool AddDeposits(const uint256& hashBlock, const std::vector<CTransactionRef>& vtx);
 
     /** Add a new withdrawal bundle to SCDB */
     bool AddWithdrawal(uint8_t nSidechain, const uint256& hash, bool fDebug = false);
@@ -108,6 +111,9 @@ public:
     /** Return the CTIP (critical transaction index pair) for all sidechains */
     std::map<uint8_t, SidechainCTIP> GetCTIP() const;
 
+    /** Tell us if this txout is a CTIP and for which sidechain */
+    bool IsCTIP(const COutPoint& out, uint8_t& nSidechain) const;
+
     bool GetCachedWithdrawalTx(const uint256& hash, CMutableTransaction& mtx) const;
 
     /** Return vector of cached custom withdrawal votes */
@@ -136,9 +142,6 @@ public:
 
     /** Get list of this node's uncommitted sidechain proposals */
     std::vector<Sidechain> GetSidechainProposals() const;
-
-    /** Get the scriptPubKey that relates to nSidechain if it exists */
-    bool GetSidechainScript(const uint8_t nSidechain, CScript& scriptPubKey) const;
 
     /** Get list of sidechains that we have set to ACK */
     std::vector<uint256> GetSidechainsToActivate() const;
@@ -208,15 +211,11 @@ public:
     /** Spend a withdrawal bundle (if we can) */
     bool SpendWithdrawal(uint8_t nSidechain, const uint256& hashBlock, const CTransaction& tx, const int nTx, bool fJustCheck = false,  bool fDebug = false);
 
-    /** Get SidechainDeposit from deposit CTransaction. Part of SCDB because
-     * we need the list of active sidechains to find deposit outputs. */
-    bool TxnToDeposit(const CTransaction& tx, const int nTx, const uint256& hashBlock, SidechainDeposit& deposit);
-
     /** Print SCDB withdrawal verification status */
     std::string ToString() const;
 
     /** Check the updates in a block and then apply them */
-    bool Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false);
+    bool Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const uint256& hashCoinbase, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false);
 
     /** Undo the changes to SCDB of a block - for block is disconnection */
     bool Undo(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTransactionRef>& vtx, bool fDebug = false);
@@ -231,16 +230,10 @@ private:
     void ApplyDefaultUpdate();
 
     /** Apply the changes in a block to SCDB */
-    bool ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false);
-
-    /** Takes a list of sidechain hashes to upvote */
-    void UpdateActivationStatus(const std::vector<uint256>& vHash);
+    bool ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const uint256& hashCoinbase, const std::vector<CTxOut>& vout, bool fJustCheck = false, bool fDebug = false);
 
     /** Update CTIP to match the deposit cache - called after sorting / undo */
     bool UpdateCTIP();
-
-    /** Calls SortDeposits for all of SCDB's deposit cache */
-    bool SortSCDBDeposits();
 
     /** All sidechain slots, their activation status, and params if active */
     std::vector<Sidechain> vSidechain;

@@ -39,10 +39,10 @@ void SidechainDB::AddRemovedDeposit(const uint256& hashRemoved)
     vRemovedDeposit.push_back(hashRemoved);
 }
 
-void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit)
+bool SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit)
 {
     if (vDeposit.empty())
-        return;
+        return true;
 
     // Split the deposits by nSidechain
     std::vector<std::vector<SidechainDeposit>> vDepositSplit;
@@ -65,17 +65,148 @@ void SidechainDB::AddDeposits(const std::vector<SidechainDeposit>& vDeposit)
         }
     }
 
-    // Sort the deposits by CTIP UTXO spend order
-    // TODO check return value
-    if (!SortSCDBDeposits()) {
-        LogPrintf("SCDB %s: Failed to sort SCDB deposits!", __func__);
+    std::vector<std::vector<SidechainDeposit>> vDepositSorted;
+
+    // Loop through deposits and sort the vector for each sidechain
+    for (const std::vector<SidechainDeposit>& v : vDepositCache) {
+        std::vector<SidechainDeposit> vDeposit;
+        if (!SortDeposits(v, vDeposit)) {
+            LogPrintf("%s: Error: Failed to sort deposits!\n", __func__);
+            return false;
+        }
+        vDepositSorted.push_back(vDeposit);
     }
 
-    // TODO check return value
+    // Update deposit cache with sorted list
+    vDepositCache = vDepositSorted;
+
     // Finally, update the CTIP for each nSidechain and log it
     if (!UpdateCTIP()) {
         LogPrintf("SCDB %s: Failed to update CTIP!", __func__);
+        return false;
     }
+
+    return true;
+}
+
+bool SidechainDB::AddDeposits(const uint256& hashBlock, const std::vector<CTransactionRef>& vtx)
+{
+    // Find deposits from block transactions
+    std::map<uint8_t, COutPoint> mapConnectCTIP;
+    std::vector<SidechainDeposit> vDeposit;
+    for (size_t x = 0; x < vtx.size(); x++) {
+        const CTransactionRef& tx = vtx[x];
+        if (tx->IsCoinBase())
+            continue;
+
+        uint8_t nSidechain = 0;
+        bool fSpendsCTIP = false;
+        for (const CTxIn& in : tx->vin) {
+            // Check if tx spent coin is SCDB CTIP or in mapConnectCTIP
+            if (IsCTIP(in.prevout, nSidechain)) {
+                fSpendsCTIP = true;
+            }
+            else {
+                for (const std::pair<uint8_t, COutPoint> p : mapConnectCTIP) {
+                    if (in.prevout == p.second) {
+                        fSpendsCTIP = true;
+                        nSidechain = p.first;
+                    }
+                }
+            }
+
+            // If tx spent ctip, find new ctip in outputs
+            if (fSpendsCTIP) {
+                bool fOut = false;
+                COutPoint ctip;
+                for (size_t y = 0; y < tx->vout.size(); y++) {
+                    if (tx->vout[y].scriptPubKey.IsDrivechain()) {
+                        ctip = COutPoint(tx->GetHash(), y);
+                        fOut = true;
+                        break;
+                    }
+                }
+                if (!fOut) {
+                    return false;
+                }
+                // Track new CTIP
+                mapConnectCTIP[nSidechain] = ctip;
+            }
+        }
+
+        // Create SidechainDeposit from deposit tx
+        if (fSpendsCTIP) {
+            SidechainDeposit deposit;
+            deposit.nSidechain = nSidechain;
+            deposit.tx = *tx;
+            deposit.nTx = x;
+            deposit.hashBlock = hashBlock;
+
+            deposit.strDest = "";
+            deposit.nBurnIndex = 0;
+
+            // Find the destination encoding and burn output index
+            bool fBurnFound = false;
+            bool fDestFound = false;
+            for (size_t z = 0; z < tx->vout.size(); z++) {
+                const CScript &scriptPubKey = tx->vout[z].scriptPubKey;
+
+                if (!scriptPubKey.size())
+                    continue;
+
+                if (scriptPubKey.IsDrivechain()) {
+                    // If we already found a burn output, more make the deposit invalid
+                    if (fBurnFound) {
+                        LogPrintf("%s: Invalid - multiple burn outputs. \ntxid: %s\n", __func__, tx->GetHash().ToString());
+                        return false;
+                    }
+
+                    // Copy burn output index
+                    deposit.nBurnIndex = z;
+                    fBurnFound = true;
+                    continue;
+                }
+
+                if (fDestFound)
+                    continue;
+                if (scriptPubKey.front() != OP_RETURN)
+                    continue;
+                if (scriptPubKey.size() < 3) {
+                    LogPrintf("%s: Invalid - First OP_RETURN is invalid (too small).\ntxid: %s\n", __func__, tx->GetHash().ToString());
+                    return false;
+                }
+                if (scriptPubKey.size() > MAX_DEPOSIT_DESTINATION_BYTES) {
+                    LogPrintf("%s: Invalid - First OP_RETURN is invalid (too large).\ntxid: %s\n", __func__, tx->GetHash().ToString());
+                    return false;
+                }
+
+                CScript::const_iterator pDest = scriptPubKey.begin() + 1;
+                opcodetype opcode;
+                std::vector<unsigned char> vch;
+                if (!scriptPubKey.GetOp(pDest, opcode, vch) || vch.empty()) {
+                    LogPrintf("%s: Invalid - First OP_RETURN is invalid (failed GetOp).\ntxid: %s\n", __func__, tx->GetHash().ToString());
+                    return false;
+                }
+
+                std::string strDest((const char*)vch.data(), vch.size());
+                if (strDest.empty()) {
+                    LogPrintf("%s: Invalid - empty dest.\ntxid: %s\n", __func__, tx->GetHash().ToString());
+                    return false;
+                }
+
+                deposit.strDest = strDest;
+                fDestFound = true;
+            }
+
+            // Skip Withdrawal change return deposit, handled by SCDB::SpendWithdrawal
+            if (deposit.strDest == SIDECHAIN_WITHDRAWAL_RETURN_DEST)
+                continue;
+
+            if (fDestFound && fBurnFound)
+                vDeposit.push_back(deposit);
+        }
+    }
+    return AddDeposits(vDeposit);
 }
 
 bool SidechainDB::AddWithdrawal(uint8_t nSidechain, const uint256& hash, bool fDebug)
@@ -313,6 +444,17 @@ bool SidechainDB::GetCTIP(uint8_t nSidechain, SidechainCTIP& out) const
     return false;
 }
 
+bool SidechainDB::IsCTIP(const COutPoint& out, uint8_t& nSidechain) const
+{
+    for (const std::pair<uint8_t, SidechainCTIP>& ctip : mapCTIP) {
+        if (ctip.second.out == out) {
+            nSidechain = ctip.first;
+            return true;
+        }
+    }
+    return false;
+}
+
 bool SidechainDB::GetCachedWithdrawalTx(const uint256& hash, CMutableTransaction& mtx) const
 {
     // Find the Withdrawal
@@ -445,19 +587,6 @@ std::string SidechainDB::GetSidechainName(uint8_t nSidechain) const
 std::vector<Sidechain> SidechainDB::GetSidechainProposals() const
 {
     return vSidechainProposal;
-}
-
-bool SidechainDB::GetSidechainScript(const uint8_t nSidechain, CScript& scriptPubKey) const
-{
-    Sidechain sidechain;
-    if (!GetSidechain(nSidechain, sidechain))
-        return false;
-
-    scriptPubKey.resize(2);
-    scriptPubKey[0] = OP_DRIVECHAIN;
-    scriptPubKey[1] = nSidechain;
-
-    return true;
 }
 
 std::vector<uint256> SidechainDB::GetSidechainsToActivate() const
@@ -780,12 +909,9 @@ bool SidechainDB::SpendWithdrawal(uint8_t nSidechain, const uint256& hashBlock, 
     bool fChangeOutputFound = false;
     bool fReturnDestFound = false;
     uint32_t nBurnIndex = 0;
-    uint8_t nSidechainScript;
     CAmount amountChange = 0;
     for (size_t i = 0; i < tx.vout.size(); i++) {
         const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
-
-        // This would be non-standard but still checking
         if (!scriptPubKey.size())
             continue;
 
@@ -832,7 +958,7 @@ bool SidechainDB::SpendWithdrawal(uint8_t nSidechain, const uint256& hashBlock, 
             fReturnDestFound = true;
         }
 
-        if (scriptPubKey.IsDrivechain(nSidechainScript)) {
+        if (scriptPubKey.IsDrivechain()) {
             if (fChangeOutputFound) {
                 // We already found a sidechain script output. This second
                 // sidechain output makes the Withdrawal invalid.
@@ -863,18 +989,6 @@ bool SidechainDB::SpendWithdrawal(uint8_t nSidechain, const uint256& hashBlock, 
                 __func__,
                 hashBlind.ToString(),
                 nSidechain);
-        }
-        return false;
-    }
-
-    // Make sure that the sidechain output is to the correct sidechain
-    if (nSidechainScript != nSidechain) {
-        if (fDebug) {
-            LogPrintf("SCDB %s: Cannot spend Withdrawal: %s for sidechain number: %u. Return output to incorrect nSidechain: %u in Withdrawal.\n",
-                __func__,
-                hashBlind.ToString(),
-                nSidechain,
-                nSidechainScript);
         }
         return false;
     }
@@ -1000,74 +1114,6 @@ bool SidechainDB::SpendWithdrawal(uint8_t nSidechain, const uint256& hashBlock, 
     return true;
 }
 
-bool SidechainDB::TxnToDeposit(const CTransaction& tx, const int nTx, const uint256& hashBlock, SidechainDeposit& deposit)
-{
-    // Note that the first OP_RETURN output found in a deposit transaction will
-    // be used as the destination. Others are ignored.
-    bool fBurnFound = false;
-    bool fDestFound = false;
-    for (size_t i = 0; i < tx.vout.size(); i++) {
-        const CScript &scriptPubKey = tx.vout[i].scriptPubKey;
-
-        if (!scriptPubKey.size())
-            continue;
-
-        uint8_t nSidechain;
-        if (scriptPubKey.IsDrivechain(nSidechain)) {
-            // If we already found a burn output, more make the deposit invalid
-            if (fBurnFound) {
-                LogPrintf("%s: Invalid - multiple burn outputs.\ntxid: %s\n", __func__, tx.GetHash().ToString());
-                return false;
-            }
-
-            // We found the burn output, copy the output index & nSidechain
-            deposit.nSidechain = nSidechain;
-            deposit.nBurnIndex = i;
-            fBurnFound = true;
-            continue;
-        }
-
-        // Move on to looking for the encoded destination string
-
-        if (fDestFound)
-            continue;
-        if (scriptPubKey.front() != OP_RETURN)
-            continue;
-        if (scriptPubKey.size() < 3) {
-            LogPrintf("%s: Invalid - First OP_RETURN is invalid (too small).\ntxid: %s\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-        if (scriptPubKey.size() > MAX_DEPOSIT_DESTINATION_BYTES) {
-            LogPrintf("%s: Invalid - First OP_RETURN is invalid (too large).\ntxid: %s\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-
-        CScript::const_iterator pDest = scriptPubKey.begin() + 1;
-        opcodetype opcode;
-        std::vector<unsigned char> vch;
-        if (!scriptPubKey.GetOp(pDest, opcode, vch) || vch.empty()) {
-            LogPrintf("%s: Invalid - First OP_RETURN is invalid (failed GetOp).\ntxid: %s\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-
-        std::string strDest((const char*)vch.data(), vch.size());
-        if (strDest.empty()) {
-            LogPrintf("%s: Invalid - empty dest.\ntxid: %s\n", __func__, tx.GetHash().ToString());
-            return false;
-        }
-
-        deposit.strDest = strDest;
-
-        fDestFound = true;
-    }
-
-    deposit.tx = tx;
-    deposit.hashBlock = hashBlock;
-    deposit.nTx = nTx;
-
-    return (fBurnFound && fDestFound && CTransaction(deposit.tx) == tx);
-}
-
 std::string SidechainDB::ToString() const
 {
     std::string str;
@@ -1122,18 +1168,18 @@ std::string SidechainDB::ToString() const
     return str;
 }
 
-bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
+bool SidechainDB::Update(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const uint256& hashCoinbase, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
 {
     // Make a copy of SCDB to test update
     SidechainDB scdbCopy = (*this);
-    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug)) {
-        return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, vout, fJustCheck, fDebug);
+    if (scdbCopy.ApplyUpdate(nHeight, hashBlock, hashPrevBlock, hashCoinbase, vout, fJustCheck, fDebug)) {
+        return ApplyUpdate(nHeight, hashBlock, hashPrevBlock, hashCoinbase, vout, fJustCheck, fDebug);
     } else {
         return false;
     }
 }
 
-bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
+bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint256& hashPrevBlock, const uint256& hashCoinbase, const std::vector<CTxOut>& vout, bool fJustCheck, bool fDebug)
 {
     if (hashBlock.IsNull()) {
         if (fDebug)
@@ -1160,7 +1206,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
                     nHeight);
         return false;
     }
-
 
     if (!hashBlockLastSeen.IsNull() && hashPrevBlock != hashBlockLastSeen) {
         if (fDebug)
@@ -1209,6 +1254,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
     }
 
     // Track sidechain proposal
+    std::vector<uint256> vActivationHash;
     if (!fJustCheck && vProposal.size() == 1) {
         SidechainActivationStatus status;
         status.nFail = 0;
@@ -1218,6 +1264,8 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         // Start tracking the new sidechain proposal
         vActivationStatus.push_back(status);
 
+        vActivationHash.push_back(status.proposal.GetSerHash());
+
         LogPrintf("SCDB %s: Tracking new sidechain proposal:\n%s\n",
                 __func__,
                 status.proposal.ToString());
@@ -1225,7 +1273,6 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
 
     // Scan for sidechain activation commitments
     std::map<uint8_t, uint256> mapActivation;
-    std::vector<uint256> vActivationHash;
     for (const CTxOut& out : vout) {
         const CScript& scriptPubKey = out.scriptPubKey;
         uint256 hashSidechain;
@@ -1268,8 +1315,149 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
         vActivationHash.push_back(hashSidechain);
     }
-    if (!fJustCheck)
-        UpdateActivationStatus(vActivationHash);
+
+    // Update sidechain activation status
+    if (!fJustCheck && vActivationHash.size()) {
+        // Increment the age of all sidechain proposals and remove expired.
+        std::vector<SidechainActivationStatus>::iterator it;
+        for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+            it->nAge++;
+
+            int nPeriod = 0;
+            if (IsSidechainActive(it->proposal.nSidechain))
+                nPeriod = SIDECHAIN_REPLACEMENT_PERIOD;
+            else
+                nPeriod = SIDECHAIN_ACTIVATION_PERIOD;
+
+            if (it->nAge > nPeriod) {
+                LogPrintf("SCDB %s: Sidechain proposal expired:\n%s\n",
+                        __func__,
+                        it->proposal.ToString());
+
+                it = vActivationStatus.erase(it);
+            } else {
+                it++;
+            }
+        }
+
+        // Calculate failures. Sidechain proposals with activation status will have
+        // their activation failure count increased by 1 if a activation commitment
+        // for them is not found in the block. New sidechain proposals (age = 1)
+        // count as an activation commitment.
+        for (size_t i = 0; i < vActivationStatus.size(); i++) {
+            // Skip new sidechain proposals
+            if (vActivationStatus[i].nAge == 1)
+                continue;
+
+            // Search for sidechain activation commitments
+            bool fFound = false;
+            for (const uint256& u : vActivationHash) {
+                if (u == vActivationStatus[i].proposal.GetSerHash()) {
+                    fFound = true;
+                    break;
+                }
+            }
+            if (!fFound)
+                vActivationStatus[i].nFail++;
+        }
+
+        // Remove sidechain proposals with too many failures to activate
+        for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+            if (it->nFail >= SIDECHAIN_ACTIVATION_MAX_FAILURES) {
+                LogPrintf("SCDB %s: Sidechain proposal rejected:\n%s\n",
+                        __func__,
+                        it->proposal.ToString());
+
+                it = vActivationStatus.erase(it);
+            } else {
+                it++;
+            }
+        }
+
+        // Search for sidechains that have passed the test and should be activated.
+        for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
+            // The required period to be activated is either the normal sidechain
+            // activation period for a new sidechain, or the same as the Withdrawal
+            // minimum workscore for a proposal that replaces an active sidechain.
+            int nPeriodRequired = 0;
+            if (IsSidechainActive(it->proposal.nSidechain))
+                nPeriodRequired = SIDECHAIN_REPLACEMENT_PERIOD;
+            else
+                nPeriodRequired = SIDECHAIN_ACTIVATION_PERIOD;
+
+            // If a proposal makes it to the required age without being killed off
+            // by failures then it will be activated.
+            if (it->nAge == nPeriodRequired) {
+                // Create sidechain object from proposal
+                Sidechain sidechain;
+                sidechain.fActive = true;
+                sidechain.nSidechain    = it->proposal.nSidechain;
+                sidechain.nVersion      = it->proposal.nVersion;
+                sidechain.hashID1       = it->proposal.hashID1;
+                sidechain.hashID2       = it->proposal.hashID2;
+                sidechain.title         = it->proposal.title;
+                sidechain.description   = it->proposal.description;
+
+                // Update nSidechain slot with new sidechain params
+                vSidechain[sidechain.nSidechain] = sidechain;
+
+                // Remove from cache of our own proposals
+                for (size_t j = 0; j < vSidechainProposal.size(); j++) {
+                    if (it->proposal == vSidechainProposal[j]) {
+                        vSidechainProposal[j] = vSidechainProposal.back();
+                        vSidechainProposal.pop_back();
+                        break;
+                    }
+                }
+                // Remove SCDB proposal activation status
+                it = vActivationStatus.erase(it);
+
+                // Reset Withdrawal status for new sidechain
+                vWithdrawalStatus[sidechain.nSidechain].clear();
+
+                // Reset deposits for new sidechain
+                vDepositCache[sidechain.nSidechain].clear();
+
+                // Reset CTIP for new sidechain
+                mapCTIP.erase(sidechain.nSidechain);
+
+                // Find CTIP in coinbase
+                bool fCTIP = false;
+                for (size_t k = 0; k < vout.size(); k++) {
+                    if (vout[k].scriptPubKey.IsDrivechain()) {
+                        SidechainCTIP ctip;
+                        ctip.amount = 0;
+                        ctip.out = COutPoint(hashCoinbase, k);
+
+                        mapCTIP[sidechain.nSidechain] = ctip;
+
+                        fCTIP = true;
+
+                        LogPrintf("SCDB %s: Create genesis sidechain CTIP for nSidechain: %u. CTIP output: %s CTIP amount: %i.\n",
+                            __func__,
+                            sidechain.nSidechain,
+                            ctip.out.ToString(),
+                            CAmount(0));
+
+                        break;
+                    }
+                }
+
+                if (!fCTIP) {
+                    if (fDebug)
+                        LogPrintf("SCDB %s: Missing genesis CTIP!\n", __func__);
+                    return false;
+                }
+
+                if (fDebug)
+                    LogPrintf("SCDB %s: Sidechain activated:\n%s\n",
+                            __func__,
+                            sidechain.ToString());
+            } else {
+                it++;
+            }
+        }
+    }
 
     // Scan for new sidechain withdrawals. Check that there are no more than 1
     // new withdrawal per sidechain per block. Keep track of new withdrawals and
@@ -1461,13 +1649,24 @@ bool SidechainDB::Undo(int nHeight, const uint256& hashBlock, const uint256& has
 
     // If any deposits were removed re-sort deposits and update CTIP
     if (fDepositRemoved) {
-        // TODO check return value
-        if (!SortSCDBDeposits()) {
-            LogPrintf("SCDB %s: Failed to sort SCDB deposits!", __func__);
+        std::vector<std::vector<SidechainDeposit>> vDepositSorted;
+
+        // Loop through deposits and sort the vector for each sidechain
+        for (const std::vector<SidechainDeposit>& v : vDepositCache) {
+            std::vector<SidechainDeposit> vDeposit;
+            if (!SortDeposits(v, vDeposit)) {
+                LogPrintf("%s: Error: Failed to sort deposits!\n", __func__);
+                return false;
+            }
+            vDepositSorted.push_back(vDeposit);
         }
-        // TODO check return value
+
+        // Update deposit cache with sorted list
+        vDepositCache = vDepositSorted;
+
         if (!UpdateCTIP()) {
             LogPrintf("SCDB %s: Failed to update CTIP!", __func__);
+            return false;
         }
     }
 
@@ -1582,142 +1781,6 @@ void SidechainDB::ApplyDefaultUpdate()
 
     // Remove expired Withdrawal(s)
     RemoveExpiredWithdrawals();
-}
-
-void SidechainDB::UpdateActivationStatus(const std::vector<uint256>& vHash)
-{
-    // TODO change containers
-
-    // Increment the age of all sidechain proposals and remove expired.
-    std::vector<SidechainActivationStatus>::iterator it;
-    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
-        it->nAge++;
-
-        int nPeriod = 0;
-        if (IsSidechainActive(it->proposal.nSidechain))
-            nPeriod = SIDECHAIN_REPLACEMENT_PERIOD;
-        else
-            nPeriod = SIDECHAIN_ACTIVATION_PERIOD;
-
-        if (it->nAge > nPeriod) {
-            LogPrintf("SCDB %s: Sidechain proposal expired:\n%s\n",
-                    __func__,
-                    it->proposal.ToString());
-
-            it = vActivationStatus.erase(it);
-        } else {
-            it++;
-        }
-    }
-
-    // Calculate failures. Sidechain proposals with activation status will have
-    // their activation failure count increased by 1 if a activation commitment
-    // for them is not found in the block. New sidechain proposals (age = 1)
-    // count as an activation commitment.
-    for (size_t i = 0; i < vActivationStatus.size(); i++) {
-        // Skip new sidechain proposals
-        if (vActivationStatus[i].nAge == 1)
-            continue;
-
-        // Search for sidechain activation commitments
-        bool fFound = false;
-        for (const uint256& u : vHash) {
-            if (u == vActivationStatus[i].proposal.GetSerHash()) {
-                fFound = true;
-                break;
-            }
-        }
-        if (!fFound)
-            vActivationStatus[i].nFail++;
-    }
-
-    // Remove sidechain proposals with too many failures to activate
-    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
-        if (it->nFail >= SIDECHAIN_ACTIVATION_MAX_FAILURES) {
-            LogPrintf("SCDB %s: Sidechain proposal rejected:\n%s\n",
-                    __func__,
-                    it->proposal.ToString());
-
-            it = vActivationStatus.erase(it);
-        } else {
-            it++;
-        }
-    }
-
-    // Search for sidechains that have passed the test and should be activated.
-    for (it = vActivationStatus.begin(); it != vActivationStatus.end();) {
-        // The required period to be activated is either the normal sidechain
-        // activation period for a new sidechain, or the same as the Withdrawal
-        // minimum workscore for a proposal that replaces an active sidechain.
-        int nPeriodRequired = 0;
-        if (IsSidechainActive(it->proposal.nSidechain))
-            nPeriodRequired = SIDECHAIN_REPLACEMENT_PERIOD;
-        else
-            nPeriodRequired = SIDECHAIN_ACTIVATION_PERIOD;
-
-        // If a proposal makes it to the required age without being killed off
-        // by failures then it will be activated.
-        if (it->nAge == nPeriodRequired) {
-            // Create sidechain object from proposal
-            Sidechain sidechain;
-            sidechain.fActive = true;
-            sidechain.nSidechain    = it->proposal.nSidechain;
-            sidechain.nVersion      = it->proposal.nVersion;
-            sidechain.hashID1       = it->proposal.hashID1;
-            sidechain.hashID2       = it->proposal.hashID2;
-            sidechain.title         = it->proposal.title;
-            sidechain.description   = it->proposal.description;
-
-            // Update nSidechain slot with new sidechain params
-            vSidechain[sidechain.nSidechain] = sidechain;
-
-            // Remove from cache of our own proposals
-            for (size_t j = 0; j < vSidechainProposal.size(); j++) {
-                if (it->proposal == vSidechainProposal[j]) {
-                    vSidechainProposal[j] = vSidechainProposal.back();
-                    vSidechainProposal.pop_back();
-                    break;
-                }
-            }
-            // Remove SCDB proposal activation status
-            it = vActivationStatus.erase(it);
-
-            // Reset Withdrawal status for new sidechain
-            vWithdrawalStatus[sidechain.nSidechain].clear();
-
-            // Reset deposits for new sidechain
-            vDepositCache[sidechain.nSidechain].clear();
-
-            // Reset CTIP for new sidechain
-            mapCTIP.erase(sidechain.nSidechain);
-
-            LogPrintf("SCDB %s: Sidechain activated:\n%s\n",
-                    __func__,
-                    sidechain.ToString());
-        } else {
-            it++;
-        }
-    }
-}
-
-bool SidechainDB::SortSCDBDeposits()
-{
-    std::vector<std::vector<SidechainDeposit>> vDepositSorted;
-
-    // Loop through deposits and sort the vector for each sidechain
-    for (const std::vector<SidechainDeposit>& v : vDepositCache) {
-        std::vector<SidechainDeposit> vDeposit;
-        if (!SortDeposits(v, vDeposit)) {
-            LogPrintf("%s: Error: Failed to sort deposits!\n", __func__);
-            return false;
-        }
-        vDepositSorted.push_back(vDeposit);
-    }
-
-    // Update deposit cache with sorted list
-    vDepositCache = vDepositSorted;
-
-    return true;
 }
 
 bool SidechainDB::UpdateCTIP()

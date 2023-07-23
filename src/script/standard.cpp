@@ -108,8 +108,7 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
     }
 
     // OP_DRIVECHAIN BIP 300 sidechain escrow output
-    uint8_t nSidechain;
-    if (scriptPubKey.IsDrivechain(nSidechain)) {
+    if (scriptPubKey.IsDrivechain()) {
         typeRet = TX_DRIVECHAIN;
         return true;
     }
