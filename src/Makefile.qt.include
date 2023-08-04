@@ -176,7 +176,6 @@ QT_MOC_CPP = \
   qt/moc_intro.cpp \
   qt/moc_latestblocktablemodel.cpp \
   qt/moc_macdockiconhandler.cpp \
-  qt/moc_macnotificationhandler.cpp \
   qt/moc_managenewsdialog.cpp \
   qt/moc_mempooltablemodel.cpp \
   qt/moc_miningdialog.cpp \
@@ -188,7 +187,6 @@ QT_MOC_CPP = \
   qt/moc_newstablemodel.cpp \
   qt/moc_newstypestablemodel.cpp \
   qt/moc_newsqrdialog.cpp \
-  qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
   qt/moc_opreturndialog.cpp \
   qt/moc_opreturntablemodel.cpp \
@@ -234,8 +232,7 @@ QT_MOC_CPP = \
   qt/moc_walletview.cpp
 
 DRIVECHAIN_MM = \
-  qt/macdockiconhandler.mm \
-  qt/macnotificationhandler.mm
+  qt/macdockiconhandler.mm
 
 QT_MOC = \
   qt/drivechain.moc \
@@ -287,7 +284,6 @@ DRIVECHAIN_QT_H = \
   qt/intro.h \
   qt/latestblocktablemodel.h \
   qt/macdockiconhandler.h \
-  qt/macnotificationhandler.h \
   qt/managenewsdialog.h \
   qt/mempooltablemodel.h \
   qt/miningdialog.h \
@@ -300,7 +296,6 @@ DRIVECHAIN_QT_H = \
   qt/newstypestablemodel.h \
   qt/newsqrdialog.h \
   qt/networkstyle.h \
-  qt/notificator.h \
   qt/openuridialog.h \
   qt/opreturndialog.h \
   qt/opreturntablemodel.h \
@@ -497,7 +492,6 @@ DRIVECHAIN_QT_BASE_CPP = \
   qt/intro.cpp \
   qt/mempooltablemodel.cpp \
   qt/networkstyle.cpp \
-  qt/notificator.cpp \
   qt/optionsdialog.cpp \
   qt/optionsmodel.cpp \
   qt/peertablemodel.cpp \
