@@ -7,6 +7,7 @@
 
 #include <qt/guiutil.h>
 #include <qt/hashcalcdialog.h> // For HexToBinStr & BinToHexStr
+#include <qt/hdexplorerdialog.h>
 #include <qt/platformstyle.h>
 
 #include <QScrollBar>
@@ -573,6 +574,12 @@ void CreateWalletDialog::on_pushButtonRandom_clicked()
     assert(secret.VerifyPubKey(pubkey));
 
     ui->lineEditEntropy->setText(QString::fromStdString(CBitcoinSecret(secret).ToString()));
+}
+
+void CreateWalletDialog::on_pushButtonHDExplorer_clicked()
+{
+    HDExplorerDialog dialog(platformStyle);
+    dialog.exec();
 }
 
 bool EntropyToKeys(const std::vector<unsigned char>& vchEntropy, std::string& strXPub, std::string& strXPriv, std::string& strV3, std::vector<std::string>& vChildAddr) {

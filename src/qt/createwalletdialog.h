@@ -79,6 +79,7 @@ private Q_SLOTS:
     void on_pushButtonCopyXPub_clicked();
     void on_pushButtonCopyV3_clicked();
     void on_pushButtonRandom_clicked();
+    void on_pushButtonHDExplorer_clicked();
 };
 
 bool EntropyToKeys(const std::vector<unsigned char>& vchEntropy, std::string& strXPub, std::string& strXPriv, std::string& strV3, std::vector<std::string>& vChildAddr);
