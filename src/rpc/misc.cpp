@@ -1815,9 +1815,7 @@ UniValue getworkscore(const JSONRPCRequest& request)
             "1. nsidechain     (numeric, required) Sidechain number to look up Withdrawal of\n"
             "2. hash           (string, required) Hash of the Withdrawal\n"
             "\nResult:\n"
-            "{\n"
-            "  \"workscore\" : x,   (numeric) workscore of Withdrawal\n"
-            "}\n"
+            "workscore         (numeric) workscore of Withdrawal\n"
             "\n"
             "\nExample:\n"
             + HelpExampleCli("getworkscore", "0 hash")
