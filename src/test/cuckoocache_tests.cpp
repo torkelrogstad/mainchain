@@ -6,8 +6,6 @@
 #include <script/sigcache.h>
 #include <test/test_drivechain.h>
 #include <random.h>
-
-#include <deque>
 #include <thread>
 
 /** Test Suite for CuckooCache

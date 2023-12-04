@@ -619,8 +619,10 @@ TableViewLastColumnResizingFixer::TableViewLastColumnResizingFixer(QTableView* t
 fs::path static StartupShortcutPath()
 {
     std::string chain = ChainNameFromCommandLine();
-    if (chain == CBaseChainParams::DRIVENET)
+    if (chain == CBaseChainParams::MAIN)
         return GetSpecialFolderPath(CSIDL_STARTUP) / "Drivechain.lnk";
+    if (chain == CBaseChainParams::TESTNET) // Remove this special case when CBaseChainParams::TESTNET = "testnet4"
+        return GetSpecialFolderPath(CSIDL_STARTUP) / "Drivechain (testnet).lnk";
     return GetSpecialFolderPath(CSIDL_STARTUP) / strprintf("Drivechain (%s).lnk", chain);
 }
 
@@ -715,7 +717,7 @@ fs::path static GetAutostartDir()
 fs::path static GetAutostartFilePath()
 {
     std::string chain = ChainNameFromCommandLine();
-    if (chain == CBaseChainParams::DRIVENET)
+    if (chain == CBaseChainParams::MAIN)
         return GetAutostartDir() / "Drivechain.desktop";
     return GetAutostartDir() / strprintf("Drivechain-%s.lnk", chain);
 }
@@ -760,7 +762,7 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         // Write a bitcoin.desktop file to the autostart directory:
         optionFile << "[Desktop Entry]\n";
         optionFile << "Type=Application\n";
-        if (chain == CBaseChainParams::DRIVENET)
+        if (chain == CBaseChainParams::MAIN)
             optionFile << "Name=Drivechain\n";
         else
             optionFile << strprintf("Name=Drivechain (%s)\n", chain);
