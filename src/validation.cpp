@@ -7,6 +7,7 @@
 
 #include <addressbook.h>
 #include <arith_uint256.h>
+#include <base58.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <checkpoints.h>
@@ -3381,6 +3382,12 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
+    // Check header signature
+    if (fCheckPOW && block.GetHash() != Params().GetConsensus().hashGenesisBlock) {
+        if (!VerifyHeaderSig(block))
+            return state.DoS(50, false, REJECT_INVALID, "header-signature", false, "invalid header signature");
+    }
+
     return true;
 }
 
@@ -6165,3 +6172,27 @@ public:
         mapBlockIndex.clear();
     }
 } instance_of_cmaincleanup;
+
+bool VerifyHeaderSig(const CBlockHeader& header)
+{
+    if (header.vHeaderSig.size() != 65) {
+        LogPrintf("%s: Invalid signature size!\n", __func__);
+        return false;
+    }
+
+    uint256 hash = header.GetHashForSig();
+
+
+    CPubKey pubkey;
+    if (!pubkey.RecoverCompact(hash, header.vHeaderSig)) {
+        LogPrintf("%s: Failed to recover pubkey!\n", __func__);
+        return false;
+    }
+
+    if (DecodeDestination("145Ci4nDFymr3oXRsE5KCmeUdd6VuUxEB4") != CTxDestination(pubkey.GetID())) {
+        LogPrintf("%s: Address does not match signature!\n", __func__);
+        return false;
+    }
+
+    return true;
+}

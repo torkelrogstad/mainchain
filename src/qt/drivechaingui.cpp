@@ -447,6 +447,7 @@ void BitcoinGUI::createActions()
 
     showMiningDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/tx_mined"), tr("&Solo Mine"), this);
     showMiningDialogAction->setStatusTip(tr("Show mining window"));
+    showMiningDialogAction->setEnabled(false);
 
     showPaperWalletDialogAction = new QAction(platformStyle->TextColorIcon(":/icons/print"), tr("&Paper Wallet"), this);
     showPaperWalletDialogAction->setStatusTip(tr("Show paper wallet window"));

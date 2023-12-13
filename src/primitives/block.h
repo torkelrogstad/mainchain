@@ -27,6 +27,7 @@ public:
     uint32_t nTime;
     uint32_t nBits;
     uint32_t nNonce;
+    std::vector<unsigned char> vHeaderSig;
 
     CBlockHeader()
     {
@@ -43,6 +44,7 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
+        READWRITE(vHeaderSig);
     }
 
     void SetNull()
@@ -53,6 +55,7 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
+        vHeaderSig.clear();
     }
 
     bool IsNull() const
@@ -61,6 +64,8 @@ public:
     }
 
     uint256 GetHash() const;
+
+    uint256 GetHashForSig() const;
 
     uint256 GetPrevHash() const
     {
@@ -118,6 +123,7 @@ public:
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.vHeaderSig     = vHeaderSig;
         return block;
     }
 
