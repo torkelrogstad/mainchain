@@ -15,6 +15,18 @@ uint256 CBlockHeader::GetHash() const
     return SerializeHash(*this);
 }
 
+uint256 CBlockHeader::GetHashForSig() const
+{
+    CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
+    ss << nVersion;
+    ss << nTime;
+    ss << nBits;
+    ss << nNonce;
+    ss << hashPrevBlock;
+    ss << hashMerkleRoot;
+    return ss.GetHash();
+}
+
 std::string CBlock::ToString() const
 {
     std::stringstream s;

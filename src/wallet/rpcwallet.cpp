@@ -10,6 +10,7 @@
 #include <core_io.h>
 #include <httpserver.h>
 #include <validation.h>
+#include <miner.h>
 #include <net.h>
 #include <policy/feerate.h>
 #include <policy/fees.h>
@@ -3541,7 +3542,7 @@ UniValue generate(const JSONRPCRequest& request)
     }
 
     int num_generate = request.params[0].get_int();
-    uint64_t max_tries = 1000000;
+    int max_tries = 1000000;
     if (!request.params[1].isNull()) {
         max_tries = request.params[1].get_int();
     }
@@ -3554,12 +3555,58 @@ UniValue generate(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
     }
 
-    //throw an error if no script was provided
+    // throw an error if no script was provided
     if (coinbase_script->reserveScript.empty()) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available");
     }
 
-    return generateBlocks(coinbase_script, num_generate, max_tries, true);
+    coinbase_script->KeepScript();
+
+    UniValue blocks(UniValue::VARR);
+    int nTries = 0;
+    for (int i = 0; i < num_generate; i++) {
+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbase_script->reserveScript));
+        if (!pblocktemplate.get())
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
+
+        CBlock *pblock = &pblocktemplate->block;
+
+        unsigned int nExtraNonce = 0;
+        {
+            LOCK(cs_main);
+            IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
+        }
+
+        bool fMined = false;
+        nTries = 0;
+        while (nTries < max_tries) {
+            nTries++;
+
+            pblock->nNonce++;
+
+            // Header signature
+            uint256 hashHeader = pblock->GetBlockHeader().GetHashForSig();
+            std::vector<unsigned char> vchSig = pwallet->SignHeaderHash(hashHeader);
+            pblock->vHeaderSig = vchSig;
+
+            if (CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+                fMined = true;
+                break;
+            }
+        }
+
+        if (!fMined)
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't mine new block");
+
+        std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
+        if (!ProcessNewBlock(Params(), shared_pblock, true, nullptr))
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+
+        blocks.push_back(pblock->GetHash().ToString());
+    }
+
+
+    return blocks;
 }
 
 UniValue createsidechaindeposit(const JSONRPCRequest& request)

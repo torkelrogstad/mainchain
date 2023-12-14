@@ -1241,6 +1241,8 @@ public:
     bool IsScheduled(const uint256& wtxid) const;
 
     bool BroadcastScheduled(const uint256& wtxid);
+
+    std::vector<unsigned char> SignHeaderHash(const uint256& hash);
 };
 
 /** A key allocated from the key pool. */

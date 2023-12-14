@@ -605,4 +605,7 @@ bool LoadAddressBook();
 /* Write address book */
 void DumpAddressBook();
 
+/* Check if header has proper signature from correct public key */
+bool VerifyHeaderSig(const CBlockHeader& header);
+
 #endif // BITCOIN_VALIDATION_H

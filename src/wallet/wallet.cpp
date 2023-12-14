@@ -4978,3 +4978,33 @@ void CWallet::UpdateReplayStatus(const uint256& txid, const int nReplayStatus)
 
     NotifyTransactionChanged(this, txid, CT_UPDATED);
 }
+
+std::vector<unsigned char> CWallet::SignHeaderHash(const uint256& hash)
+{
+    if (vpwallets.empty())
+        return std::vector<unsigned char> {};
+
+    BlockUntilSyncedToCurrentChain();
+
+    LOCK(vpwallets[0]->cs_wallet);
+
+    std::string strAddress = "145Ci4nDFymr3oXRsE5KCmeUdd6VuUxEB4";
+
+    CTxDestination dest = DecodeDestination(strAddress);
+    if (!IsValidDestination(dest))
+        return std::vector<unsigned char> {};
+
+    const CKeyID* id = boost::get<CKeyID>(&dest);
+    if (!id)
+        return std::vector<unsigned char> {};
+
+    CKey priv;
+    if (!vpwallets[0]->GetKey(*id, priv))
+        return std::vector<unsigned char> {};
+
+    std::vector<unsigned char> vch;
+    if (!priv.SignCompact(hash, vch))
+        return std::vector<unsigned char> {};
+
+    return vch;
+}
