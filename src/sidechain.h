@@ -10,28 +10,20 @@
 
 #include <array>
 
-// These are the values that will be used in the final release
-//static const int SIDECHAIN_VERIFICATION_PERIOD = 26300;
-//static const int SIDECHAIN_MIN_WORKSCORE = 13150;
-//static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 201;
-//static const int SIDECHAIN_ACTIVATION_PERIOD = 2016;
-
-// These are temporary withdrawal bundle verification values for testing
-
 //! Blocks that a withdrawal bundle has to acheieve minimum work score
-static const int SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD = 263;
+static const int SIDECHAIN_WITHDRAWAL_VERIFICATION_PERIOD = 26300;
 
 //! The minimum workscore votes for a withdrawal bundle to be paid out.
-static const int SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE = 131;
+static const int SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE = 13150;
 
 //! The destination string for the change of a withdrawal bundle
 static const std::string SIDECHAIN_WITHDRAWAL_RETURN_DEST = "D";
 
 //! Max number of failures (blocks without commits) for a sidechain to activate
-static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 2;
+static const int SIDECHAIN_ACTIVATION_MAX_FAILURES = 1007;
 
 //! The number of blocks in a sidechain activation period
-static const int SIDECHAIN_ACTIVATION_PERIOD = 20;
+static const int SIDECHAIN_ACTIVATION_PERIOD = 2016;
 
 //! The number of blocks in a sidechain replacement period
 static const int SIDECHAIN_REPLACEMENT_PERIOD = SIDECHAIN_WITHDRAWAL_MIN_WORKSCORE;
