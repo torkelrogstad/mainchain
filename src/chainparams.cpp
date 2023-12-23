@@ -96,7 +96,9 @@ public:
         consensus.nMinimumChainWork = uint256S("0x00");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x00");
+        consensus.defaultAssumeValid = uint256S("0x3722a1ebb37cbc2430f4fa18ba6ecedf3aa5047385cc9dd79f0c78429b729b08");
+
+        consensus.MinimumHeight = 37178;
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -134,13 +136,14 @@ public:
 
         checkpointData = {
             {
+                {37178, uint256S("3722a1ebb37cbc2430f4fa18ba6ecedf3aa5047385cc9dd79f0c78429b729b08")},
             }
         };
 
         chainTxData = ChainTxData{
-            /* nTime    */ 1702443625,
-            /* nTxCount */ 10000,
-            /* dTxRate  */ 2.9
+            /* nTime    */ 1703295430,
+            /* nTxCount */ 37178,
+            /* dTxRate  */ 1
         };
     }
 };
