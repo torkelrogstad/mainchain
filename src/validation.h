@@ -157,6 +157,8 @@ static const int DEFAULT_STOPATHEIGHT = 0;
 /** Maximum number of bytes added to a critical transaction (v3 - BMM etc) */
 static const int MAX_CRITICAL_DATA_BYTES = 21;
 
+static const std::string HEADER_SIG_ADDR = "1PN7Y9UeDx7XZNdVcj83iP4u2QbUhGeVMj";
+
 struct BlockHasher
 {
     size_t operator()(const uint256& hash) const { return hash.GetCheapHash(); }

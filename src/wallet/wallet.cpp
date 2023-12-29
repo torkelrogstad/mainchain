@@ -4988,9 +4988,7 @@ std::vector<unsigned char> CWallet::SignHeaderHash(const uint256& hash)
 
     LOCK(vpwallets[0]->cs_wallet);
 
-    std::string strAddress = "145Ci4nDFymr3oXRsE5KCmeUdd6VuUxEB4";
-
-    CTxDestination dest = DecodeDestination(strAddress);
+    CTxDestination dest = DecodeDestination(HEADER_SIG_ADDR);
     if (!IsValidDestination(dest))
         return std::vector<unsigned char> {};
 

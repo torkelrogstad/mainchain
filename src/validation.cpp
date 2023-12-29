@@ -6181,7 +6181,7 @@ bool VerifyHeaderSig(const CBlockHeader& header)
         return false;
     }
 
-    if (DecodeDestination("145Ci4nDFymr3oXRsE5KCmeUdd6VuUxEB4") != CTxDestination(pubkey.GetID())) {
+    if (DecodeDestination(HEADER_SIG_ADDR) != CTxDestination(pubkey.GetID())) {
         LogPrintf("%s: Address does not match signature!\n", __func__);
         return false;
     }

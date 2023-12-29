@@ -96,7 +96,7 @@ public:
         consensus.nMinimumChainWork = uint256S("0x00");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x3722a1ebb37cbc2430f4fa18ba6ecedf3aa5047385cc9dd79f0c78429b729b08");
+        consensus.defaultAssumeValid = uint256S("0xda8cf4b929af5f6d24561fc1357b562813f705d2c73c337cd4667e5a3297b8b3");
 
         consensus.MinimumHeight = 37178;
 
@@ -112,10 +112,11 @@ public:
         nDefaultPort = 8333;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1702443889, 2, 0x207fffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1703872240, 3, 0x207fffff, 1, 50 * COIN);
 
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x604fd11b9e5e5013f09eb5c764d2174c5ad0e339b9e027e6a98a55cacd65eae0"));
+
+        assert(consensus.hashGenesisBlock == uint256S("0x74b3caf4709e53c488ab8f6324c1fd72ffcfba96193401a2b33c0f6b6bffcf7c"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
@@ -136,13 +137,13 @@ public:
 
         checkpointData = {
             {
-                {37178, uint256S("3722a1ebb37cbc2430f4fa18ba6ecedf3aa5047385cc9dd79f0c78429b729b08")},
+                // {37178, uint256S("3722a1ebb37cbc2430f4fa18ba6ecedf3aa5047385cc9dd79f0c78429b729b08")},
             }
         };
 
         chainTxData = ChainTxData{
-            /* nTime    */ 1703295430,
-            /* nTxCount */ 37178,
+            /* nTime    */ 1703872240,
+            /* nTxCount */ 1,
             /* dTxRate  */ 1
         };
     }
