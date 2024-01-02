@@ -98,7 +98,7 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0xda8cf4b929af5f6d24561fc1357b562813f705d2c73c337cd4667e5a3297b8b3");
 
-        consensus.MinimumHeight = 37178;
+        consensus.MinimumHeight = 11;
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -106,10 +106,10 @@ public:
          * a large 32-bit integer with any alignment.
          */
         pchMessageStart[0] = 0xf9;
-        pchMessageStart[1] = 0xbe;
-        pchMessageStart[2] = 0xb4;
+        pchMessageStart[1] = 0xb4;
+        pchMessageStart[2] = 0xb3;
         pchMessageStart[3] = 0xd9;
-        nDefaultPort = 8333;
+        nDefaultPort = 8383;
         nPruneAfterHeight = 100000;
 
         genesis = CreateGenesisBlock(1703872240, 3, 0x207fffff, 1, 50 * COIN);
@@ -137,7 +137,7 @@ public:
 
         checkpointData = {
             {
-                // {37178, uint256S("3722a1ebb37cbc2430f4fa18ba6ecedf3aa5047385cc9dd79f0c78429b729b08")},
+                {11, uint256S("7c43551f4784e3f788f27ecc5920eefb4331e6e6884c8419de570bd114c1e461")},
             }
         };
 
