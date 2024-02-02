@@ -1305,7 +1305,7 @@ bool SidechainDB::ApplyUpdate(int nHeight, const uint256& hashBlock, const uint2
         }
     }
 
-    // Update SCDB withdrawl vote scores and add new withdrawals
+    // Update SCDB withdrawal vote scores and add new withdrawals
     if (!fJustCheck && (HasState() || mapNewWithdrawal.size())) {
         // Check if there are update bytes
         std::vector<CScript> vUpdateBytes;

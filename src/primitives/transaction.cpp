@@ -87,7 +87,7 @@ bool CTransaction::GetBlindHash(uint256& hashRet) const
     if (!mtx.vin.size() || !mtx.vout.size())
         return false;
 
-    // Remove the CTIP scriptSig (set to OP_0 as the sidechain must orignally)
+    // Remove the CTIP scriptSig (set to OP_0 as the sidechain must originally)
     mtx.vin.clear();
     mtx.vin.resize(1);
     mtx.vin[0].scriptSig = CScript() << OP_0;
@@ -107,7 +107,7 @@ CAmount CTransaction::GetBlindValueOut() const
     if (!mtx.vin.size() || !mtx.vout.size())
         return false;
 
-    // Remove the CTIP scriptSig (set to OP_0 as the sidechain must orignally)
+    // Remove the CTIP scriptSig (set to OP_0 as the sidechain must originally)
     mtx.vin.clear();
     mtx.vin.resize(1);
     mtx.vin[0].scriptSig = CScript() << OP_0;

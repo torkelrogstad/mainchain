@@ -1423,7 +1423,7 @@ QTabBar::tear {image: url(tear_indicator);}
 QTabBar::scroller{width:85pix;}
 QTabBar QToolbutton{background-color:"light blue";}
 
-But that left the buttons transparant.
+But that left the buttons transparent.
 Looked confusing as the tab buttons migrated behind the scroller buttons.
 So we had to color the back ground of the scroller buttons
 */

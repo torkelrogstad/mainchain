@@ -2233,7 +2233,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         }
 
         /*
-         * Note: While not commited to by miners in a coinbase, the messages
+         * Note: While not committed to by miners in a coinbase, the messages
          * M5 & M6 also exist. These are regular Bitcoin transactions, which can
          * be identified by the outputs they are spending. M5 & M6 transactions
          * spend the outputs of Critical TxID-index Pairs (a "CTIP") owned by

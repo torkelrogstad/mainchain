@@ -41,7 +41,7 @@ public:
     };
 
     // The members enumerated here are named as such to not be confused
-    // with the other wallet tx status colum in the transaction table model.
+    // with the other wallet tx status column in the transaction table model.
     enum ReplayStatus {
         ReplayUnknown,
         ReplayFalse,
