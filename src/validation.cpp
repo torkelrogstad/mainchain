@@ -3375,8 +3375,9 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
-    // Check header signature
-    if (fCheckPOW && block.GetHash() != Params().GetConsensus().hashGenesisBlock) {
+    // Check header signature except on genesis blocks and regtest mode
+    if (block.GetHash() != consensusParams.hashGenesisBlock && fCheckPOW &&
+            Params().NetworkIDString() != "regtest") {
         if (!VerifyHeaderSig(block))
             return state.DoS(50, false, REJECT_INVALID, "header-signature", false, "invalid header signature");
     }
