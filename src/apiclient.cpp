@@ -30,7 +30,7 @@ bool APIClient::IsTxReplayed(const uint256& txid)
     // by reference
 
     try {
-        // Setup BOOST ASIO for a synchronus call to the mainchain
+        // Setup BOOST ASIO for a synchronous call to the mainchain
         boost::asio::io_service io_service;
         boost::asio::ssl::context sslContext(boost::asio::ssl::context::method::sslv23_client);
         boost::asio::ssl::stream<tcp::socket> sslSocket(io_service, sslContext);
@@ -57,7 +57,7 @@ bool APIClient::IsTxReplayed(const uint256& txid)
         // Send the request
         boost::asio::write(sslSocket, output);
 
-        // Read the reponse
+        // Read the response
         std::string data;
         for (;;)
         {
@@ -143,7 +143,7 @@ bool APIClient::SendRequest(const std::string& json, boost::property_tree::ptree
     // Regtest RPC = 18443
 
     try {
-        // Setup BOOST ASIO for a synchronus call to the mainchain
+        // Setup BOOST ASIO for a synchronous call to the mainchain
         boost::asio::io_service io_service;
         tcp::resolver resolver(io_service);
         tcp::resolver::query query("blockchain.info", "443");
@@ -176,7 +176,7 @@ bool APIClient::SendRequest(const std::string& json, boost::property_tree::ptree
         // Send the request
         boost::asio::write(socket, output);
 
-        // Read the reponse
+        // Read the response
         std::string data;
         for (;;)
         {

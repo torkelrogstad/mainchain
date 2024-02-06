@@ -79,7 +79,7 @@ void ManageNewsDialog::on_pushButtonWrite_clicked()
     if (!IsHexNumber(strBytes)) {
         QMessageBox::critical(this, tr("Failed to create news type"),
             tr("Invalid header bytes!\n\n"
-               "Header bytes must be four valid hexidecimal characters with no prefix."),
+               "Header bytes must be four valid hexadecimal characters with no prefix."),
             QMessageBox::Ok);
         return;
     }
@@ -93,7 +93,7 @@ void ManageNewsDialog::on_pushButtonWrite_clicked()
     if (script.size() != 4) {
         QMessageBox::critical(this, tr("Failed to create news type"),
             tr("Invalid hex bytes length!\n\n"
-               "Header bytes must be four valid hexidecimal characters with no prefix."),
+               "Header bytes must be four valid hexadecimal characters with no prefix."),
             QMessageBox::Ok);
         return;
     }

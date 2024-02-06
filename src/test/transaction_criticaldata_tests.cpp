@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(criticaldata_invalid_locktime)
     mtx.vout[0].scriptPubKey = CScript() << OP_0;
     mtx.vout[0].nValue = 50 * CENT;
 
-    // Set locktime to the block we would like critical data to be commited in
+    // Set locktime to the block we would like critical data to be committed in
     mtx.nLockTime = 2600;
 
     // Add critical data
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(criticaldata_invalid_no_commit)
     mtx.vout[0].scriptPubKey = CScript() << OP_0;
     mtx.vout[0].nValue = 50 * CENT;
 
-    // Set locktime to the block we would like critical data to be commited in
+    // Set locktime to the block we would like critical data to be committed in
     mtx.nLockTime = 102;
 
     // Add critical data

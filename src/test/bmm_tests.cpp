@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(bmm_commit)
     mtx.vout[0].scriptPubKey = CScript() << OP_0;
     mtx.vout[0].nValue = 50 * CENT;
 
-    // Set locktime to the block we would like critical data to be commited in
+    // Set locktime to the block we would like critical data to be committed in
     mtx.nLockTime = 102;
 
     // Add critical data
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(bmm_prevbytes_mempool)
     mtx.vout[0].scriptPubKey = GetScriptForRawPubKey(coinbaseKey.GetPubKey());
     mtx.vout[0].nValue = 50 * CENT;
 
-    // Set locktime to the block we would like critical data to be commited in
+    // Set locktime to the block we would like critical data to be committed in
     mtx.nLockTime = 101;
 
     // Add critical data
