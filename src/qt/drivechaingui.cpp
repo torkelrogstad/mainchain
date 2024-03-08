@@ -1357,7 +1357,6 @@ void BitcoinGUI::setNumBlocksIBD(int count, double nVerificationProgress)
     QString label = QString::number(count);
     label += " blocks ( Syncing: ";
     label += QString::number(nVerificationProgress, 'f', 5);
-    label += "%";
     label += ")";
     labelNumBlocks->setText(label);
 
