@@ -96,9 +96,9 @@ public:
         consensus.nMinimumChainWork = uint256S("0x00");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x5f086e59a4e0896e3a2554a43f8aeeae0017f303185d1fbc4386e5045646def2");
+        consensus.defaultAssumeValid = uint256S("0x5c19daec5e73aa7c9707a7931237fce59e7b8f4c1ca35763ed1c3b9f8ba5d179");
 
-        consensus.MinimumHeight = 11;
+        consensus.MinimumHeight = 0;
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -112,11 +112,11 @@ public:
         nDefaultPort = 8383;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1703872240, 3, 0x207fffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1710278531, 10, 0x207fffff, 1, 50 * COIN);
 
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0x74b3caf4709e53c488ab8f6324c1fd72ffcfba96193401a2b33c0f6b6bffcf7c"));
+        assert(consensus.hashGenesisBlock == uint256S("0x5c19daec5e73aa7c9707a7931237fce59e7b8f4c1ca35763ed1c3b9f8ba5d179"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
@@ -137,17 +137,17 @@ public:
 
         checkpointData = {
             {
-                {11, uint256S("7c43551f4784e3f788f27ecc5920eefb4331e6e6884c8419de570bd114c1e461")},
-                {425, uint256S("53e450ef3d039e725b3c88d6b85e3a1c06273bf0eef247a7b782d542f8cc3fe1")},
-                {82353, uint256S("5f086e59a4e0896e3a2554a43f8aeeae0017f303185d1fbc4386e5045646def2")},
+                //{11, uint256S("7c43551f4784e3f788f27ecc5920eefb4331e6e6884c8419de570bd114c1e461")},
+                //{425, uint256S("53e450ef3d039e725b3c88d6b85e3a1c06273bf0eef247a7b782d542f8cc3fe1")},
+                //{82353, uint256S("5f086e59a4e0896e3a2554a43f8aeeae0017f303185d1fbc4386e5045646def2")},
 
             }
         };
 
         chainTxData = ChainTxData{
-            /* nTime    */ 1708893194,
-            /* nTxCount */ 83644,
-            /* dTxRate  */ 0.01673294786093678
+            /* nTime    */ 1710278531,
+            /* nTxCount */ 1,
+            /* dTxRate  */ 0.0
 
         };
     }
