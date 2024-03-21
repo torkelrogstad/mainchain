@@ -96,7 +96,7 @@ public:
         consensus.nMinimumChainWork = uint256S("0x00");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x5c19daec5e73aa7c9707a7931237fce59e7b8f4c1ca35763ed1c3b9f8ba5d179");
+        consensus.defaultAssumeValid = uint256S("0x56eb7bc17defe42c14e67e21e338d84ae905294abc128ca9ab2ffc8c2eb2656f");
 
         consensus.MinimumHeight = 0;
 
@@ -137,17 +137,14 @@ public:
 
         checkpointData = {
             {
-                //{11, uint256S("7c43551f4784e3f788f27ecc5920eefb4331e6e6884c8419de570bd114c1e461")},
-                //{425, uint256S("53e450ef3d039e725b3c88d6b85e3a1c06273bf0eef247a7b782d542f8cc3fe1")},
-                //{82353, uint256S("5f086e59a4e0896e3a2554a43f8aeeae0017f303185d1fbc4386e5045646def2")},
-
+                {10000, uint256S("56eb7bc17defe42c14e67e21e338d84ae905294abc128ca9ab2ffc8c2eb2656f")},
             }
         };
 
         chainTxData = ChainTxData{
-            /* nTime    */ 1710278531,
-            /* nTxCount */ 1,
-            /* dTxRate  */ 0.0
+            /* nTime    */ 1710982336,
+            /* nTxCount */ 10153,
+            /* dTxRate  */ 0.01675917318840859
 
         };
     }
