@@ -570,7 +570,7 @@ fs::path GetDefaultDataDir()
     return pathRet / "Library/Application Support/Drivechain";
 #else
     // Unix
-    return pathRet / ".drivechain";
+    return pathRet / "drivechain";
 #endif
 #endif
 }
