@@ -132,8 +132,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "disconnectnode", 1, "nodeid" },
     { "addwitnessaddress", 1, "p2sh" },
     { "addwithdrawal", 0, "nsidechain" },
-    { "createcriticaldatatx", 0, "amount" },
-    { "createcriticaldatatx", 1, "height" },
     { "createbmmcriticaldatatx", 0, "amount" },
     { "createbmmcriticaldatatx", 1, "height" },
     { "createbmmcriticaldatatx", 3, "nsidechain" },

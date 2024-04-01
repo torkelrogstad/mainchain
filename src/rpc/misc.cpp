@@ -608,78 +608,6 @@ UniValue logging(const JSONRPCRequest& request)
     return result;
 }
 
-UniValue createcriticaldatatx(const JSONRPCRequest& request)
-{
-    // TODO finish
-    //
-    if (request.fHelp || request.params.size() != 3)
-        throw std::runtime_error(
-            "createcriticaldatatx\n"
-            "Create a critical data transaction\n"
-            "\nArguments:\n"
-            "1. \"amount\"         (numeric or string, required) The amount in " + CURRENCY_UNIT + " to be spent.\n"
-            "2. \"height\"         (numeric, required) The block height this transaction must be included in.\n"
-            "3. \"criticalhash\"   (string, required) h* you want added to a coinbase\n"
-            "\nExamples:\n"
-            + HelpExampleCli("createcriticaldatatx", "\"amount\", \"height\", \"criticalhash\"")
-            + HelpExampleRpc("createcriticaldatatx", "\"amount\", \"height\", \"criticalhash\"")
-            );
-
-    // TODO remove after finished
-    throw JSONRPCError(RPC_INTERNAL_ERROR, "Sorry, this function is not supported yet.");
-
-    // Amount
-    CAmount nAmount = AmountFromValue(request.params[0]);
-    if (nAmount <= 0)
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
-
-    int nHeight = request.params[1].get_int();
-
-    // Critical hash
-    uint256 hashCritical = uint256S(request.params[2].get_str());
-    if (hashCritical.IsNull())
-        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid h*");
-
-#ifdef ENABLE_WALLET
-    // Create and send the transaction
-    std::string strError;
-    if (vpwallets.empty()){
-        strError = "Error: no wallets are available";
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-    std::vector<CRecipient> vecSend;
-    CRecipient recipient = {CScript() << OP_0, nAmount, false};
-    vecSend.push_back(recipient);
-
-    LOCK2(cs_main, vpwallets[0]->cs_wallet);
-
-    CWalletTx wtx;
-    CReserveKey reservekey(vpwallets[0]);
-    CAmount nFeeRequired;
-    int nChangePosRet = -1;
-    //TODO: set this as a real thing
-    CCoinControl cc;
-    if (!vpwallets[0]->CreateTransaction(vecSend, wtx, reservekey, nFeeRequired, nChangePosRet, strError, cc)) {
-        if (nAmount + nFeeRequired > vpwallets[0]->GetBalance())
-            strError = strprintf("Error: This transaction requires a transaction fee of at least %s", FormatMoney(nFeeRequired));
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-    CValidationState state;
-    if (!vpwallets[0]->CommitTransaction(wtx, reservekey, g_connman.get(), state)) {
-        strError = strprintf("Error: The transaction was rejected! Reason given: %s", state.GetRejectReason());
-        throw JSONRPCError(RPC_WALLET_ERROR, strError);
-    }
-#endif
-
-    UniValue ret(UniValue::VOBJ);
-#ifdef ENABLE_WALLET
-    ret.push_back(Pair("txid", wtx.GetHash().GetHex()));
-    ret.push_back(Pair("nChangePos", nChangePosRet));
-#endif
-
-    return ret;
-}
-
 UniValue listsidechainctip(const JSONRPCRequest& request)
 {
     if (request.fHelp || request.params.size() < 1)
@@ -2284,9 +2212,8 @@ static const CRPCCommand commands[] =
 
     /* Drivechain rpc commands for the user and sidechains */
     { "Drivechain",  "addwithdrawal",                 &addwithdrawal,                   {"nsidechain", "hash"}},
-    { "Drivechain",  "createcriticaldatatx",          &createcriticaldatatx,            {"amount", "height", "criticalhash"}},
     { "Drivechain",  "listsidechainctip",             &listsidechainctip,               {"nsidechain"}},
-    { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain", "txid", "n", "count"}},    
+    { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain", "txid", "n", "count"}},
     { "Drivechain",  "listsidechaindepositsbyblock",  &listsidechaindepositsbyblock,    {"nsidechain", "end_blockhash", "start_blockhash"}},
     { "Drivechain",  "countsidechaindeposits",        &countsidechaindeposits,          {"nsidechain"}},
     { "Drivechain",  "receivewithdrawalbundle",       &receivewithdrawalbundle,         {"nsidechain","rawtx"}},
