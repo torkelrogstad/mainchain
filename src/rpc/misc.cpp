@@ -876,7 +876,7 @@ UniValue listsidechaindepositsbyblock(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_MISC_ERROR, "Invalid sidechain number!");
 
     uint256 endBlockHash;
-    int endHeight;
+    int endHeight = 0;
     if (!request.params[1].isNull()) {
         std::string strBlockHash = request.params[1].get_str();
         endBlockHash = uint256S(strBlockHash);
@@ -906,7 +906,7 @@ UniValue listsidechaindepositsbyblock(const JSONRPCRequest& request)
     }
 
     uint256 startBlockHash;
-    int startHeight;
+    int startHeight = 0;
     if (!request.params[2].isNull()) {
         std::string strBlockHash = request.params[2].get_str();
         startBlockHash = uint256S(strBlockHash);
