@@ -716,7 +716,7 @@ UniValue listsidechaindeposits(const JSONRPCRequest& request)
     if (request.fHelp || request.params.size() < 1)
         throw std::runtime_error(
             "listsidechaindeposits\n"
-            "List the most recent cached deposits for sidechain.\n"
+            "Return list of deposits sorted from most recent to oldest for sidechain\n"
             "Optionally limited to count. Note that this only has access to "
             "deposits which are currently cached.\n"
             "\nArguments:\n"
@@ -849,16 +849,15 @@ UniValue listsidechaindepositsbyblock(const JSONRPCRequest& request)
     if (request.fHelp || request.params.size() < 1)
         throw std::runtime_error(
             "listsidechaindepositsbyblock\n"
-            "List the most recent cached deposits for sidechain.\n"
-            "Optionally limited to count. Note that this only has access to "
-            "deposits which are currently cached.\n"
+            "Return list of deposits within block range sorted from oldest to most recent for sidechain\n"
+            "Note that this only has access to deposits which are currently cached.\n"
             "\nArguments:\n"
             "1. \"nsidechain\"      (numeric, required) The sidechain number\n"
             "2. \"end_blockhash\"   (string, optional) Only return deposits in and before this block\n"
             "3. \"start_blockhash\" (string, optional) Only return deposits in and after this block\n"
             "\nExamples:\n"
-            + HelpExampleCli("listsidechaindepositsbyblock", "\"sidechainkey\", \"count\"")
-            + HelpExampleCli("listsidechaindepositsbyblock", "\"sidechainkey\", \"count\"")
+            + HelpExampleCli("listsidechaindepositsbyblock", "\"nsidechain\", \"end_blockhash\", \"start_blockhash\"")
+            + HelpExampleCli("listsidechaindepositsbyblock", "\"nsidechain\", \"end_blockhash\", \"start_blockhash\"")
             );
 
 #ifdef ENABLE_WALLET
@@ -2287,8 +2286,8 @@ static const CRPCCommand commands[] =
     { "Drivechain",  "addwithdrawal",                 &addwithdrawal,                   {"nsidechain", "hash"}},
     { "Drivechain",  "createcriticaldatatx",          &createcriticaldatatx,            {"amount", "height", "criticalhash"}},
     { "Drivechain",  "listsidechainctip",             &listsidechainctip,               {"nsidechain"}},
-    { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain"}},
-    { "Drivechain",  "listsidechaindepositsbyblock",  &listsidechaindepositsbyblock,    {"nsidechain"}},
+    { "Drivechain",  "listsidechaindeposits",         &listsidechaindeposits,           {"nsidechain", "txid", "n", "count"}},    
+    { "Drivechain",  "listsidechaindepositsbyblock",  &listsidechaindepositsbyblock,    {"nsidechain", "end_blockhash", "start_blockhash"}},
     { "Drivechain",  "countsidechaindeposits",        &countsidechaindeposits,          {"nsidechain"}},
     { "Drivechain",  "receivewithdrawalbundle",       &receivewithdrawalbundle,         {"nsidechain","rawtx"}},
     { "Drivechain",  "verifybmm",                     &verifybmm,                       {"blockhash", "bmmhash", "nsidechain"}},
