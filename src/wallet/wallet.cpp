@@ -2402,6 +2402,11 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const
             continue;
 
         for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++) {
+            // Skip Drivechain CTIP outputs
+            uint8_t nSidechain = 0;
+            if (pcoin->tx->vout[i].scriptPubKey.IsDrivechain(nSidechain))
+                continue;
+
             if (pcoin->tx->vout[i].nValue < nMinimumAmount || pcoin->tx->vout[i].nValue > nMaximumAmount)
                 continue;
 
