@@ -1271,7 +1271,13 @@ bool CWallet::AbandonTransaction(const uint256& hashTx, std::string* pstrReason)
         // if (currentconfirm < 0) {Tx and spends are already conflicted, no need to abandon}
         if (currentconfirm == 0 && !wtx.isAbandoned()) {
             // If the orig tx was not in block/mempool, none of its spends can be in mempool
-            assert(!wtx.InMempool());
+            if (wtx.InMempool()) {
+                if (pstrReason)
+                    *pstrReason = "Spends in mempool!";
+
+                return false;
+            }
+
             wtx.nIndex = -1;
             wtx.setAbandoned();
             wtx.MarkDirty();
