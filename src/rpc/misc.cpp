@@ -1189,7 +1189,7 @@ UniValue verifybmm(const JSONRPCRequest& request)
     CBlock block;
     if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
     {
-        std::string strError = "Failed to read block from disk";
+        std::string strError = "Failed to read block from disk - try again later";
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_MISC_ERROR, strError);
     }
@@ -1225,12 +1225,19 @@ UniValue verifybmm(const JSONRPCRequest& request)
             continue;
 
         // Check prev block bytes
-        if (strPrevBlock != block.hashPrevBlock.ToString().substr(56, 63))
+        if (strPrevBlock != block.hashPrevBlock.ToString().substr(56, 63)) {
+            LogPrintf("%s: Skipping BMM commit for sidechain %u with invalid prevbytes\n", __func__, nSidechain);
             continue;
+        }
 
         // Check h*
-        if (hashBMM == data.hashCritical)
+        if (hashBMM == data.hashCritical) {
             fBMMFound = true;
+            break;
+        } else {
+            LogPrintf("%s: Skipping BMM commit for sidechain %u with invalid h*\n", __func__, nSidechain);
+            continue;
+        }
     }
 
     if (!fBMMFound) {
@@ -1259,8 +1266,8 @@ UniValue verifydeposit(const JSONRPCRequest& request)
             "2. \"txid\"           (string, required) deposit txid to locate\n"
             "3. \"nTx\"            (int, required) deposit tx number in block\n"
             "\nExamples:\n"
-            + HelpExampleCli("verifybmm", "\"blockhash\", \"txid\"")
-            + HelpExampleRpc("verifybmm", "\"blockhash\", \"txid\"")
+            + HelpExampleCli("verifydeposit", "\"blockhash\", \"txid\", \"nTx\"")
+            + HelpExampleRpc("verifydeposit", "\"blockhash\", \"txid\", \"nTx\"")
             );
 
     uint256 hashBlock = uint256S(request.params[0].get_str());
