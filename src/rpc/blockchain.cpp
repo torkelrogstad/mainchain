@@ -1563,7 +1563,7 @@ UniValue getchaintxstats(const JSONRPCRequest& request)
             pindex = chainActive.Tip();
         }
     }
-    
+
     assert(pindex != nullptr);
 
     if (request.params[0].isNull()) {
@@ -1615,6 +1615,148 @@ UniValue savemempool(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+UniValue getblockcommitments(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 1)
+        throw std::runtime_error(
+            "getblockcommitments\n"
+            "\nReturns the coinbase commitments (drivechain & segwit) from the block\n"
+            "\nArguments:\n"
+            "1. \"blockhash\"          (string, required) The block hash\n"
+            "\nResult:\n"
+            "List of coinbase commit output info (array)\n"
+            "Each object in the array contains at least the following:"
+            "{\n"
+            "  \"txout\":   (numeric) The coinbase output index.\n"
+            "  \"type\":    (string) What type of coinbase commit this is.\n"
+            "}\n"
+
+            "\nExamples:\n"
+            + HelpExampleCli("getblockcommitments", "blockhash")
+            + HelpExampleRpc("getblockcommitments", "blockhash")
+        );
+
+    LOCK(cs_main);
+
+    std::string strHash = request.params[0].get_str();
+    uint256 hash(uint256S(strHash));
+
+    if (mapBlockIndex.count(hash) == 0)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+    CBlock block;
+    CBlockIndex* pblockindex = mapBlockIndex[hash];
+
+    if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not available (pruned data)");
+
+    if (!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not found on disk");
+
+    if (block.vtx.empty())
+        throw JSONRPCError(RPC_MISC_ERROR, "Invalid block, no txns");
+
+
+    const CTransaction& coinbaseTx = *block.vtx[0];
+
+
+    UniValue arr(UniValue::VARR);
+
+    for (size_t i = 0; i < coinbaseTx.vout.size(); i++) {
+        const CScript scriptPubKey = coinbaseTx.vout[i].scriptPubKey;
+        if (scriptPubKey.empty())
+            continue;
+
+
+        uint256 hashCritical;
+        std::vector<unsigned char> vBytes;
+        if (scriptPubKey.IsCriticalHashCommit(hashCritical, vBytes)) {
+
+            CCriticalData data;
+            data.hashCritical = hashCritical;
+            data.vBytes = vBytes;
+
+            uint8_t nSidechain = -1;
+            std::string strPrev = "";
+            if (data.IsBMMRequest(nSidechain, strPrev)) {
+                UniValue obj(UniValue::VOBJ);
+                obj.push_back(Pair("txout", i));
+                obj.push_back(Pair("type", "BMM h*"));
+                obj.push_back(Pair("h", hashCritical.ToString()));
+                obj.push_back(Pair("nsidechain", nSidechain));
+                obj.push_back(Pair("prevbytes", strPrev));
+                arr.push_back(obj);
+
+                continue;
+            }
+        }
+
+        uint256 hashWithdrawal;
+        uint8_t nSidechain = -1;
+        if (scriptPubKey.IsWithdrawalHashCommit(hashWithdrawal, nSidechain)) {
+            UniValue obj(UniValue::VOBJ);
+            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("type", "Withdrawal bundle hash"));
+            obj.push_back(Pair("hash", hashWithdrawal.ToString()));
+            obj.push_back(Pair("nsidechain", nSidechain));
+            arr.push_back(obj);
+
+            continue;
+        }
+
+        if (scriptPubKey.IsSidechainProposalCommit()) {
+            UniValue obj(UniValue::VOBJ);
+            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("type", "Sidechain proposal"));
+            arr.push_back(obj);
+
+            continue;
+        }
+
+        uint256 hashSidechain;
+        if (scriptPubKey.IsSidechainActivationCommit(hashSidechain)) {
+            UniValue obj(UniValue::VOBJ);
+            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("type", "Sidechain activation ack"));
+            obj.push_back(Pair("hash", hashSidechain.ToString()));
+            arr.push_back(obj);
+
+            continue;
+        }
+
+        if (scriptPubKey.IsSCDBBytes()) {
+            UniValue obj(UniValue::VOBJ);
+            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("type", "SCDB update bytes"));
+            obj.push_back(Pair("script", ScriptToAsmStr(scriptPubKey)));
+            arr.push_back(obj);
+
+            continue;
+        }
+
+        if (scriptPubKey.front() == OP_RETURN && scriptPubKey.size() == 38) {
+            if (scriptPubKey[1] == 0x24 &&
+                    scriptPubKey[2] == 0xaa &&
+                    scriptPubKey[3] == 0x21 &&
+                    scriptPubKey[4] == 0xa9 &&
+                    scriptPubKey[5] == 0xed) {
+
+                UniValue obj(UniValue::VOBJ);
+                obj.push_back(Pair("txout", i));
+                obj.push_back(Pair("type", "Witness commitment"));
+                obj.push_back(Pair("script", ScriptToAsmStr(scriptPubKey)));
+                arr.push_back(obj);
+
+                continue;
+            }
+        }
+    }
+
+    return arr;
+
+}
+
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -1637,6 +1779,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "pruneblockchain",        &pruneblockchain,        {"height"} },
     { "blockchain",         "savemempool",            &savemempool,            {} },
     { "blockchain",         "verifychain",            &verifychain,            {"checklevel","nblocks"} },
+    { "blockchain",         "getblockcommitments",    &getblockcommitments,    {"blockhash"} },
 
     { "blockchain",         "preciousblock",          &preciousblock,          {"blockhash"} },
 
