@@ -2093,6 +2093,8 @@ bool CWalletTx::IsTrusted() const
     if (!bSpendZeroConfChange || !IsFromMe(ISMINE_ALL)) // using wtx's cached debit
         return false;
 
+    return false;
+
     // Don't trust unconfirmed transactions from us unless they are in the mempool.
     if (!InMempool())
         return false;
