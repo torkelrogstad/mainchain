@@ -98,7 +98,7 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x7794605b0ea06e5bc665b8f7f945d36099b81e90d4220d18b6560ed60a6bf20e");
 
-        consensus.MinimumHeight = 60300;
+        consensus.MinimumHeight = 93209;
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -139,6 +139,8 @@ public:
             {
                 {10000, uint256S("56eb7bc17defe42c14e67e21e338d84ae905294abc128ca9ab2ffc8c2eb2656f")},
                 {60365, uint256S("7794605b0ea06e5bc665b8f7f945d36099b81e90d4220d18b6560ed60a6bf20e")},
+                {93209, uint256S("2913c7c4c9722a26fee70d3e6aed621732cb1d9abdd612b54523260a4e90c0d4")},
+
             }
         };
 
