@@ -1680,7 +1680,7 @@ UniValue getblockcommitments(const JSONRPCRequest& request)
             std::string strPrev = "";
             if (data.IsBMMRequest(nSidechain, strPrev)) {
                 UniValue obj(UniValue::VOBJ);
-                obj.push_back(Pair("txout", i));
+                obj.push_back(Pair("txout", (int64_t)i));
                 obj.push_back(Pair("type", "BMM h*"));
                 obj.push_back(Pair("h", hashCritical.ToString()));
                 obj.push_back(Pair("nsidechain", nSidechain));
@@ -1695,7 +1695,7 @@ UniValue getblockcommitments(const JSONRPCRequest& request)
         uint8_t nSidechain = -1;
         if (scriptPubKey.IsWithdrawalHashCommit(hashWithdrawal, nSidechain)) {
             UniValue obj(UniValue::VOBJ);
-            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("txout", (int64_t)i));
             obj.push_back(Pair("type", "Withdrawal bundle hash"));
             obj.push_back(Pair("hash", hashWithdrawal.ToString()));
             obj.push_back(Pair("nsidechain", nSidechain));
@@ -1706,7 +1706,7 @@ UniValue getblockcommitments(const JSONRPCRequest& request)
 
         if (scriptPubKey.IsSidechainProposalCommit()) {
             UniValue obj(UniValue::VOBJ);
-            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("txout", (int64_t)i));
             obj.push_back(Pair("type", "Sidechain proposal"));
             arr.push_back(obj);
 
@@ -1716,7 +1716,7 @@ UniValue getblockcommitments(const JSONRPCRequest& request)
         uint256 hashSidechain;
         if (scriptPubKey.IsSidechainActivationCommit(hashSidechain)) {
             UniValue obj(UniValue::VOBJ);
-            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("txout", (int64_t)i));
             obj.push_back(Pair("type", "Sidechain activation ack"));
             obj.push_back(Pair("hash", hashSidechain.ToString()));
             arr.push_back(obj);
@@ -1726,7 +1726,7 @@ UniValue getblockcommitments(const JSONRPCRequest& request)
 
         if (scriptPubKey.IsSCDBBytes()) {
             UniValue obj(UniValue::VOBJ);
-            obj.push_back(Pair("txout", i));
+            obj.push_back(Pair("txout", (int64_t)i));
             obj.push_back(Pair("type", "SCDB update bytes"));
             obj.push_back(Pair("script", ScriptToAsmStr(scriptPubKey)));
             arr.push_back(obj);
@@ -1742,7 +1742,7 @@ UniValue getblockcommitments(const JSONRPCRequest& request)
                     scriptPubKey[5] == 0xed) {
 
                 UniValue obj(UniValue::VOBJ);
-                obj.push_back(Pair("txout", i));
+                obj.push_back(Pair("txout", (int64_t)i));
                 obj.push_back(Pair("type", "Witness commitment"));
                 obj.push_back(Pair("script", ScriptToAsmStr(scriptPubKey)));
                 arr.push_back(obj);
