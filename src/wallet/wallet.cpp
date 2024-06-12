@@ -3490,7 +3490,7 @@ bool CWallet::CreateOPReturnTransaction(CTransactionRef& tx, std::string& strFai
     wtxNew.SetTx(MakeTransactionRef(std::move(mtx)));
 
     CValidationState state;
-    if (!CommitTransaction(wtxNew, reserveKey, g_connman.get(), state, true /* fRemoveIfFail */, 1 * COIN /* nAbsurdFee */)) {
+    if (!CommitTransaction(wtxNew, reserveKey, g_connman.get(), state, true /* fRemoveIfFail */, MAX_MONEY /* nAbsurdFee */)) {
         strFail = "Failed to commit OP_RETURN transaction! Reject reason: " + FormatStateMessage(state) + "\n";
         return false;
     }
