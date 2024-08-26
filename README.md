@@ -1,3 +1,6 @@
+This software is deprecated please see https://github.com/LayerTwo-Labs/bip300301_enforcer for the new version
+
+
 Mainchain is an implementation of Bitcoin that extends it with Drivechain capabilities.
 
 # Drivechain (BIPs 300+301)
