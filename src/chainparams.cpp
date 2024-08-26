@@ -96,9 +96,9 @@ public:
         consensus.nMinimumChainWork = uint256S("0x00");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x134a2a62ed90c0f92a9ace3a0f36a0624f66be03fb365111058791ca2e219d23");
+        consensus.defaultAssumeValid = uint256S("0x21f3224e3d2438e544511a7be28d026e317816ad5fdf315bcdf2b6e6e1063416");
 
-        consensus.MinimumHeight = 102478;
+        consensus.MinimumHeight = 0;
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -112,11 +112,11 @@ public:
         nDefaultPort = 8383;
         nPruneAfterHeight = 100000;
 
-        genesis = CreateGenesisBlock(1710278531, 10, 0x207fffff, 1, 50 * COIN);
+        genesis = CreateGenesisBlock(1724707148, 10, 0x207fffff, 1, 50 * COIN);
 
         consensus.hashGenesisBlock = genesis.GetHash();
 
-        assert(consensus.hashGenesisBlock == uint256S("0x5c19daec5e73aa7c9707a7931237fce59e7b8f4c1ca35763ed1c3b9f8ba5d179"));
+        assert(consensus.hashGenesisBlock == uint256S("0x21f3224e3d2438e544511a7be28d026e317816ad5fdf315bcdf2b6e6e1063416"));
         assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
@@ -137,18 +137,15 @@ public:
 
         checkpointData = {
             {
-                {10000, uint256S("56eb7bc17defe42c14e67e21e338d84ae905294abc128ca9ab2ffc8c2eb2656f")},
-                {60365, uint256S("7794605b0ea06e5bc665b8f7f945d36099b81e90d4220d18b6560ed60a6bf20e")},
-                {93209, uint256S("2913c7c4c9722a26fee70d3e6aed621732cb1d9abdd612b54523260a4e90c0d4")},
-                {102478, uint256S("134a2a62ed90c0f92a9ace3a0f36a0624f66be03fb365111058791ca2e219d23")},
+                {0, uint256S("21f3224e3d2438e544511a7be28d026e317816ad5fdf315bcdf2b6e6e1063416")},
 
             }
         };
 
         chainTxData = ChainTxData{
             /* nTime    */ 1714092751,
-            /* nTxCount */ 180122,
-            /* dTxRate  */ 0.08612047950180136
+            /* nTxCount */ 1,
+            /* dTxRate  */ 0.0
         };
     }
 };
