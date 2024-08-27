@@ -44,7 +44,9 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
-        READWRITE(vHeaderSig);
+        if (!(s.GetVersion() & SERIALIZE_WITHOUT_HEADER_SIG)) {
+            READWRITE(vHeaderSig);
+        }
     }
 
     void SetNull()

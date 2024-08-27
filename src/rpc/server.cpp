@@ -553,6 +553,10 @@ int RPCSerializationFlags()
     int flag = 0;
     if (gArgs.GetArg("-rpcserialversion", DEFAULT_RPC_SERIALIZE_VERSION) == 0)
         flag |= SERIALIZE_TRANSACTION_NO_WITNESS;
+
+    if (gArgs.GetBoolArg("-rpcserialwithoutheadersig", false))
+        flag |= SERIALIZE_WITHOUT_HEADER_SIG;
+
     return flag;
 }
 
